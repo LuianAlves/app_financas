@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
+            $table->longText('image')->nullable();
+            $table->boolean('is_active')->default(false);
             $table->string('password');
             $table->rememberToken();
             $table->foreignUuid('current_team_id')->nullable(); // ← se teams usarem UUID também

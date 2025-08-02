@@ -1,8 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\{
-    AccountController,
+
+use App\Http\Controllers\{AccountController,
+    Auth\AuthController,
     CardController,
     CategoryController,
     TransactionController,
@@ -10,8 +11,16 @@ use App\Http\Controllers\{
     InvoiceController,
     CardTransactionController,
     SavingController,
-    NotificationController
-};
+    NotificationController};
+
+Route::get('/', [AuthController::class, 'welcome']);
+
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login');
+
+Route::get('/register', [AuthController::class, 'registerView']);
+Route::post('/register', [AuthController::class, 'register'])->name('register');
+
+Route::any('/logout', [AuthController::class, 'destroy'])->name('logout');
 
 // Middleware de autenticação, agrupamento
 Route::middleware(['auth'])->group(function () {

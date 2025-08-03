@@ -2,8 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 
-use App\Http\Controllers\{AccountController,
-    Auth\AuthController,
+// Auth
+use App\Http\Controllers\Auth\{
+    AuthController,
+};
+
+// Api
+use App\Http\Controllers\Api\{
+    AccountController,
     CardController,
     CategoryController,
     TransactionController,
@@ -11,9 +17,15 @@ use App\Http\Controllers\{AccountController,
     InvoiceController,
     CardTransactionController,
     SavingController,
-    NotificationController};
+    NotificationController,
+};
 
-Route::get('/', [AuthController::class, 'welcome']);
+// Web
+use App\Http\Controllers\Web\{
+    DashboardController
+};
+
+Route::get('/login', [AuthController::class, 'welcome']);
 
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login');
 
@@ -22,8 +34,9 @@ Route::post('/register', [AuthController::class, 'register'])->name('register');
 
 Route::any('/logout', [AuthController::class, 'destroy'])->name('logout');
 
-// Middleware de autenticação, agrupamento
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth:web', config('jetstream.auth_session')])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
+
     Route::resource('accounts', AccountController::class)->parameters(['accounts' => 'account:uuid']);
     Route::resource('cards', CardController::class)->parameters(['cards' => 'card:uuid']);
     Route::resource('categories', CategoryController::class)->parameters(['categories' => 'category:uuid']);

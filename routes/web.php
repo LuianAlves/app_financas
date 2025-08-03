@@ -34,7 +34,7 @@ Route::post('/register', [AuthController::class, 'register'])->name('register');
 
 Route::any('/logout', [AuthController::class, 'destroy'])->name('logout');
 
-Route::middleware(['auth:web', config('jetstream.auth_session')])->group(function () {
+Route::middleware(['auth', config('jetstream.auth_session')])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
 
     Route::resource('accounts', AccountController::class)->parameters(['accounts' => 'account:uuid']);

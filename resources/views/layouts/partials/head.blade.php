@@ -18,6 +18,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,500,600,700%7cPoppins:300,400,500,600,700,800,900&amp;display=swap" rel="stylesheet">
 
+    <script src="https://kit.fontawesome.com/d949d91b0e.js" crossorigin="anonymous"></script>
+
     <link href="{{asset('assets/vendors/simplebar/simplebar.min.css')}}" rel="stylesheet">
     <link href="{{asset('assets/css/theme-rtl.css')}}" rel="stylesheet" id="style-rtl">
     <link href="{{asset('assets/css/theme.css')}}" rel="stylesheet" id="style-default">

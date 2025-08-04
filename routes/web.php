@@ -33,7 +33,7 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
 
     // Users
-    Route::resource('users', UserController::class)->parameters(['users' => 'account:uuid']);
+    Route::resource('users', UserController::class)->scoped(['user' => 'uuid']);
 
     Route::resource('accounts', AccountController::class)->parameters(['accounts' => 'account:uuid']);
     Route::resource('cards', CardController::class)->parameters(['cards' => 'card:uuid']);

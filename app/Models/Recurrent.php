@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Auth\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Recurrent extends BaseModel
@@ -24,7 +25,7 @@ class Recurrent extends BaseModel
 
     public function category(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(TransactionCategory::class);
     }
 
     public function account(): BelongsTo

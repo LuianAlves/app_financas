@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
+use App\Models\Auth\User;
 use App\Models\Saving;
-use App\Models\User;
 
 class SavingPolicy
 {

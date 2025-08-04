@@ -19,7 +19,7 @@ return new class extends Migration
             $table->enum('type', ['income', 'expense']);
             $table->enum('frequency', ['daily', 'weekly', 'monthly', 'yearly']);
             $table->date('next_date');
-            $table->foreignUuid('category_id')->nullable()->constrained('categories')->onDelete('set null');
+            $table->foreignUuid('categoria_id')->references('id')->on('transaction_categories')->onDelete('cascade');
             $table->foreignUuid('account_id')->nullable()->constrained('accounts')->onDelete('set null');
             $table->timestamps();
         });

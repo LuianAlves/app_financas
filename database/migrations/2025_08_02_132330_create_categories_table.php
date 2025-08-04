@@ -9,12 +9,14 @@ return new class extends Migration
 
     public function up(): void
     {
-        Schema::create('categories', function (Blueprint $table) {
+        Schema::create('transaction_categories', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
-            $table->string('name');
-            $table->decimal('monthly_limit', 12, 2)->nullable();
-            $table->string('color')->nullable();
+            $table->uuid('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->string('nome'); // Ex: Salário, Aluguel, Mercado, etc.
+            $table->enum('tipo', ['entrada', 'saida', 'investimento']);
+            $table->decimal('limite_mensal', 12, 2)->nullable();
+            $table->string('cor')->default('#18dec7');
             $table->timestamps();
         });
     }

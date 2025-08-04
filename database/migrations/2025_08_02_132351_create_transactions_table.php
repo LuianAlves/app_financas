@@ -18,7 +18,7 @@ return new class extends Migration
             $table->decimal('amount', 12, 2);
             $table->date('date');
             $table->enum('type', ['income', 'expense']);
-            $table->foreignUuid('category_id')->nullable()->constrained('categories')->onDelete('set null');
+            $table->foreignUuid('categoria_id')->references('id')->on('transaction_categories')->onDelete('cascade');
             $table->foreignUuid('account_id')->nullable()->constrained('accounts')->onDelete('set null');
             $table->timestamps();
         });

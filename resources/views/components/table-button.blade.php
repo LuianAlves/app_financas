@@ -3,8 +3,26 @@
         <span class="fas fa-ellipsis-h fs-10"></span>
     </button>
     <div class="dropdown-menu dropdown-menu-end border py-0">
-        <div class="py-2"><a class="dropdown-item" href="{{routeEdit($id)}}">Editar registro</a>
-            <a class="dropdown-item text-danger" href="#!">Excluir registro</a>
+        <div class="py-2">
+            <a class="dropdown-item" href="{{routeShow($id)}}">
+                <i class="fa-solid fa-expand text-primary"></i>
+                Visualizar registro
+            </a>
+
+            <a class="dropdown-item py-2" href="{{routeEdit($id)}}">
+                <i class="fa-solid fa-pen-to-square text-success"></i>
+                Editar registro
+            </a>
+            <form id="delete-form-{{ $id }}" action="{{ route(currentRoute()[0]. '.destroy', $id) }}" method="POST"
+                  style="display: none;">
+                @csrf
+                @method('DELETE')
+            </form>
+
+            <a class="dropdown-item text-danger" href="#" onclick="event.preventDefault(); if(confirm('Tem certeza que deseja remover esse registro?')) { document.getElementById('delete-form-{{ $id }}').submit(); }">
+                <i class="fa-solid fa-trash-can text-danger"></i>
+                Excluir registro
+            </a>
         </div>
     </div>
 </div>

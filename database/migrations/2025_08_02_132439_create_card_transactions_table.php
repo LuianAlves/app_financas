@@ -20,7 +20,7 @@ return new class extends Migration
             $table->date('date');
             $table->unsignedTinyInteger('installments')->default(1);
             $table->unsignedTinyInteger('current_installment')->default(1);
-            $table->foreignUuid('category_id')->nullable()->constrained('categories')->onDelete('set null');
+            $table->foreignUuid('categoria_id')->references('id')->on('transaction_categories')->onDelete('cascade');
             $table->timestamps();
         });
     }

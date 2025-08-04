@@ -112,6 +112,26 @@
                             <span class="nav-link-text ps-1">Usuários</span>
                         </div>
                     </a>
+
+                    <a class="nav-link" href="{{route('accounts.index')}}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon">
+                                <i class="fa-solid fa-building-columns"></i>
+                            </span>
+                            <span class="nav-link-text ps-1">Contas Bancárias</span>
+                        </div>
+                    </a>
+                </li>
+
+
+                <!-- Entidates -->
+                <li class="nav-item">
+                    <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                        <div class="col-auto navbar-vertical-label">Controle</div>
+                        <div class="col ps-0">
+                            <hr class="mb-0 navbar-vertical-divider"/>
+                        </div>
+                    </div>
                 </li>
 
 

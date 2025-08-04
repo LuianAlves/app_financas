@@ -25,11 +25,13 @@
         <div class="navbar-vertical-content scrollbar">
             <ul class="navbar-nav flex-column mb-3" id="navbarVerticalNav">
                 <li class="nav-item">
-                    <!-- parent pages--><a class="nav-link dropdown-indicator" href="#dashboard" role="button"
-                                           data-bs-toggle="collapse" aria-expanded="true"
-                                           aria-controls="dashboard">
+                    <!-- parent pages-->
+                    <a class="nav-link dropdown-indicator" href="#dashboard" role="button"
+                       data-bs-toggle="collapse" aria-expanded="true"
+                       aria-controls="dashboard">
                         <div class="d-flex align-items-center"><span class="nav-link-icon"><span
-                                    class="fas fa-chart-pie"></span></span><span class="nav-link-text ps-1">Dashboard</span>
+                                    class="fas fa-chart-pie"></span></span><span
+                                class="nav-link-text ps-1">Dashboard</span>
                         </div>
                     </a>
                     <ul class="nav collapse show" id="dashboard">
@@ -54,7 +56,8 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="dashboard/e-commerce.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">E commerce</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">E commerce</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -68,7 +71,8 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="dashboard/project-management.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Management</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Management</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -81,7 +85,8 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="dashboard/support-desk.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Support desk</span><span
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Support desk</span><span
                                         class="badge rounded-pill ms-2 badge-subtle-success">New</span>
                                 </div>
                             </a>
@@ -89,6 +94,27 @@
                         </li>
                     </ul>
                 </li>
+
+
+                <!-- Entidates -->
+                <li class="nav-item">
+                    <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
+                        <div class="col-auto navbar-vertical-label">Entidades</div>
+                        <div class="col ps-0">
+                            <hr class="mb-0 navbar-vertical-divider"/>
+                        </div>
+                    </div>
+                    <a class="nav-link" href="{{route('users.index')}}" role="button">
+                        <div class="d-flex align-items-center">
+                            <span class="nav-link-icon">
+                                <span class="far fa-user"></span>
+                            </span>
+                            <span class="nav-link-text ps-1">Usuários</span>
+                        </div>
+                    </a>
+                </li>
+
+
                 <li class="nav-item">
                     <!-- label-->
                     <div class="row navbar-vertical-label-wrapper mt-3 mb-2">
@@ -100,7 +126,8 @@
                     </div>
                     <!-- parent pages--><a class="nav-link" href="app/calendar.html" role="button">
                         <div class="d-flex align-items-center"><span class="nav-link-icon"><span
-                                    class="fas fa-calendar-alt"></span></span><span class="nav-link-text ps-1">Calendar</span>
+                                    class="fas fa-calendar-alt"></span></span><span
+                                class="nav-link-text ps-1">Calendar</span>
                         </div>
                     </a>
                     <!-- parent pages--><a class="nav-link" href="app/chat.html" role="button">
@@ -113,7 +140,8 @@
                                            data-bs-toggle="collapse" aria-expanded="false"
                                            aria-controls="email">
                         <div class="d-flex align-items-center"><span class="nav-link-icon"><span
-                                    class="fas fa-envelope-open"></span></span><span class="nav-link-text ps-1">Email</span>
+                                    class="fas fa-envelope-open"></span></span><span
+                                class="nav-link-text ps-1">Email</span>
                         </div>
                     </a>
                     <ul class="nav collapse" id="email">
@@ -125,7 +153,8 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="app/email/email-detail.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Email detail</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Email detail</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -142,24 +171,28 @@
                                            data-bs-toggle="collapse" aria-expanded="false"
                                            aria-controls="events">
                         <div class="d-flex align-items-center"><span class="nav-link-icon"><span
-                                    class="fas fa-calendar-day"></span></span><span class="nav-link-text ps-1">Events</span>
+                                    class="fas fa-calendar-day"></span></span><span
+                                class="nav-link-text ps-1">Events</span>
                         </div>
                     </a>
                     <ul class="nav collapse" id="events">
                         <li class="nav-item"><a class="nav-link" href="app/events/create-an-event.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Create an event</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Create an event</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="app/events/event-detail.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Event detail</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Event detail</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="app/events/event-list.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Event list</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Event list</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -244,13 +277,15 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="app/e-commerce/customer-details.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Customer details</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Customer details</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="app/e-commerce/shopping-cart.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Shopping cart</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Shopping cart</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -327,13 +362,15 @@
                             </ul>
                         </li>
                         <li class="nav-item"><a class="nav-link" href="app/e-learning/student-overview.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Student overview</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Student overview</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="app/e-learning/trainer-profile.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Trainer profile</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Trainer profile</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -349,7 +386,8 @@
                                            data-bs-toggle="collapse" aria-expanded="false"
                                            aria-controls="social">
                         <div class="d-flex align-items-center"><span class="nav-link-icon"><span
-                                    class="fas fa-share-alt"></span></span><span class="nav-link-text ps-1">Social</span>
+                                    class="fas fa-share-alt"></span></span><span
+                                class="nav-link-text ps-1">Social</span>
                         </div>
                     </a>
                     <ul class="nav collapse" id="social">
@@ -361,13 +399,15 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="app/social/activity-log.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Activity log</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Activity log</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="app/social/notifications.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Notifications</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Notifications</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -388,7 +428,8 @@
                     </a>
                     <ul class="nav collapse" id="support-desk">
                         <li class="nav-item"><a class="nav-link" href="app/support-desk/table-view.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Table view</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Table view</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -407,19 +448,22 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="app/support-desk/contact-details.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Contact details</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Contact details</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="app/support-desk/tickets-preview.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Tickets preview</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Tickets preview</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="app/support-desk/quick-links.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Quick links</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Quick links</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -458,7 +502,8 @@
                                            role="button" data-bs-toggle="collapse" aria-expanded="false"
                                            aria-controls="authentication">
                         <div class="d-flex align-items-center"><span class="nav-link-icon"><span
-                                    class="fas fa-lock"></span></span><span class="nav-link-text ps-1">Authentication</span>
+                                    class="fas fa-lock"></span></span><span
+                                class="nav-link-text ps-1">Authentication</span>
                         </div>
                     </a>
                     <ul class="nav collapse" id="authentication">
@@ -473,21 +518,24 @@
                             <ul class="nav collapse" id="simple">
                                 <li class="nav-item"><a class="nav-link"
                                                         href="pages/authentication/simple/login.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Login</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Login</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="pages/authentication/simple/logout.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Logout</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Logout</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="pages/authentication/simple/register.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Register</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Register</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -533,21 +581,24 @@
                             <ul class="nav collapse" id="card">
                                 <li class="nav-item"><a class="nav-link"
                                                         href="pages/authentication/card/login.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Login</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Login</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="pages/authentication/card/logout.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Logout</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Logout</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="pages/authentication/card/register.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Register</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Register</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -593,21 +644,24 @@
                             <ul class="nav collapse" id="split">
                                 <li class="nav-item"><a class="nav-link"
                                                         href="pages/authentication/split/login.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Login</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Login</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="pages/authentication/split/logout.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Logout</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Logout</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="pages/authentication/split/register.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Register</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Register</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -691,13 +745,15 @@
                     </a>
                     <ul class="nav collapse" id="pricing">
                         <li class="nav-item"><a class="nav-link" href="pages/pricing/pricing-default.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Pricing default</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Pricing default</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="pages/pricing/pricing-alt.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Pricing alt</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Pricing alt</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -725,7 +781,8 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="pages/faq/faq-accordion.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Faq accordion</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Faq accordion</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -764,19 +821,22 @@
                     </a>
                     <ul class="nav collapse" id="miscellaneous">
                         <li class="nav-item"><a class="nav-link" href="pages/miscellaneous/associations.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Associations</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Associations</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="pages/miscellaneous/invite-people.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Invite people</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Invite people</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="pages/miscellaneous/privacy-policy.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Privacy policy</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Privacy policy</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -793,7 +853,8 @@
                     <ul class="nav collapse" id="Layouts">
                         <li class="nav-item"><a class="nav-link" href="demo/navbar-vertical.html"
                                                 target="_blank">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Navbar vertical</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Navbar vertical</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -807,7 +868,8 @@
                         </li>
                         <li class="nav-item"><a class="nav-link" href="demo/navbar-double-top.html"
                                                 target="_blank">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Double top</span><span
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Double top</span><span
                                         class="badge rounded-pill ms-2 badge-subtle-success">New</span>
                                 </div>
                             </a>
@@ -863,25 +925,29 @@
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link" href="modules/forms/basic/select.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Select</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Select</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link" href="modules/forms/basic/checks.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Checks</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Checks</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link" href="modules/forms/basic/range.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Range</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Range</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link" href="modules/forms/basic/layout.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Layout</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Layout</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -913,7 +979,8 @@
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/forms/advance/editor.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Editor</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Editor</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -948,7 +1015,8 @@
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/forms/advance/rating.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Rating</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Rating</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -956,7 +1024,8 @@
                             </ul>
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/forms/floating-labels.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Floating labels</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Floating labels</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -969,7 +1038,8 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/forms/validation.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Validation</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Validation</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -985,19 +1055,22 @@
                     </a>
                     <ul class="nav collapse" id="tables">
                         <li class="nav-item"><a class="nav-link" href="modules/tables/basic-tables.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Basic tables</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Basic tables</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/tables/advance-tables.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Advance tables</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Advance tables</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/tables/bulk-select.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Bulk select</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Bulk select</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1007,7 +1080,8 @@
                                            data-bs-toggle="collapse" aria-expanded="false"
                                            aria-controls="charts">
                         <div class="d-flex align-items-center"><span class="nav-link-icon"><span
-                                    class="fas fa-chart-line"></span></span><span class="nav-link-text ps-1">Charts</span>
+                                    class="fas fa-chart-line"></span></span><span
+                                class="nav-link-text ps-1">Charts</span>
                         </div>
                     </a>
                     <ul class="nav collapse" id="charts">
@@ -1058,7 +1132,8 @@
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/charts/echarts/geo-map.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Geo map</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Geo map</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -1118,13 +1193,15 @@
                     </a>
                     <ul class="nav collapse" id="icons">
                         <li class="nav-item"><a class="nav-link" href="modules/icons/font-awesome.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Font awesome</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Font awesome</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/icons/bootstrap-icons.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Bootstrap icons</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Bootstrap icons</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1137,7 +1214,8 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/icons/material-icons.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Material icons</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Material icons</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1152,13 +1230,15 @@
                     </a>
                     <ul class="nav collapse" id="maps">
                         <li class="nav-item"><a class="nav-link" href="modules/maps/google-map.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Google map</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Google map</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/maps/leaflet-map.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Leaflet map</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Leaflet map</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1193,13 +1273,15 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/components/animated-icons.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Animated icons</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Animated icons</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/components/background.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Background</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Background</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1212,14 +1294,16 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/components/bottom-bar.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Bottom bar</span><span
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Bottom bar</span><span
                                         class="badge rounded-pill ms-2 badge-subtle-success">New</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/components/breadcrumbs.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Breadcrumbs</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Breadcrumbs</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1263,7 +1347,8 @@
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/components/carousel/swiper.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Swiper</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Swiper</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -1278,7 +1363,8 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/components/cookie-notice.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Cookie notice</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Cookie notice</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1306,7 +1392,8 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/components/list-group.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">List group</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">List group</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1321,21 +1408,24 @@
                         <li class="nav-item"><a class="nav-link dropdown-indicator" href="#navs-_and_-Tabs"
                                                 data-bs-toggle="collapse" aria-expanded="false"
                                                 aria-controls="components">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Navs &amp; Tabs</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Navs &amp; Tabs</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                             <ul class="nav collapse" id="navs-_and_-Tabs">
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/components/navs-and-tabs/navs.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Navs</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Navs</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/components/navs-and-tabs/navbar.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Navbar</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Navbar</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -1349,7 +1439,8 @@
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/components/navs-and-tabs/top-navbar.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Top nav</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Top nav</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -1371,7 +1462,8 @@
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/components/navs-and-tabs/tabs.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Tabs</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Tabs</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -1395,35 +1487,40 @@
                             <ul class="nav collapse" id="pictures">
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/components/pictures/avatar.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Avatar</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Avatar</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/components/pictures/images.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Images</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Images</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/components/pictures/figures.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Figures</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Figures</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/components/pictures/hoverbox.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Hoverbox</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Hoverbox</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/components/pictures/lightbox.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Lightbox</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Lightbox</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -1431,19 +1528,22 @@
                             </ul>
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/components/progress-bar.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Progress bar</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Progress bar</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/components/placeholder.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Placeholder</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Placeholder</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/components/pagination.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Pagination</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Pagination</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1511,7 +1611,8 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/components/typed-text.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Typed text</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Typed text</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1527,14 +1628,16 @@
                             <ul class="nav collapse" id="videos">
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/components/videos/embed.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Embed</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Embed</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link"
                                                         href="modules/components/videos/plyr.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Plyr</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Plyr</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -1552,7 +1655,8 @@
                     </a>
                     <ul class="nav collapse" id="utilities">
                         <li class="nav-item"><a class="nav-link" href="modules/utilities/background.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Background</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Background</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1579,7 +1683,8 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/utilities/colored-links.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Colored links</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Colored links</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1606,7 +1711,8 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/utilities/focus-ring.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Focus ring</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Focus ring</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1659,43 +1765,50 @@
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/utilities/stretched-link.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Stretched link</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Stretched link</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/utilities/text-truncation.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Text truncation</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Text truncation</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/utilities/typography.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Typography</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Typography</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/utilities/vertical-align.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Vertical align</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Vertical align</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/utilities/vertical-rule.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Vertical rule</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Vertical rule</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/utilities/visibility.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Visibility</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Visibility</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                         </li>
                         <li class="nav-item"><a class="nav-link" href="modules/utilities/visually-hidden.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Visually hidden</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Visually hidden</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1724,13 +1837,15 @@
                             <!-- more inner pages-->
                             <ul class="nav collapse" id="level-two">
                                 <li class="nav-item"><a class="nav-link" href="#!.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Item 1</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Item 1</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
                                 </li>
                                 <li class="nav-item"><a class="nav-link" href="#!.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Item 2</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Item 2</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -1740,13 +1855,15 @@
                         <li class="nav-item"><a class="nav-link dropdown-indicator" href="#level-three"
                                                 data-bs-toggle="collapse" aria-expanded="false"
                                                 aria-controls="multi-level">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Level three</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Level three</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                             <ul class="nav collapse" id="level-three">
                                 <li class="nav-item"><a class="nav-link" href="#!.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Item 3</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Item 3</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -1754,7 +1871,8 @@
                                 <li class="nav-item"><a class="nav-link dropdown-indicator" href="#item-4"
                                                         data-bs-toggle="collapse" aria-expanded="false"
                                                         aria-controls="level-three">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Item 4</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Item 4</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -1780,13 +1898,15 @@
                         <li class="nav-item"><a class="nav-link dropdown-indicator" href="#level-four"
                                                 data-bs-toggle="collapse" aria-expanded="false"
                                                 aria-controls="multi-level">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Level four</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Level four</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
                             <ul class="nav collapse" id="level-four">
                                 <li class="nav-item"><a class="nav-link" href="#!.html">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Item 6</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Item 6</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -1794,7 +1914,8 @@
                                 <li class="nav-item"><a class="nav-link dropdown-indicator" href="#item-7"
                                                         data-bs-toggle="collapse" aria-expanded="false"
                                                         aria-controls="level-four">
-                                        <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Item 7</span>
+                                        <div class="d-flex align-items-center"><span
+                                                class="nav-link-text ps-1">Item 7</span>
                                         </div>
                                     </a>
                                     <!-- more inner pages-->
@@ -1849,20 +1970,23 @@
                     <!-- parent pages--><a class="nav-link" href="documentation/getting-started.html"
                                            role="button">
                         <div class="d-flex align-items-center"><span class="nav-link-icon"><span
-                                    class="fas fa-rocket"></span></span><span class="nav-link-text ps-1">Getting started</span>
+                                    class="fas fa-rocket"></span></span><span
+                                class="nav-link-text ps-1">Getting started</span>
                         </div>
                     </a>
                     <!-- parent pages--><a class="nav-link dropdown-indicator" href="#customization"
                                            role="button" data-bs-toggle="collapse" aria-expanded="false"
                                            aria-controls="customization">
                         <div class="d-flex align-items-center"><span class="nav-link-icon"><span
-                                    class="fas fa-wrench"></span></span><span class="nav-link-text ps-1">Customization</span>
+                                    class="fas fa-wrench"></span></span><span
+                                class="nav-link-text ps-1">Customization</span>
                         </div>
                     </a>
                     <ul class="nav collapse" id="customization">
                         <li class="nav-item"><a class="nav-link"
                                                 href="documentation/customization/configuration.html">
-                                <div class="d-flex align-items-center"><span class="nav-link-text ps-1">Configuration</span>
+                                <div class="d-flex align-items-center"><span
+                                        class="nav-link-text ps-1">Configuration</span>
                                 </div>
                             </a>
                             <!-- more inner pages-->
@@ -1905,12 +2029,14 @@
                     </a>
                     <!-- parent pages--><a class="nav-link" href="documentation/design-file.html" role="button">
                         <div class="d-flex align-items-center"><span class="nav-link-icon"><span
-                                    class="fas fa-palette"></span></span><span class="nav-link-text ps-1">Design file</span>
+                                    class="fas fa-palette"></span></span><span
+                                class="nav-link-text ps-1">Design file</span>
                         </div>
                     </a>
                     <!-- parent pages--><a class="nav-link" href="changelog.html" role="button">
                         <div class="d-flex align-items-center"><span class="nav-link-icon"><span
-                                    class="fas fa-code-branch"></span></span><span class="nav-link-text ps-1">Changelog</span>
+                                    class="fas fa-code-branch"></span></span><span
+                                class="nav-link-text ps-1">Changelog</span>
                         </div>
                     </a>
                 </li>

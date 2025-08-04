@@ -3,31 +3,47 @@
 namespace App\Http\Controllers;
 
 use App\Models\Account;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 
 class AccountController extends Controller
 {
+    public $account;
+
+    public function __construct(Account $account) {
+        $this->account = $account;
+    }
+
     public function index()
     {
-        return response()->json(
-            Auth::user()->accounts()->latest()->get()
-        );
+        $accounts = $this->account->all();
+
+        return view('app.accounts.account_index', compact('accounts'));
+    }
+
+    public function create() {
+        return view('app.accounts.account_create');
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $request->validate([
             'bank_name' => 'required|string|max:255',
             'current_balance' => 'required|numeric',
             'type' => 'required|string|in:checking,savings,other'
         ]);
 
-        $account = Auth::user()->accounts()->create($data);
+        $this->account->create([
+            'user_id' => Auth::id(),
+            'bank_name' => $request->bank_name,
+            'current_balance' => $request->current_balance,
+            'type' => $request->type,
+            'created_at' => Carbon::now()
+        ]);
 
-        return response()->json($account, 201);
+        return redirect()->route('accounts.index');
     }
 
     public function show(Account $account)

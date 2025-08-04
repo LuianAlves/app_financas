@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
+use App\Models\Auth\User;
 use App\Models\CardTransaction;
-use App\Models\User;
 
 class CardTransactionPolicy
 {

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
+use App\Models\TransactionCategory;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -29,13 +29,13 @@ class CategoryController extends Controller
         return response()->json($category, 201);
     }
 
-    public function show(Category $category)
+    public function show(TransactionCategory $category)
     {
         $this->authorize('view', $category);
         return response()->json($category);
     }
 
-    public function update(Request $request, Category $category)
+    public function update(Request $request, TransactionCategory $category)
     {
         $this->authorize('update', $category);
 
@@ -50,7 +50,7 @@ class CategoryController extends Controller
         return response()->json($category);
     }
 
-    public function destroy(Category $category)
+    public function destroy(TransactionCategory $category)
     {
         $this->authorize('delete', $category);
         $category->delete();

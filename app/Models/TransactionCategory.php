@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
+use App\Models\Auth\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Category extends BaseModel
+class TransactionCategory extends BaseModel
 {
     protected $fillable = [
         'user_id',

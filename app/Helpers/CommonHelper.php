@@ -42,3 +42,10 @@ function routeShow($id): string
         : '#';
 }
 
+function brlPrice($value) {
+    $value = number_format($value, 2, ',', '.');
+
+    $value = "R$ {$value}";
+
+    return $value;
+}

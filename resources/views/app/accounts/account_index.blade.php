@@ -1,38 +1,21 @@
-<x-app-layout>
-    @section('content')
-        <x-card-header title="Contas Bancárias" count="{{$accounts->count()}}" action="novo"></x-card-header>
+@extends('layouts.templates.mobile')
+@section('content-mobile')
+    <div class="d-flex justify-content-between mb-3">
+        <a href="{{route('dashboard')}}"><i class="fas fa-xmark text-dark" style="font-size: 22px;"></i></a>
 
-        <x-table>
-            <x-slot name="thead">
-                <th scope="col">Usuário</th>
-                <th scope="col">E-mail</th>
-                <th class="text-center" scope="col">Status</th>
-                <th class="text-end" scope="col"></th>
-            </x-slot>
-            <x-slot name="tbody">
-{{--                @foreach($accounts as $user)--}}
-{{--                    <tr>--}}
-{{--                        <td class="text-nowrap">--}}
-{{--                            <div class="d-flex align-items-center">--}}
-{{--                                <div class="avatar avatar-xl">--}}
-{{--                                    <img class="rounded-circle" src="../../assets/img/team/4.jpg" alt=""/>--}}
-{{--                                </div>--}}
-{{--                                <div class="ms-2">{{$user->name}}</div>--}}
-{{--                            </div>--}}
-{{--                        </td>--}}
-{{--                        <td class="text-nowrap">{{$user->email}}</td>--}}
-{{--                        <td>--}}
-{{--                            <span class="badge badge rounded-pill d-block p-2 badge-subtle-{{$user->status ? 'success' : 'danger'}}">--}}
-{{--                                {{$user->status ? 'Ativo' : 'Inativo'}}--}}
-{{--                                <i class="fa-solid fa-xmark"></i>--}}
-{{--                            </span>--}}
-{{--                        </td>--}}
-{{--                        <td class="text-end">--}}
-{{--                            <x-table-button :id="$user->id"></x-table-button>--}}
-{{--                        </td>--}}
-{{--                    </tr>--}}
-{{--                @endforeach--}}
-            </x-slot>
-        </x-table>
-    @endsection
-</x-app-layout>
+            <i class="fa-solid fa-circle-question text-color" style="font-size: 22px;"></i>
+
+
+    </div>
+
+
+    <div class="header">
+        <h1 class="mb-1">Contas Bancárias</h1>
+        <p class="p-0 m-0 mb-3">Para uma melhor projeção, cadastre todas as suas contas bancárias atuais.</p>
+        <div class="balance-box">
+            <span>Saldo (todas as contas)</span>
+            <strong>R$ 423,200.75</strong>
+        </div>
+    </div>
+
+@endsection

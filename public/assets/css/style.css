@@ -1,0 +1,202 @@
+@media (max-width: 480px) {
+    body {
+        margin: 0;
+        font-family: 'Arial', sans-serif;
+        background-color: #007f6b;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+    }
+
+    .app-container {
+        width: 100%;
+        max-width: 400px;
+        height: 100vh;
+        background-color: #f1f1f1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding: 24px;
+    }
+
+    .scroll-content {
+        overflow-y: auto;
+        padding-bottom: 80px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .scroll-content::-webkit-scrollbar {
+        display: none;
+    }
+
+    .header {
+        padding-bottom: 8px;
+    }
+
+    .header h1 {
+        font-weight: 600;
+    }
+
+    h6 {
+        font-size: 18px !important;
+        letter-spacing: 0.5px !important;
+        margin: 10px 0px 15px 0px !important;
+    }
+
+    .header h1 {
+        font-size: 1.4rem;
+        margin-bottom: 16px;
+    }
+
+    .balance-box {
+        background-color: white;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 24px;
+    }
+
+    .balance-box span {
+        color: #555;
+        font-size: 0.9rem;
+        display: block;
+    }
+
+    .balance-box strong {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #000;
+    }
+
+    .icons-carousel {
+        overflow-x: auto;
+        padding: 0 16px 24px;
+        display: flex;
+        gap: 16px;
+        scroll-snap-type: x mandatory;
+    }
+
+    .icon-button {
+        flex: 0 0 auto;
+        scroll-snap-align: start;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: #000;
+        font-size: 0.8rem;
+        min-width: 60px;
+    }
+
+    .text-color {
+        color: #00bfa6;
+    }
+
+    .icon-button i {
+        background-color: #00bfa6;
+        color: #fff;
+        border-radius: 50%;
+        padding: 12px;
+        margin-bottom: 6px;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1rem;
+    }
+
+    .recent-transactions {
+        /*padding: 0 16px 16px;*/
+    }
+
+    .recent-transactions h2 {
+        font-size: 1rem;
+        margin-bottom: 12px;
+    }
+
+    .transaction-card {
+        background-color: white;
+        border-radius: 16px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+
+    .transaction-info {
+        display: flex;
+        align-items: center;
+    }
+
+    .transaction-info .icon {
+        background-color: #00bfa6;
+        color: white;
+        border-radius: 50%;
+        padding: 10px;
+        margin-right: 10px;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 0.9rem;
+    }
+
+    .transaction-info .details {
+        font-size: 0.9rem;
+        line-height: 1.1;
+    }
+
+    .transaction-info .details span {
+        display: block;
+        font-size: 0.75rem;
+        color: #666;
+    }
+
+    .transaction-amount {
+        font-weight: bold;
+        color: #000;
+    }
+
+    .nav-link-atalho {
+        color: #000;
+        text-decoration: none;
+    }
+
+    .bottom-nav {
+        background-color: #00bfa6;
+        display: flex;
+        justify-content: space-around;
+        padding: 14px 0;
+        border-top-left-radius: 24px;
+        border-top-right-radius: 24px;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        max-width: 400px;
+    }
+
+    .bottom-nav i {
+        color: white;
+        font-size: 1.3rem;
+    }
+
+    .icons-carousel::-webkit-scrollbar {
+        display: none;
+    }
+
+    .flatpickr-calendar {
+        border-radius: 16px !important;
+    }
+
+    .flatpickr-day.tem-evento::after {
+        content: '';
+        display: block;
+        width: 6px;
+        height: 6px;
+        margin: 0 auto;
+        margin-top: 2px;
+        background-color: #999;
+        border-radius: 50%;
+    }
+}

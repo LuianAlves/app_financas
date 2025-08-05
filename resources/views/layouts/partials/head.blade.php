@@ -41,4 +41,6 @@
             userLinkRTL.setAttribute('disabled', true);
         }
     </script>
+
+    <link href="{{asset('assets/css/style.css')}}" rel="stylesheet">
 </head>

@@ -5,20 +5,22 @@
         <h1>Tela inicial</h1>
         <div class="balance-box">
             <div class="d-flex justify-content-between">
-                    <span>Saldo</span>
+                <span>Saldo</span>
                 <i class="fa fa-eye"></i>
             </div>
-            <strong>R$ 423,200.75</strong>
+            <strong>{{brlPrice($total)}}</strong>
             <div class="d-flex justify-content-between align-items-center mt-2 mb-1">
                 <small>
-                    <b class="text-muted">A receber <a href="#"><i class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i></a></b>
+                    <b class="text-muted">A receber <a href="#"><i class="fa fa-arrow-right text-color mx-2"
+                                                                   style="font-size: 12px;"></i></a></b>
                     <div class="d-flex align-items-center">
                         <span>R$ 1.412,00 </span>
                         <small class="text-success mx-2"> +17%</small>
                     </div>
                 </small>
                 <small>
-                    <b class="text-muted">A pagar <a href="#"><i class="fa fa-arrow-right text-danger mx-2" style="font-size: 12px;"></i></a></b>
+                    <b class="text-muted">A pagar <a href="#"><i class="fa fa-arrow-right text-danger mx-2"
+                                                                 style="font-size: 12px;"></i></a></b>
                     <div class="d-flex align-items-center">
                         <span>R$ 1.971,36 </span>
                         <small class="text-danger mx-2"> +3%</small>
@@ -26,15 +28,21 @@
                 </small>
             </div>
             <div class="d-flex justify-content-end align-items-center mt-3">
-                <a href="#" class="text-muted fw-bold" style="text-decoration: none; font-size: 13px;">Extrato do mês<i class="fa fa-chevron-right mx-2" style="font-size: 12px;"></i></a>
+                <a href="#" class="text-muted fw-bold" style="text-decoration: none; font-size: 13px;">Extrato do mês<i
+                        class="fa fa-chevron-right mx-2" style="font-size: 12px;"></i></a>
             </div>
         </div>
     </div>
 
     <!-- Carousel horizontal -->
     <div class="icons-carousel">
-        <div class="icon-button"><i class="fas fa-landmark"></i><a href="{{route('accounts.index')}}" class="nav-link-atalho">Contas
-                Bancárias</a></div>
+        <div class="icon-button">
+            <a href="{{route('accounts.index')}}" class="nav-link-atalho">
+                <i class="fas fa-landmark"></i>
+                Contas Bancárias
+            </a>
+        </div>
+
         <div class="icon-button"><i class="fas fa-retweet"></i><span>Transações</span></div>
         <div class="icon-button"><i class="fas fa-credit-card"></i><span>Cartões</span></div>
         <div class="icon-button"><i class="fas fa-chart-line"></i><span>Investimentos</span></div>

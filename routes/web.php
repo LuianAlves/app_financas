@@ -1,27 +1,21 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
-use App\Http\Controllers\Auth\{
-    AuthController,
-};
-
-use App\Http\Controllers\{
-    DashboardController,
-    UserController,
-    AccountController,
+use App\Http\Controllers\{Api\AccountController,
     CardController,
     CardTransactionController,
     CategoryController,
+    DashboardController,
     InvoiceController,
     NotificationController,
     RecurrentController,
     SavingController,
     TransactionController,
-};
+    UserController,};
 
+use App\Http\Controllers\Auth\{AuthController,};
+use Illuminate\Support\Facades\Route;
 
-
+use App\Http\Controllers\Web\AccountController as WebAccountController;
 
 Route::get('/login', [AuthController::class, 'welcome']);
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login');
@@ -32,10 +26,13 @@ Route::any('/logout', [AuthController::class, 'destroy'])->name('logout');
 Route::middleware(['auth', config('jetstream.auth_session')])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
 
+
     // Users
     Route::resource('users', UserController::class)->scoped(['user' => 'uuid']);
 
+    Route::get('/account', [WebAccountController::class, 'indexView'])->name('account-view.index');
     Route::resource('accounts', AccountController::class)->scoped(['account' => 'uuid']);
+
     Route::resource('cards', CardController::class)->scoped(['card' => 'uuid']);
     Route::resource('categories', CategoryController::class)->scoped(['category' => 'uuid']);
     Route::resource('transactions', TransactionController::class)->scoped(['transaction' => 'uuid']);

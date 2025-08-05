@@ -26,6 +26,8 @@
 
 <!-- Flatpickr -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+
 
 <script>
     // Utilitário para formatar datas no padrão yyyy-mm-dd
@@ -77,6 +79,7 @@
 
     // Inicializa o calendário
     flatpickr("#calendar", {
+        locale: 'pt',
         inline: true,
         defaultDate: "today",
         disableMobile: true,

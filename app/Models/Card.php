@@ -10,7 +10,7 @@ class Card extends BaseModel
 {
     protected $fillable = [
         'user_id',
-        'nickname',
+        'name',
         'credit_limit',
         'closing_day',
         'due_day',

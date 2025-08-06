@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Models\Account;
 use App\Models\Card;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -9,17 +10,25 @@ use Illuminate\Support\Facades\Auth;
 
 class CardController extends    Controller
 {
+    public $card;
+
+    public function __construct(Card $card)
+    {
+        $this->card = $card;
+    }
     public function index()
     {
-        return response()->json(
-            Auth::user()->cards()->latest()->get()
-        );
+        $cards = Card::with('account')->where('user_id', Auth::id())->get();
+
+
+
+        return response()->json($cards);
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'nickname' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'credit_limit' => 'required|numeric',
             'closing_day' => 'required|integer|min:1|max:31',
             'due_day' => 'required|integer|min:1|max:31',
@@ -28,7 +37,7 @@ class CardController extends    Controller
 
         $card = Auth::user()->cards()->create($data);
 
-        return response()->json($card, 201);
+        return response()->json($card);
     }
 
     public function show(Card $card)
@@ -42,7 +51,7 @@ class CardController extends    Controller
         $this->authorize('update', $card);
 
         $data = $request->validate([
-            'nickname' => 'sometimes|string|max:255',
+            'name' => 'sometimes|string|max:255',
             'credit_limit' => 'sometimes|numeric',
             'closing_day' => 'sometimes|integer|min:1|max:31',
             'due_day' => 'sometimes|integer|min:1|max:31',

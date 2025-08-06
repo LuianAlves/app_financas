@@ -14,7 +14,7 @@
                     <b class="text-muted">A receber <a href="#"><i class="fa fa-arrow-right text-color mx-2"
                                                                    style="font-size: 12px;"></i></a></b>
                     <div class="d-flex align-items-center">
-                        <span>R$ 1.412,00 </span>
+                        <span>{{brlPrice($account)}}</span>
                         <small class="text-success mx-2"> +17%</small>
                     </div>
                 </small>
@@ -22,7 +22,7 @@
                     <b class="text-muted">A pagar <a href="#"><i class="fa fa-arrow-right text-danger mx-2"
                                                                  style="font-size: 12px;"></i></a></b>
                     <div class="d-flex align-items-center">
-                        <span>R$ 1.971,36 </span>
+                        <span>{{ brlPrice($savings) }}</span>
                         <small class="text-danger mx-2"> +3%</small>
                     </div>
                 </small>
@@ -37,14 +37,18 @@
     <!-- Carousel horizontal -->
     <div class="icons-carousel">
         <div class="icon-button">
-            <a href="{{route('accounts.index')}}" class="nav-link-atalho">
+            <a href="{{route('account-view.index')}}" class="nav-link-atalho">
                 <i class="fas fa-landmark"></i>
-                Contas Bancárias
+                Bancos
             </a>
         </div>
 
         <div class="icon-button"><i class="fas fa-retweet"></i><span>Transações</span></div>
-        <div class="icon-button"><i class="fas fa-credit-card"></i><span>Cartões</span></div>
+
+        <div class="icon-button">
+            <a href="{{route('card-view.index')}}" class="nav-link-atalho">
+            <i class="fas fa-credit-card"></i><span>Cartões</span></a>
+        </div>
         <div class="icon-button"><i class="fas fa-chart-line"></i><span>Investimentos</span></div>
         <div class="icon-button"><i class="fas fa-building"></i><span>Loans</span></div>
         <div class="icon-button"><i class="fas fa-piggy-bank"></i><span>Cofrinhos</span></div>

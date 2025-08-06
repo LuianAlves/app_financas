@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <title>Financial App UI</title>
+
+    <link rel="manifest" href="{{ asset('laravelpwa/manifest.json') }}">
+    <meta name="theme-color" content="#00bfa6">
 
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -136,5 +140,13 @@
 
 @stack('scripts')
 
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker
+            .register('{{ asset('laravelpwa/sw.js') }}')
+            .then(r=>console.log('SW registrado'))
+            .catch(e=>console.error('SW falhou', e));
+    }
+</script>
 </body>
 </html>

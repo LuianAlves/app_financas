@@ -3,16 +3,20 @@
 namespace App\Models;
 
 use App\Models\Auth\User;
+use App\Traits\BelongsToUser;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TransactionCategory extends BaseModel
 {
+    use BelongsToUser;
+
     protected $fillable = [
         'user_id',
         'name',
+        'type',
         'monthly_limit',
-        'color',
+        'color'
     ];
 
     public function user(): BelongsTo

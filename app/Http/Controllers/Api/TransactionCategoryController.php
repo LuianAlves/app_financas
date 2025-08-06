@@ -9,24 +9,43 @@ use Illuminate\Support\Facades\Auth;
 
 class TransactionCategoryController extends Controller
 {
+    public $transactionCategory;
+
+    public function __construct(TransactionCategory $transactionCategory)
+    {
+        $this->transactionCategory = $transactionCategory;
+    }
+
     public function index()
     {
-        return response()->json(
-            Auth::user()->categories()->orderBy('name')->get()
-        );
+        $transactionCategories = $this->transactionCategory->all();
+
+        $transactionCategories->each(function ($transactionCategory) {
+            $transactionCategory->monthly_limit = brlPrice($transactionCategory->monthly_limit);
+            $transactionCategory->type = ucfirst($transactionCategory->type);
+        });
+
+        return response()->json($transactionCategories);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'monthly_limit' => 'nullable|numeric',
-            'color' => 'nullable|string|max:50'
+        $limit = $request->input('has_limit') === '1'
+            ? $request->input('monthly_limit', 0)
+            : 0;
+
+        $transactionCategory = $this->transactionCategory->create([
+            'user_id'      => Auth::id(),
+            'name'         => $request->name,
+            'type'         => $request->type,
+            'monthly_limit'=> $limit,
+            'color'          => $request->color,
         ]);
 
-        $category = Auth::user()->categories()->create($data);
+        $transactionCategory->monthly_limit = brlPrice($transactionCategory->monthly_limit);
+        $transactionCategory->type = ucfirst($transactionCategory->type);
 
-        return response()->json($category, 201);
+        return response()->json($transactionCategory);
     }
 
     public function show(TransactionCategory $category)

@@ -15,13 +15,15 @@ class InputCheck extends Component
     public $name;
     public $checked;
     public $disabled;
+    public $value;
 
-    public function __construct($col, $title, $name, $id, $set = null, bool $checked = true, bool $disabled = true)
+    public function __construct($col, $title, $name, $id, $value = null, $set = null, bool $checked = true, bool $disabled = true)
     {
         $this->col = $col;
         $this->title = $title;
         $this->name = $name;
         $this->id = $id;
+        $this->value = $value;
         $this->set = $set;
         $this->checked = $checked;
         $this->disabled = $disabled;

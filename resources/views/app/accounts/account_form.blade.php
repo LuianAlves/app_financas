@@ -4,7 +4,7 @@
 </div>
 
 <div class="row mt-3">
-    <x-input-check col="12" set="" id="corrente" name="type" title="Conta corrente" checked="1" disabled=""></x-input-check>
-    <x-input-check col="12" set="" id="poupanca" name="type" title="Conta poupança" checked="" disabled=""></x-input-check>
-    <x-input-check col="12" set="" id="investimento" name="type" title="Conta de investimento" checked="" disabled=""></x-input-check>
+    <x-input-check col="12" set="" id="corrente" value="1" name="type" title="Conta corrente" checked="1" disabled=""></x-input-check>
+    <x-input-check col="12" set="" id="poupanca" value="2" name="type" title="Conta poupança" checked="" disabled=""></x-input-check>
+    <x-input-check col="12" set="" id="investimento" value="3" name="type" title="Conta de investimento" checked="" disabled=""></x-input-check>
 </div>

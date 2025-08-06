@@ -24,6 +24,8 @@ use App\Http\Controllers\Web\{
     CardController as WebCardController,
     DashboardController as WebDashboardController,
     NotificationController as WebNotificationController,
+    TransactionCategoryController as WebTransactionCategoryController,
+    TransactionController as WebTransactionController,
     SavingController as WebSavingController,
 };
 
@@ -48,18 +50,20 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     Route::get('/card', [WebCardController::class, 'index'])->name('card-view.index');
     Route::resource('cards', ApiCardController::class)->scoped(['card' => 'uuid']);
 
+    // Transaction Categories
+    Route::get('/transaction-category', [WebTransactionCategoryController::class, 'index'])->name('transactionCategory-view.index');
+    Route::resource('transaction-categories', ApiTransactionCategoryController::class)->scoped(['transactionCategory' => 'uuid']);
+
+    // Transactions
+    Route::get('/transaction', [WebTransactionController::class, 'index'])->name('transaction-view.index');
+
     //Savings
     Route::get('/saving', [WebSavingController::class, 'index'])->name('saving-view.index');
     Route::resource('savings', ApiSavingController::class)->scoped(['saving' => 'uuid']);
 
-
-    Route::resource('transaction-categories', ApiTransactionCategoryController::class)->scoped(['category' => 'uuid']);
-    Route::resource('transactions', ApiTransactionController::class)->scoped(['transaction' => 'uuid']);
     Route::resource('recurrents', ApiRecurrentController::class)->scoped(['recurrent' => 'uuid']);
     Route::resource('invoices', ApiInvoiceController::class)->scoped(['invoice' => 'uuid']);
     Route::resource('card-transactions', ApiCardTransactionController::class)->scoped(['cardTransaction' => 'uuid']);
-
-
 
     Route::get('notifications', [WebNotificationController::class, 'index'])->name('notifications.index');
     Route::patch('notifications/{notification}/read', [WebNotificationController::class, 'markAsRead'])->name('notifications.read');

@@ -51,12 +51,18 @@
             </a>
         </div>
 
-        <div class="icon-button"><i class="fas fa-retweet"></i><span>Transações</span></div>
+        <div class="icon-button">
+            <a href="{{route('transactionCategory-view.index')}}" class="nav-link-atalho">
+                <i class="fas fa-retweet"></i>
+                <span>Transações</span>
+            </a>
+        </div>
 
         <div class="icon-button">
             <a href="{{route('card-view.index')}}" class="nav-link-atalho">
             <i class="fas fa-credit-card"></i><span>Cartões</span></a>
         </div>
+
         <div class="icon-button"><i class="fas fa-chart-line"></i><span>Investimentos</span></div>
         <div class="icon-button"><i class="fas fa-building"></i><span>Loans</span></div>
 

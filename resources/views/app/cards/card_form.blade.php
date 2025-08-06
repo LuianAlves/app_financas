@@ -1,4 +1,4 @@
-<div class="row mb-3">
+<div class="row">
     <x-select col="6" set="" name="account_id" id="account_id" title="Banco vinculado">
         @foreach($accounts as $account)
             <option value="{{$account->id}}">{{$account->bank_name}}</option>
@@ -8,10 +8,10 @@
 
 <div class="row">
     <x-input col="12" set="" type="text" title="Titular" id="cardholder_name" name="cardholder_name" value="{{ old('cardholder_name', $card->cardholder_name ?? '') }}" placeholder="John Doe" disabled=""></x-input>
-    <x-input col="12" set="" type="number" title="Últimos 4 dígitos" id="last_four_digits" name="last_four_digits" value="{{ old('last_four_digits', $card->last_four_digits ?? '') }}" placeholder="0766" max="4" disabled=""></x-input>
+    <x-input col="12" set="" type="number" title="Últimos 4 dígitos" id="last_four_digits" name="last_four_digits" value="{{ old('last_four_digits', $card->last_four_digits ?? '') }}" placeholder="0766" disabled=""></x-input>
 </div>
 
-<div class="row mb-3">
+<div class="row">
     <x-select id="brand" name="brand" col="12" set="" title="Bandeira">
         <option value="1" data-image="https://cdn.simpleicons.org/visa">Visa</option>
         <option value="2" data-image="https://cdn.simpleicons.org/mastercard">Mastercard</option>

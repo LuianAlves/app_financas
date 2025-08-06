@@ -5,6 +5,7 @@
     <output class="text-muted fw-bold" for="{{$rangeInput}}" id="{{$rangeValue}}" aria-hidden="true"></output>
     <input
         type="range"
+        name="{{$name}}"
         class="form-range"
         min="{{$min}}"
         max="{{$max}}"

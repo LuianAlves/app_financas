@@ -267,6 +267,7 @@
         bottom: 3.5%;
         right: 7.5%;
         border-radius: 100%;
+        z-index: 9999;
     }
 
     .custom-modal {

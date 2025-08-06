@@ -1,26 +1,29 @@
-<div class="mb-3">
-    <label class="form-label" for="bank_name">Banco</label>
-    <input class="form-control" name="bank_name" id="bank_name" type="text"
-           placeholder="Bradesco, nubank .."/>
-</div>
-
-<div class="mb-3">
-    <label class="form-label" for="current_balance">Saldo atual</label>
-    <input class="form-control" name="current_balance" id="current_balance" type="number" step="0.00"
-           placeholder="0.00"/>
-</div>
-
-<div class="mb-3">
-    <div class="form-check">
-        <input class="form-check-input" id="corrente" type="radio" name="type" checked="checked"/>
-        <label class="form-check-label mb-0" for="corrente">Corrente</label>
+    <div class="row">
+        <x-input col="12" set="" type="text" title="Banco" id="bank_name" name="bank_name" value="{{ old('bank_name', $account->bank_name ?? '') }}" placeholder="Bradesco, Nubank .." disabled=""></x-input>
+        <x-input col="12" set="" type="number" title="Saldo atual" id="current_balance" name="current_balance" value="{{ old('cpfCnpj', $account->cnpj ?? '') }}" placeholder="R$ 0,00" step="0.01" disabled=""></x-input>
     </div>
-    <div class="form-check">
-        <input class="form-check-input" id="poupanca" type="radio" name="type"/>
-        <label class="form-check-label mb-0" for="poupanca">Poupança</label>
+
+    <div class="col-12 mt-2">
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="type" id="corrente">
+            <label class="form-check-label" for="corrente">
+                Corrente
+            </label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="type" id="poupanca" checked>
+            <label class="form-check-label" for="poupanca">
+                Poupança
+            </label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="type" id="investimento" checked>
+            <label class="form-check-label" for="investimento">
+                Investimento
+            </label>
+        </div>
     </div>
-    <div class="form-check">
-        <input class="form-check-input" id="investimento" type="radio" name="type"/>
-        <label class="form-check-label mb-0" for="investimento">Investimento</label>
+    <div class="text-end mt-3">
+        <button type="submit" class="btn btn-success">Salvar</button>
     </div>
 </div>

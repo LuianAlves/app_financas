@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\{Api\AccountController,
-    CardController,
+    Api\CardController,
     CardTransactionController,
     CategoryController,
     DashboardController,
@@ -16,6 +16,7 @@ use App\Http\Controllers\Auth\{AuthController,};
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Web\AccountController as WebAccountController;
+use App\Http\Controllers\Web\CardController as WebCardController;
 
 Route::get('/login', [AuthController::class, 'welcome']);
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login');
@@ -30,9 +31,10 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     // Users
     Route::resource('users', UserController::class)->scoped(['user' => 'uuid']);
 
-    Route::get('/account', [WebAccountController::class, 'indexView'])->name('account-view.index');
+    Route::get('/account', [WebAccountController::class, 'index'])->name('account-view.index');
     Route::resource('accounts', AccountController::class)->scoped(['account' => 'uuid']);
 
+    Route::get('/card', [WebCardController::class, 'index'])->name('card-view.index');
     Route::resource('cards', CardController::class)->scoped(['card' => 'uuid']);
     Route::resource('categories', CategoryController::class)->scoped(['category' => 'uuid']);
     Route::resource('transactions', TransactionController::class)->scoped(['transaction' => 'uuid']);

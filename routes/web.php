@@ -29,6 +29,7 @@ use App\Http\Controllers\Web\{
     SavingController as WebSavingController,
 };
 
+Route::get('/', [AuthController::class, 'welcome']);
 Route::get('/login', [AuthController::class, 'welcome']);
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login');
 Route::get('/register', [AuthController::class, 'registerView']);

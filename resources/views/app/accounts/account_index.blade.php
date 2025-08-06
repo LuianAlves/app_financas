@@ -1,21 +1,17 @@
 @extends('layouts.templates.mobile')
 @section('content-mobile')
-    <div class="d-flex justify-content-between mb-3">
-        <a href="{{route('dashboard')}}"><i class="fas fa-xmark text-dark" style="font-size: 22px;"></i></a>
-        <i class="fa-solid fa-circle-question text-color" style="font-size: 22px;"></i>
-    </div>
+    <x-card-header
+        prevRoute="{{route('dashboard')}}"
+        iconRight="fa-solid fa-circle-question"
+        title="Contas Bancárias"
+        description="Para uma melhor projeção, cadastre todas as suas contas bancárias atuais.">
+    </x-card-header>
 
-    <div class="header">
-        <h1 class="mb-1">Contas Bancárias</h1>
-        <p class="p-0 m-0">Para uma melhor projeção, cadastre todas as suas contas bancárias atuais.</p>
-    </div>
+    <div id="accountList" class="mt-4"></div>
 
     <button id="openModal" class="create-btn"><i class="fa fa-plus text-white"></i></button>
 
     <x-modal modalId="modalAccount" formId="formAccount" pathForm="app.accounts.account_form"></x-modal>
-
-    <!-- Lista -->
-    <div id="listaContas" class="mt-4"></div>
 
     <script>
         const modal = document.getElementById('modalAccount');
@@ -59,7 +55,7 @@
                 form.reset();
 
                 // Adiciona novo card
-                const container = document.getElementById('listaContas');
+                const container = document.getElementById('accountList');
 
                 const saldoConta = parseFloat(novaConta.current_balance) || 0;
                 const saldoCofrinho = (novaConta.savings && novaConta.savings.length > 0)
@@ -104,7 +100,7 @@
 
                 const contas = await response.json();
 
-                const container = document.getElementById('listaContas');
+                const container = document.getElementById('accountList');
                 container.innerHTML = ''; // limpa antes
 
                 contas.forEach(novaConta => {

@@ -8,14 +8,16 @@ use Illuminate\View\Component;
 
 class Form extends Component
 {
-    public $route;
+    public $id;
+    public $path;
 
     /**
      * Create a new component instance.
      */
-    public function __construct($route)
+    public function __construct($id, $path)
     {
-        $this->route = $route;
+        $this->id = $id;
+        $this->path = $path;
     }
 
     /**

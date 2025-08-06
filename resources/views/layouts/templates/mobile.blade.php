@@ -14,6 +14,8 @@
     <!-- Flatpickr -->
     <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
 
+    @stack('styles')
+
     <link href="{{asset('assets/css/style.css')}}" rel="stylesheet">
 </head>
 <body>
@@ -27,8 +29,6 @@
 <!-- Flatpickr -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
-
-
 <script>
     // Utilitário para formatar datas no padrão yyyy-mm-dd
     function formatDateISO(dateObj) {
@@ -132,6 +132,8 @@
     const hoje = formatDateISO(new Date());
     exibirEventos(hoje);
 </script>
+
+@stack('scripts')
 
 </body>
 </html>

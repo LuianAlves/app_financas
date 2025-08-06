@@ -1,18 +1,18 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
-use App\Models\Recurrent;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 
-class RecurrentController extends Controller
+class TransactionController extends Controller
 {
     public function index()
     {
         return response()->json(
-            Auth::user()->recurrents()->orderBy('next_date')->get()
+            Auth::user()->transactions()->latest('date')->get()
         );
     }
 
@@ -21,47 +21,45 @@ class RecurrentController extends Controller
         $data = $request->validate([
             'description' => 'required|string|max:255',
             'amount' => 'required|numeric',
+            'date' => 'required|date',
             'type' => 'required|in:income,expense',
-            'frequency' => 'required|in:daily,weekly,monthly,yearly',
-            'next_date' => 'required|date',
             'category_id' => 'nullable|uuid|exists:categories,id',
             'account_id' => 'nullable|uuid|exists:accounts,id'
         ]);
 
-        $recurrent = Auth::user()->recurrents()->create($data);
+        $transaction = Auth::user()->transactions()->create($data);
 
-        return response()->json($recurrent, 201);
+        return response()->json($transaction, 201);
     }
 
-    public function show(Recurrent $recurrent)
+    public function show(Transaction $transaction)
     {
-        $this->authorize('view', $recurrent);
-        return response()->json($recurrent);
+        $this->authorize('view', $transaction);
+        return response()->json($transaction);
     }
 
-    public function update(Request $request, Recurrent $recurrent)
+    public function update(Request $request, Transaction $transaction)
     {
-        $this->authorize('update', $recurrent);
+        $this->authorize('update', $transaction);
 
         $data = $request->validate([
             'description' => 'sometimes|string|max:255',
             'amount' => 'sometimes|numeric',
+            'date' => 'sometimes|date',
             'type' => 'sometimes|in:income,expense',
-            'frequency' => 'sometimes|in:daily,weekly,monthly,yearly',
-            'next_date' => 'sometimes|date',
             'category_id' => 'nullable|uuid|exists:categories,id',
             'account_id' => 'nullable|uuid|exists:accounts,id'
         ]);
 
-        $recurrent->update($data);
+        $transaction->update($data);
 
-        return response()->json($recurrent);
+        return response()->json($transaction);
     }
 
-    public function destroy(Recurrent $recurrent)
+    public function destroy(Transaction $transaction)
     {
-        $this->authorize('delete', $recurrent);
-        $recurrent->delete();
+        $this->authorize('delete', $transaction);
+        $transaction->delete();
 
         return response()->json(null, 204);
     }

@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
             $table->foreignUuid('account_id')->nullable()->constrained('accounts')->onDelete('set null');
 
-            $table->string('cardholder name');
+            $table->string('cardholder_name');
             $table->unsignedInteger('last_four_digits')->nullable();
 
             $table->json('brand')->nullable();

@@ -33,4 +33,6 @@ class Account extends BaseModel
     {
         return $this->hasMany(Card::class);
     }
+
+
 }

@@ -21,4 +21,6 @@ class AccountController extends Controller
 
         return view('app.accounts.account_index', compact('accounts'));
     }
+
+
 }

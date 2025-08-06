@@ -1,9 +1,13 @@
-<div class="row justify-content-center">
-    <x-select col="12" set="mx-auto" name="account_id" id="account_id" title="Banco vinculado">
+<div class="row">
+    <x-select col="6" set="" name="account_id" id="account_id" title="Banco vinculado">
         @foreach($accounts as $account)
-            <option value="{{ $account->id }}">{{ $account->bank_name }}</option>
+            <option value="{{$account->id}}">{{$account->bank_name}}</option>
         @endforeach
     </x-select>
+</div>
+
+<div class="row">
+    <x-input col="12" set="" type="color" title="Cor do Cofrinho" id="color_card" name="color_card" value="{{ old('color_card', $saving->color_card ?? '#4CAF50') }}"></x-input>
 </div>
 
 <div class="row">
@@ -12,10 +16,6 @@
 
 <div class="row">
     <x-input col="12" set="" type="number" step="0.01" min="0" title="Valor" id="current_amount" name="current_amount" value="{{ old('current_amount', $saving->current_amount ?? '0.00') }}" placeholder="0,00"></x-input>
-</div>
-
-<div class="row">
-    <x-input col="12" set="" type="color" title="Cor do Cofrinho" id="color_card" name="color_card" value="{{ old('color_card', $saving->color_card ?? '#4CAF50') }}"></x-input>
 </div>
 
 @push('styles')

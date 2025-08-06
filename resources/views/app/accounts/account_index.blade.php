@@ -7,7 +7,7 @@
         description="Para uma melhor projeção, cadastre todas as suas contas bancárias atuais.">
     </x-card-header>
 
-    <div id="AccountList" class="mt-4"></div>
+    <div id="accountList" class="mt-4"></div>
 
     <button id="openModal" class="create-btn"><i class="fa fa-plus text-white"></i></button>
 
@@ -55,7 +55,7 @@
                 form.reset();
 
                 // Adiciona novo card
-                const container = document.getElementById('AccountList');
+                const container = document.getElementById('accountList');
 
                 const saldoConta = parseFloat(novaConta.current_balance) || 0;
                 const saldoCofrinho = (novaConta.savings && novaConta.savings.length > 0)
@@ -100,7 +100,7 @@
 
                 const contas = await response.json();
 
-                const container = document.getElementById('AccountList');
+                const container = document.getElementById('accountList');
                 container.innerHTML = ''; // limpa antes
 
                 contas.forEach(novaConta => {

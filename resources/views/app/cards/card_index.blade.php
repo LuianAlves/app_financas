@@ -1,62 +1,20 @@
 @extends('layouts.templates.mobile')
 @section('content-mobile')
-
-    <div class="d-flex justify-content-between mb-3">
-        <a href="{{ route('dashboard') }}"><i class="fas fa-xmark text-dark" style="font-size: 22px;"></i></a>
-        <i class="fa-solid fa-credit-card text-color" style="font-size: 22px;"></i>
-    </div>
-
-    <div class="header">
-        <h1 class="mb-1">Cartões de Crédito</h1>
-        <p class="p-0 m-0">Gerencie seus cartões e acompanhe seus limites e faturas.</p>
-    </div>
+    <x-card-header
+        prevRoute="{{ route('dashboard') }}"
+        iconRight="fa-solid fa-credit-card"
+        title="Cartões de Crédito"
+        description="Gerencie seus cartões e acompanhe seus limites e faturas."
+    ></x-card-header>
 
     <button id="openModal" class="create-btn"><i class="fa fa-plus text-white"></i></button>
 
-    <!-- Modal com Form -->
-    <div id="modalCartao" class="custom-modal">
-        <div class="custom-modal-content">
-            <span id="closeModal" class="close-btn">&times;</span>
+    <x-modal modalId="modalCard" formId="formCard" pathForm="app.cards.card_form" :data="['accounts' => $accounts]"></x-modal>
 
-            <form id="formCartao">
-                <div class="balance-box">
-                    <span>Adicionar Cartão</span>
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <input type="text" class="form-control" name="name" placeholder="Nome do cartão" required>
-                        </div>
-                        <div class="col-12 mt-2">
-                            <input type="number" step="0.01" class="form-control" name="credit_limit" placeholder="Limite R$" required>
-                        </div>
-                        <div class="col-6 mt-2">
-                            <input type="number" class="form-control" name="closing_day" placeholder="Fechamento (ex: 15)" required>
-                        </div>
-                        <div class="col-6 mt-2">
-                            <input type="number" class="form-control" name="due_day" placeholder="Vencimento (ex: 25)" required>
-                        </div>
-                        <div class="col-12 mt-2">
-                            <select name="account_id" class="form-select">
-                                <option value="">Vincular conta (opcional)</option>
-                                @foreach($accounts ?? [] as $account)
-                                <option value="{{ $account->id }}">{{ $account->bank_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="text-end mt-3">
-                            <button type="submit" class="btn btn-success">Salvar</button>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Lista de cartões -->
-    <div id="listaCartoes" class="mt-4"></div>
+    <div id="cardList" class="mt-4"></div>
 
     <script>
-        const modal = document.getElementById('modalCartao');
+        const modal = document.getElementById('modalCard');
         const openBtn = document.getElementById('openModal');
         const closeBtn = document.getElementById('closeModal');
 
@@ -67,7 +25,7 @@
             return parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
-        document.getElementById('formCartao').addEventListener('submit', async function (e) {
+        document.getElementById('formCard').addEventListener('submit', async function (e) {
             e.preventDefault();
             const form = e.target;
             const data = new FormData(form);
@@ -95,7 +53,7 @@
         });
 
         function adicionarCartao(cartao) {
-            const container = document.getElementById('listaCartoes');
+            const container = document.getElementById('cardList');
             if (!container) return;
 
             const card = `
@@ -131,5 +89,4 @@
 
         window.addEventListener('DOMContentLoaded', carregarCartoes);
     </script>
-
 @endsection

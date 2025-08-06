@@ -1,33 +1,52 @@
 <div class="col-{{$col}} offset-{{$set}}">
-    <label for="{{$rangeInput}}" class="form-label text-muted" style="font-size: 13.5px; font-weight: bold; letter-spacing: 0.75px;">
+    <label for="{{$rangeInput}}" class="form-label text-muted" style="font-size:13.5px;font-weight:bold;letter-spacing:0.75px;">
         {{$title}}
     </label>
-    <output class="text-muted fw-bold" for="{{$rangeInput}}" id="{{$rangeValue}}" aria-hidden="true"></output>
+
+    <div class="d-flex align-items-center mb-2">
+        <input
+            type="number"
+            id="{{$rangeInput}}-manual"
+            class="form-control me-2"
+            style="max-width:120px"
+            min="{{$min}}"
+            max="{{$max}}"
+            step="0.01"
+            value="{{$value}}"
+        >
+        <output id="{{$rangeValue}}" class="text-muted fw-bold"></output>
+    </div>
+
     <input
         type="range"
-        name="{{$name}}"
+        id="{{$rangeInput}}"
         class="form-range"
         min="{{$min}}"
         max="{{$max}}"
-        value="{{$value}}"
         step="0.01"
-        id="{{$rangeInput}}"
+        value="{{$value}}"
+        name="{{$name}}"
     >
 </div>
 
 <script>
     (function(){
-        const rangeInput = document.getElementById('{{$rangeInput}}');
-        const rangeOutput = document.getElementById('{{$rangeValue}}');
-        const brl = new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        });
+        const slider = document.getElementById('{{$rangeInput}}');
+        const manual = document.getElementById('{{$rangeInput}}-manual');
+        const output = document.getElementById('{{$rangeValue}}');
+        const fmt = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 
-        rangeOutput.textContent = brl.format(parseFloat(rangeInput.value));
+        function sync(val){
+            const num = parseFloat(val) || 0;
+            slider.value = num;
+            manual.value = num.toFixed(2);
+            output.textContent = fmt.format(num);
+        }
 
-        rangeInput.addEventListener('input', () => {
-            rangeOutput.textContent = brl.format(parseFloat(rangeInput.value));
-        });
+        // inicializa
+        sync(slider.value);
+
+        slider.addEventListener('input', e=> sync(e.target.value));
+        manual.addEventListener('input', e=> sync(e.target.value));
     })();
 </script>

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
             $table->string('name');
             $table->decimal('current_amount', 12, 2)->default(0);
+            $table->string('color_card')->nullable();
             $table->foreignUuid('account_id')->nullable()->constrained('accounts')->onDelete('set null');
             $table->timestamps();
         });

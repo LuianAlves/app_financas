@@ -26,6 +26,7 @@ use App\Http\Controllers\Web\{
     NotificationController as WebNotificationController,
     TransactionCategoryController as WebTransactionCategoryController,
     TransactionController as WebTransactionController,
+    SavingController as WebSavingController,
 };
 
 Route::get('/login', [AuthController::class, 'welcome']);
@@ -55,12 +56,14 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
 
     // Transactions
     Route::get('/transaction', [WebTransactionController::class, 'index'])->name('transaction-view.index');
-    Route::resource('transactions', ApiTransactionController::class)->scoped(['transaction' => 'uuid']);
+
+    //Savings
+    Route::get('/saving', [WebSavingController::class, 'index'])->name('saving-view.index');
+    Route::resource('savings', ApiSavingController::class)->scoped(['saving' => 'uuid']);
 
     Route::resource('recurrents', ApiRecurrentController::class)->scoped(['recurrent' => 'uuid']);
     Route::resource('invoices', ApiInvoiceController::class)->scoped(['invoice' => 'uuid']);
     Route::resource('card-transactions', ApiCardTransactionController::class)->scoped(['cardTransaction' => 'uuid']);
-    Route::resource('savings', ApiSavingController::class)->scoped(['saving' => 'uuid']);
 
     Route::get('notifications', [WebNotificationController::class, 'index'])->name('notifications.index');
     Route::patch('notifications/{notification}/read', [WebNotificationController::class, 'markAsRead'])->name('notifications.read');

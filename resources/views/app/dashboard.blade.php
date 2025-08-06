@@ -11,8 +11,10 @@
             <strong>{{brlPrice($total)}}</strong>
             <div class="d-flex justify-content-between align-items-center mt-2 mb-1">
                 <small>
-                    <b class="text-muted">A receber <a href="#"><i class="fa fa-arrow-right text-color mx-2"
-                                                                   style="font-size: 12px;"></i></a></b>
+                    <b class="text-muted">
+                        A receber
+                        <a href="#"><i class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i></a>
+                    </b>
                     <div class="d-flex flex-column">
                         <div class="d-flex align-items-center">
                             <span>{{ brlPrice($account) }}</span>

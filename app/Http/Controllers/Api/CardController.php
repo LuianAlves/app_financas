@@ -8,31 +8,45 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 
-class CardController extends    Controller
+class CardController extends Controller
 {
     public $card;
+
     public function __construct(Card $card)
     {
         $this->card = $card;
     }
+
     public function index()
     {
-        $cards = Card::with('account')->where('user_id', Auth::id())->get();
+        $cards = $this->card::with('account')->get();
+
+        $cards->each(function ($card) {
+            $card->cardholder_name = strtoupper($card->cardholder_name);
+            $card->credit_limit = brlPrice($card->credit_limit);
+            $card->account->bank_name = strtoupper($card->account->bank_name);
+        });
 
         return response()->json($cards);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'credit_limit' => 'required|numeric',
-            'closing_day' => 'required|integer|min:1|max:31',
-            'due_day' => 'required|integer|min:1|max:31',
-            'account_id' => 'nullable|uuid|exists:accounts,id',
+        $card = $this->card->with('account')->create([
+            'user_id' => Auth::id(),
+            'account_id' => $request->account_id,
+            'cardholder_name' => $request->cardholder_name,
+            'last_four_digits' => $request->last_four_digits,
+            'brand' => $request->brand,
+            'color_card' => $request->color_card,
+            'credit_limit' => $request->credit_limit,
+            'closing_day' => $request->closing_day,
+            'due_day' => $request->due_day,
         ]);
 
-        $card = Auth::user()->cards()->create($data);
+        $card->cardholder_name = strtoupper($card->cardholder_name);
+        $card->credit_limit = brlPrice($card->credit_limit);
+        $card->account->bank_name = strtoupper($card->account->bank_name);
 
         return response()->json($card);
     }
@@ -40,6 +54,7 @@ class CardController extends    Controller
     public function show(Card $card)
     {
         $this->authorize('view', $card);
+
         return response()->json($card);
     }
 

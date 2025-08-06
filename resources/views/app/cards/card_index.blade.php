@@ -54,9 +54,13 @@
             try {
                 const response = await fetch("{{ route('cards.store') }}", {
                     method: "POST",
-                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
                     body: data
                 });
+
                 if (!response.ok) throw new Error('Erro ao salvar cartão.');
                 const card = await response.json();
 
@@ -113,7 +117,7 @@
 
     @push('styles')
         <style>
-            #cardList {
+            #savingList {
                 display: flex;
                 flex-direction: column;
                 align-items: center;

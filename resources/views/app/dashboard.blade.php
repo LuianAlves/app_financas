@@ -11,17 +11,27 @@
             <strong>{{brlPrice($total)}}</strong>
             <div class="d-flex justify-content-between align-items-center mt-2 mb-1">
                 <small>
+
+                    <b class="text-muted">A receber <a href="{{route('transactionCategory-view.index')}}"><i class="fa fa-arrow-right text-color mx-2"
+                                                                   style="font-size: 12px;"></i></a></b>
+
                     <b class="text-muted">
                         A receber
                         <a href="#"><i class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i></a>
                     </b>
+
                     <div class="d-flex flex-column">
                         <div class="d-flex align-items-center">
-                            <span>{{ brlPrice($account) }}</span>
+                            <span>{{ brlPrice($income) }}</span>
                             <small class="text-success mx-2">+17%</small>
                         </div>
-                        <b class="text-muted">Cofrinhos<a href="{{route('saving-view.index')}}"><i class="fa fa-arrow-right text-color mx-2"
+                        <b class="text-muted">Saldo contas<a href="{{route('account-view.index')}}"><i class="fa fa-arrow-right text-color mx-2"
                                                                        style="font-size: 12px;"></i></a></b>
+                        <div>
+                            <span>{{ brlPrice($accounts) }}</span>
+                        </div>
+                        <b class="text-muted">Cofrinhos<a href="{{route('saving-view.index')}}"><i class="fa fa-arrow-right text-color mx-2"
+                                                                                                   style="font-size: 12px;"></i></a></b>
                         <div>
                             <span>{{ brlPrice($savings) }}</span>
                         </div>
@@ -29,12 +39,18 @@
 
                 </small>
                 <small>
-                    <b class="text-muted">A pagar <a href="#"><i class="fa fa-arrow-right text-danger mx-2"
+                    <b class="text-muted">A pagar <a href="{{route('transactionCategory-view.index')}}"><i class="fa fa-arrow-right text-danger mx-2"
                                                                  style="font-size: 12px;"></i></a></b>
                     <div class="d-flex align-items-center">
-                        <span>{{ brlPrice('0') }}</span>
+                        <span>{{ brlPrice($categorySums['despesa'] ?? 0, 2, ',', '.') }}</span>
                         <small class="text-danger mx-2"> +3%</small>
                     </div>
+                    <b class="text-muted">Balanço <a href="#"><i class="fa fa-arrow-right text-info mx-2"
+                                                                 style="font-size: 12px;"></i></a></b>
+                    <div class="d-flex align-items-center">
+                        <span>{{ brlPrice($balance) }}</span>
+                    </div>
+
                 </small>
             </div>
             <div class="d-flex justify-content-end align-items-center mt-3">

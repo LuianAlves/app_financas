@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Auth;
 class CardController extends    Controller
 {
     public $card;
-
     public function __construct(Card $card)
     {
         $this->card = $card;
@@ -19,8 +18,6 @@ class CardController extends    Controller
     public function index()
     {
         $cards = Card::with('account')->where('user_id', Auth::id())->get();
-
-
 
         return response()->json($cards);
     }

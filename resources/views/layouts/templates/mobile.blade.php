@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -21,21 +21,31 @@
 
     @stack('styles')
 
-    <link href="{{asset('assets/css/style.css')}}" rel="stylesheet">
+    <link href="{{ asset('assets/css/style.css') }}" rel="stylesheet">
 </head>
 <body>
 
 <div class="app-container">
-    <div class="scroll-content">
+    <aside class="sidebar d-none d-sm-block">
+        <div class="logo">Financeiro</div>
+        <nav>
+            <a href="#" class="active"><i class="fa fa-home"></i>Início</a>
+            <a href="#"><i class="fa fa-university"></i>Bancos</a>
+            <a href="#"><i class="fa fa-exchange-alt"></i>Transações</a>
+            <a href="#"><i class="fa fa-credit-card"></i>Cartões</a>
+            <a href="#"><i class="fa fa-chart-line"></i>Investimentos</a>
+        </nav>
+    </aside>
+
+    <main class="content-area scroll-content">
         @yield('content-mobile')
-    </div>
+    </main>
 </div>
 
 <!-- Flatpickr -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
 <script>
-    // Utilitário para formatar datas no padrão yyyy-mm-dd
     function formatDateISO(dateObj) {
         const y = dateObj.getFullYear();
         const m = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -43,7 +53,6 @@
         return `${y}-${m}-${d}`;
     }
 
-    // Dados de lançamentos simulados
     const eventosFake = {
         "2025-08-15": [
             {tipo: 'entrada', descricao: 'Pagamento Cliente A', valor: 1200.00},
@@ -57,19 +66,15 @@
         ]
     };
 
-    // Exibe os lançamentos de um dia
     function exibirEventos(dataSelecionada) {
         const container = document.getElementById('calendar-results');
         container.innerHTML = `<h6>Lançamentos do dia ${dataSelecionada}</h6>`;
-
         const eventos = eventosFake[dataSelecionada] || [];
-
         if (eventos.length === 0) {
-            container.innerHTML += '' +
+            container.innerHTML +=
                 '<div class="transaction-card"><div class="transaction-info"><div class="icon"><i class="fa-solid fa-sack-dollar"></i></div><div class="details">Nenhum lançamento encontrado.</div></div></div>';
             return;
         }
-
         eventos.forEach(ev => {
             const cor = ev.tipo === 'entrada' ? 'text-success' : 'text-danger';
             const sinal = ev.tipo === 'entrada' ? '+' : '-';
@@ -77,65 +82,43 @@
         <div class="d-flex justify-content-between border-bottom py-2">
           <div>${ev.descricao}</div>
           <div class="${cor}">${sinal} R$ ${ev.valor.toFixed(2)}</div>
-        </div>
-      `;
+        </div>`;
         });
     }
 
-    // Inicializa o calendário
     flatpickr("#calendar", {
         locale: 'pt',
         inline: true,
         defaultDate: "today",
         disableMobile: true,
-
         onDayCreate: function (_, __, ___, dayElem) {
             const dateFormatted = formatDateISO(dayElem.dateObj);
             const eventos = eventosFake[dateFormatted];
-
             if (Array.isArray(eventos)) {
-                let hasEntrada = eventos.some(ev => ev.tipo === 'entrada');
-                let hasSaida = eventos.some(ev => ev.tipo === 'saida');
-
-                if (hasEntrada || hasSaida) {
-                    const dotContainer = document.createElement('div');
-                    dotContainer.style.display = 'flex';
-                    dotContainer.style.justifyContent = 'center';
-                    dotContainer.style.gap = '2px';
-                    dotContainer.style.marginTop = '-10px';
-
-                    if (hasEntrada) {
-                        const pontoVerde = document.createElement('span');
-                        pontoVerde.style.width = '6px';
-                        pontoVerde.style.height = '6px';
-                        pontoVerde.style.backgroundColor = 'green';
-                        pontoVerde.style.borderRadius = '50%';
-                        dotContainer.appendChild(pontoVerde);
-                    }
-
-                    if (hasSaida) {
-                        const pontoVermelho = document.createElement('span');
-                        pontoVermelho.style.width = '6px';
-                        pontoVermelho.style.height = '6px';
-                        pontoVermelho.style.backgroundColor = 'red';
-                        pontoVermelho.style.borderRadius = '50%';
-                        dotContainer.appendChild(pontoVermelho);
-                    }
-
-                    dayElem.appendChild(dotContainer);
+                const dotContainer = document.createElement('div');
+                dotContainer.style.display = 'flex';
+                dotContainer.style.justifyContent = 'center';
+                dotContainer.style.gap = '2px';
+                dotContainer.style.marginTop = '-10px';
+                if (eventos.some(ev => ev.tipo === 'entrada')) {
+                    const pv = document.createElement('span');
+                    Object.assign(pv.style, { width:'6px', height:'6px', backgroundColor:'green', borderRadius:'50%' });
+                    dotContainer.appendChild(pv);
                 }
+                if (eventos.some(ev => ev.tipo === 'saida')) {
+                    const pr = document.createElement('span');
+                    Object.assign(pr.style, { width:'6px', height:'6px', backgroundColor:'red', borderRadius:'50%' });
+                    dotContainer.appendChild(pr);
+                }
+                if (dotContainer.childElementCount) dayElem.appendChild(dotContainer);
             }
         },
-
-        onChange: function (selectedDates) {
-            const dataSelecionada = formatDateISO(selectedDates[0]);
-            setTimeout(() => exibirEventos(dataSelecionada), 100);
+        onChange: function (sd) {
+            setTimeout(() => exibirEventos(formatDateISO(sd[0])), 100);
         }
     });
 
-    // Exibe eventos de hoje ao carregar
-    const hoje = formatDateISO(new Date());
-    exibirEventos(hoje);
+    exibirEventos(formatDateISO(new Date()));
 </script>
 
 @stack('scripts')
@@ -144,8 +127,8 @@
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker
             .register('{{ asset('laravelpwa/sw.js') }}')
-            .then(r=>console.log('SW registrado'))
-            .catch(e=>console.error('SW falhou', e));
+            .then(() => console.log('SW registrado'))
+            .catch(e => console.error('SW falhou', e));
     }
 </script>
 </body>

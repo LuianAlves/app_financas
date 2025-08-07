@@ -77,7 +77,12 @@
         </div>
 
         <div class="icon-button"><i class="fas fa-chart-line"></i><span>Investimentos</span></div>
-        <div class="icon-button"><i class="fas fa-building"></i><span>Loans</span></div>
+
+        <div class="icon-button">
+            <a href="{{route('test.push')}}" class="nav-link-atalho">
+                <i class="fas fa-building"></i><span>Loans</span>
+            </a>
+        </div>
 
         <div class="icon-button">
             <a href="{{route('saving-view.index')}}" class="nav-link-atalho">

@@ -12,10 +12,8 @@
 
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-
     <!-- Flatpickr -->
     <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
 
@@ -27,7 +25,6 @@
 <div class="login-container">
     <div class="login-card">
         <h2>Entrar</h2>
-
         <form method="POST" action="{{ route('login') }}">
             @csrf
 
@@ -55,12 +52,16 @@
 </div>
 
 @stack('scripts')
+<!-- remove o registro manual de SW daqui -->
+<!-- carrega o nosso script de push -->
+<script src="{{ asset('js/push-register.js') }}"></script>
 <script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker
-            .register('{{ asset('laravelpwa/sw.js') }}')
-            .catch(e => console.error('SW falhou', e));
-    }
+    // dispara no primeiro clique/toque ou direto se já tiver permissão
+    window.addEventListener('DOMContentLoaded', () => {
+        if (typeof setupPushOnGesture === 'function') {
+            setupPushOnGesture();
+        }
+    });
 </script>
 </body>
 </html>

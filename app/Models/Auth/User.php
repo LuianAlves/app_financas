@@ -12,6 +12,7 @@ use App\Models\Recurrent;
 use App\Models\Saving;
 use App\Models\Transaction;
 use App\Traits\BelongsToUser;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -30,6 +31,7 @@ class User extends Authenticatable
     use HasProfilePhoto;
     use Notifiable;
     use TwoFactorAuthenticatable;
+    use HasPushSubscriptions;
 
     /**
      * The attributes that are mass assignable.

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
 
             $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('account_id')->nullable()->constrained('accounts')->onDelete('set null');
+            $table->foreignUuid('card_id')->nullable()->constrained('cards')->onDelete('set null');
             $table->foreignUuid('transaction_category_id')->references('id')->on('transaction_categories')->onDelete('cascade');
 
             $table->string('title')->nullable();
@@ -23,8 +23,14 @@ return new class extends Migration
             $table->decimal('amount', 12, 2);
             $table->date('date')->nullable();
 
-            $table->tinyInteger('recurrence_type')->default(1)->nullable(); // '1: Único, 2: Mensal, 3: Anual, 4: Personalizado'
+            $table->enum('type', ['pix', 'card', 'money'])->default('pix');
+
+            $table->enum('type_card', ['credit', 'debit'])->default('credit')->nullable();
+
+            $table->enum('recurrence_type', ['unique', 'monthly', 'yearly', 'custom'])->default('unique')->nullable();
             $table->integer('recurrence_custom')->nullable(); // 'Número de repetições se for recorrência personalizada'
+
+            $table->unsignedTinyInteger('installments')->nullable()->default(1);
 
             $table->timestamps();
         });

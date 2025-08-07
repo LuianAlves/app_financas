@@ -1,26 +1,10 @@
-<div class="mb-3">
-    <label class="form-label" for="bank_name">Banco</label>
-    <input class="form-control" name="bank_name" id="bank_name" type="text"
-           placeholder="Bradesco, nubank .."/>
+<div class="row">
+    <x-input col="12" set="" type="text" title="Banco" id="bank_name" name="bank_name" value="{{ old('bank_name', $account->bank_name ?? '') }}" placeholder="Bradesco, Nubank .." disabled=""></x-input>
+    <x-input col="12" set="" type="number" title="Saldo atual" id="current_balance" name="current_balance" value="{{ old('current_balance', $account->current_balance ?? '') }}" placeholder="R$ 0,00" step="0.01" disabled=""></x-input>
 </div>
 
-<div class="mb-3">
-    <label class="form-label" for="current_balance">Saldo atual</label>
-    <input class="form-control" name="current_balance" id="current_balance" type="number" step="0.00"
-           placeholder="0.00"/>
-</div>
-
-<div class="mb-3">
-    <div class="form-check">
-        <input class="form-check-input" id="corrente" type="radio" name="type" checked="checked"/>
-        <label class="form-check-label mb-0" for="corrente">Corrente</label>
-    </div>
-    <div class="form-check">
-        <input class="form-check-input" id="poupanca" type="radio" name="type"/>
-        <label class="form-check-label mb-0" for="poupanca">Poupança</label>
-    </div>
-    <div class="form-check">
-        <input class="form-check-input" id="investimento" type="radio" name="type"/>
-        <label class="form-check-label mb-0" for="investimento">Investimento</label>
-    </div>
+<div class="row mt-3">
+    <x-input-check col="12" set="" id="corrente" value="1" name="type" title="Conta corrente" checked="1" disabled=""></x-input-check>
+    <x-input-check col="12" set="" id="poupanca" value="2" name="type" title="Conta poupança" checked="" disabled=""></x-input-check>
+    <x-input-check col="12" set="" id="investimento" value="3" name="type" title="Conta de investimento" checked="" disabled=""></x-input-check>
 </div>

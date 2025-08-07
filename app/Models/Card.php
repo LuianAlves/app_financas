@@ -2,19 +2,27 @@
 
 namespace App\Models;
 
-use App\Models\Auth\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+use App\Models\Auth\User;
+
+use App\Traits\BelongsToUser;
+
 class Card extends BaseModel
 {
+    use BelongsToUser;
+
     protected $fillable = [
         'user_id',
-        'nickname',
+        'account_id',
+        'cardholder_name',
+        'last_four_digits',
+        'brand',
+        'color_card',
         'credit_limit',
         'closing_day',
         'due_day',
-        'account_id',
     ];
 
     public function user(): BelongsTo

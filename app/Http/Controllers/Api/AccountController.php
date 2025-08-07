@@ -23,7 +23,6 @@ class AccountController extends Controller
 
         $accounts->each(function ($account) {
 
-
             if (isset($account->savings[0]) && isset($account->savings[0]->current_amount)) {
                 $account->total = $account->savings[0]->current_amount + $account->current_balance;
 
@@ -44,19 +43,8 @@ class AccountController extends Controller
         return response()->json($accounts);
     }
 
-    public function create()
-    {
-        return view('app.accounts.account_create');
-    }
-
     public function store(Request $request)
     {
-//        $request->validate([
-//            'bank_name' => 'required|string|max:255',
-//            'current_balance' => 'required|numeric',
-//            'type' => 'required|string|in:checking,savings,other'
-//        ]);
-
         $account = $this->account->create([
             'user_id' => Auth::id(),
             'bank_name' => $request->bank_name,

@@ -1,7 +1,27 @@
+/* =================================================
+   Complete CSS File – Copy & Paste
+   ================================================= */
+
+/* ========== EXISTING VARIABLES & UTILITIES ========== */
 :root {
     --color-text: #00bfa6 !important;
 }
 
+.bg-color {
+    background-color: var(--color-text);
+    background: var(--color-text);
+    color: #fff;
+}
+
+.text-color {
+    color: var(--color-text);
+}
+
+.border-color {
+    color: var(--color-text);
+}
+
+/* ========== EXISTING MOBILE & LAYOUT STYLES ========== */
 @media (max-width: 480px) {
     body {
         margin: 0;
@@ -28,7 +48,6 @@
         padding-bottom: 80px;
         -webkit-overflow-scrolling: touch;
     }
-
     .scroll-content::-webkit-scrollbar {
         display: none;
     }
@@ -36,20 +55,16 @@
     .header {
         padding-bottom: 8px;
     }
-
     .header h1 {
         font-weight: 600;
+        font-size: 1.4rem;
+        margin-bottom: 16px;
     }
 
     h6 {
         font-size: 18px !important;
         letter-spacing: 0.5px !important;
-        margin: 10px 0px 15px 0px !important;
-    }
-
-    .header h1 {
-        font-size: 1.4rem;
-        margin-bottom: 16px;
+        margin: 10px 0 15px !important;
     }
 
     .balance-box {
@@ -58,13 +73,11 @@
         padding: 16px;
         margin-bottom: 24px;
     }
-
     .balance-box span {
         color: #555;
         font-size: 0.9rem;
         display: block;
     }
-
     .balance-box strong {
         font-size: 2rem;
         font-weight: bold;
@@ -78,6 +91,9 @@
         gap: 16px;
         scroll-snap-type: x mandatory;
     }
+    .icons-carousel::-webkit-scrollbar {
+        display: none;
+    }
 
     .icon-button {
         flex: 0 0 auto;
@@ -90,11 +106,6 @@
         font-size: 0.8rem;
         min-width: 60px;
     }
-
-    .text-color {
-        color: #00bfa6;
-    }
-
     .icon-button i {
         background-color: #00bfa6;
         color: #fff;
@@ -109,15 +120,10 @@
         font-size: 1rem;
     }
 
-    .recent-transactions {
-        /*padding: 0 16px 16px;*/
-    }
-
     .recent-transactions h2 {
         font-size: 1rem;
         margin-bottom: 12px;
     }
-
     .transaction-card {
         background-color: white;
         border-radius: 16px;
@@ -127,12 +133,10 @@
         justify-content: space-between;
         margin-bottom: 12px;
     }
-
     .transaction-info {
         display: flex;
         align-items: center;
     }
-
     .transaction-info .icon {
         background-color: #00bfa6;
         color: white;
@@ -146,18 +150,15 @@
         align-items: center;
         font-size: 0.9rem;
     }
-
     .transaction-info .details {
         font-size: 0.9rem;
         line-height: 1.1;
     }
-
     .transaction-info .details span {
         display: block;
         font-size: 0.75rem;
         color: #666;
     }
-
     .transaction-amount {
         font-weight: bold;
         color: #000;
@@ -186,20 +187,14 @@
         width: 100%;
         max-width: 400px;
     }
-
     .bottom-nav i {
         color: white;
         font-size: 1.3rem;
     }
 
-    .icons-carousel::-webkit-scrollbar {
-        display: none;
-    }
-
     .flatpickr-calendar {
         border-radius: 16px !important;
     }
-
     .flatpickr-day.tem-evento::after {
         content: '';
         display: block;
@@ -210,43 +205,54 @@
         background-color: #999;
         border-radius: 50%;
     }
-
     .flatpickr-current-month {
         display: flex !important;
         align-items: center !important;
         justify-content: space-around !important;
     }
-
-    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange, .flatpickr-day.selected.inRange, .flatpickr-day.startRange.inRange, .flatpickr-day.endRange.inRange, .flatpickr-day.selected:focus, .flatpickr-day.startRange:focus, .flatpickr-day.endRange:focus, .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover, .flatpickr-day.selected.prevMonthDay, .flatpickr-day.startRange.prevMonthDay, .flatpickr-day.endRange.prevMonthDay, .flatpickr-day.selected.nextMonthDay, .flatpickr-day.startRange.nextMonthDay, .flatpickr-day.endRange.nextMonthDay {
+    .flatpickr-day.selected,
+    .flatpickr-day.startRange,
+    .flatpickr-day.endRange,
+    .flatpickr-day.selected.inRange,
+    .flatpickr-day.startRange.inRange,
+    .flatpickr-day.endRange.inRange,
+    .flatpickr-day.selected:focus,
+    .flatpickr-day.startRange:focus,
+    .flatpickr-day.endRange:focus,
+    .flatpickr-day.selected:hover,
+    .flatpickr-day.startRange:hover,
+    .flatpickr-day.endRange:hover,
+    .flatpickr-day.selected.prevMonthDay,
+    .flatpickr-day.startRange.prevMonthDay,
+    .flatpickr-day.endRange.prevMonthDay,
+    .flatpickr-day.selected.nextMonthDay,
+    .flatpickr-day.startRange.nextMonthDay,
+    .flatpickr-day.endRange.nextMonthDay {
         background: #00bfa6;
-        -webkit-box-shadow: none;
         box-shadow: none;
         color: #fff;
         border-color: #00bfa6;
     }
-
-    .flatpickr-current-month .flatpickr-monthDropdown-months, .flatpickr-current-month input.cur-year {
+    .flatpickr-current-month .flatpickr-monthDropdown-months,
+    .flatpickr-current-month input.cur-year {
         font-size: 14px;
     }
-
-    .flatpickr-next-month,    .flatpickr-prev-month {
+    .flatpickr-next-month,
+    .flatpickr-prev-month {
         fill: #00bfa6 !important;
     }
 
     input::placeholder {
         color: #b4b4b4 !important;
     }
-
     .form-check-input {
         height: .75em !important;
         width: .75em !important;
     }
-
     .form-check-label {
         font-size: 13.5px !important;
         color: #949494 !important;
     }
-
     .form-check-input:checked {
         background-color: var(--color-text) !important;
         border-color: var(--color-text) !important;
@@ -261,6 +267,7 @@
         bottom: 3.5%;
         right: 7.5%;
         border-radius: 100%;
+        z-index: 9999;
     }
 
     .custom-modal {
@@ -268,7 +275,7 @@
         bottom: 0;
         left: 0;
         right: 0;
-        height: 50vh;
+        height: auto;
         background: #fff;
         border-top-left-radius: 20px;
         border-top-right-radius: 20px;
@@ -296,5 +303,147 @@
         font-size: 24px;
         cursor: pointer;
     }
+}
 
+/* ========== NEW GLOBAL VARIABLES & OVERRIDES ========== */
+:root {
+    --primary:    #00bfa6;
+    --bg-input:   #f0f2f5;
+    --bg-card:    #ffffff;
+    --text-dark:  #333333;
+    --radius:     8px;
+    --spacing:    16px;
+    --font-base:  'Inter', sans-serif;
+}
+
+/* Global modal & form styling */
+.custom-modal {
+    transform: translateY(100%);
+    transition: transform 0.3s ease-in-out;
+}
+.custom-modal.show {
+    transform: translateY(0);
+}
+
+.custom-modal-content {
+    padding: var(--spacing);
+    font-family: var(--font-base);
+    color: var(--text-dark);
+    max-height: 60vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.close-btn {
+    top: 12px;
+    right: 16px;
+    font-size: 1.5rem;
+}
+
+/* form-group geral */
+.custom-modal-content .form-group {
+    margin-bottom: var(--spacing);
+}
+.custom-modal-content label {
+    margin-bottom: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+/* inputs padrão */
+.custom-modal-content .form-control,
+.custom-modal-content .form-control-sm {
+    background: var(--bg-input);
+    border: none;
+    border-radius: var(--radius);
+    height: 44px;
+    padding: 0 1rem;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    box-shadow: none;
+}
+.custom-modal-content .form-control:focus,
+.custom-modal-content .form-control-sm:focus {
+    box-shadow: 0 0 0 2px var(--primary);
+}
+
+/* select2 override */
+.custom-modal-content .select2-container--default .select2-selection--single {
+    background: var(--bg-input);
+    border: none;
+    border-radius: var(--radius);
+    height: 44px;
+    padding: 0 0.75rem;
+}
+.custom-modal-content .select2-container--default .select2-selection--single:focus {
+    box-shadow: 0 0 0 2px var(--primary);
+}
+
+/* input[type=color] */
+.custom-modal-content input[type="color"] {
+    padding: 0;
+    height: 44px;
+    width: 44px;
+    border: none;
+    border-radius: var(--radius);
+}
+
+/* generic select override */
+.custom-modal-content select.form-control {
+    background: var(--bg-input);
+    border: none;
+    border-radius: var(--radius);
+    height: 44px;
+    padding: 0 1rem;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='8'><path fill='%23333' d='M7 8L0 0h14z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 0.75rem;
+}
+.custom-modal-content select.form-control:focus {
+    box-shadow: 0 0 0 2px var(--primary);
+    outline: none;
+}
+.custom-modal-content option {
+    background: var(--bg-card);
+    color: var(--text-dark);
+}
+
+/* range */
+.custom-modal-content output {
+    display: block;
+    text-align: right;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+.custom-modal-content .form-range {
+    width: 100%;
+    height: 4px;
+    accent-color: var(--primary);
+}
+
+/* botão salvar */
+.custom-modal-content button[type="submit"],
+.custom-modal-content .btn-save {
+    width: 100%;
+    padding: 0.75rem;
+    margin-top: var(--spacing);
+    background: var(--primary);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.custom-modal-content button[type="submit"]:hover,
+.custom-modal-content .btn-save:hover {
+    background: #00a38c;
 }

@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <title>Financial App UI</title>
+
+    <link rel="manifest" href="{{ asset('laravelpwa/manifest.json') }}">
+    <meta name="theme-color" content="#00bfa6">
 
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -13,6 +18,8 @@
 
     <!-- Flatpickr -->
     <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+
+    @stack('styles')
 
     <link href="{{asset('assets/css/style.css')}}" rel="stylesheet">
 </head>
@@ -27,8 +34,6 @@
 <!-- Flatpickr -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
-
-
 <script>
     // Utilitário para formatar datas no padrão yyyy-mm-dd
     function formatDateISO(dateObj) {
@@ -133,5 +138,15 @@
     exibirEventos(hoje);
 </script>
 
+@stack('scripts')
+
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker
+            .register('{{ asset('laravelpwa/sw.js') }}')
+            .then(r=>console.log('SW registrado'))
+            .catch(e=>console.error('SW falhou', e));
+    }
+</script>
 </body>
 </html>

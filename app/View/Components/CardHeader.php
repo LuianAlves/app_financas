@@ -8,15 +8,17 @@ use Illuminate\View\Component;
 
 class CardHeader extends Component
 {
+    public $prevRoute;
     public $title;
-    public $action;
-    public $count;
+    public $iconRight;
+    public $description;
 
-    public function __construct($title, $action = null, $count = null)
+    public function __construct($prevRoute, $title, $iconRight = null, $description = null)
     {
+        $this->prevRoute = $prevRoute;
         $this->title = $title;
-        $this->action = $action;
-        $this->count = $count;
+        $this->iconRight = $iconRight;
+        $this->description = $description;
     }
 
     /**

@@ -13,13 +13,19 @@ return new class extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->uuid('id')->primary();
+
             $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
-            $table->string('description');
-            $table->decimal('amount', 12, 2);
-            $table->date('date');
-            $table->enum('type', ['income', 'expense']);
-            $table->foreignUuid('categoria_id')->references('id')->on('transaction_categories')->onDelete('cascade');
             $table->foreignUuid('account_id')->nullable()->constrained('accounts')->onDelete('set null');
+            $table->foreignUuid('transaction_category_id')->references('id')->on('transaction_categories')->onDelete('cascade');
+
+            $table->string('title')->nullable();
+            $table->string('description')->nullable();
+            $table->decimal('amount', 12, 2);
+            $table->date('date')->nullable();
+
+            $table->tinyInteger('recurrence_type')->default(1)->nullable(); // '1: Único, 2: Mensal, 3: Anual, 4: Personalizado'
+            $table->integer('recurrence_custom')->nullable(); // 'Número de repetições se for recorrência personalizada'
+
             $table->timestamps();
         });
     }

@@ -5,21 +5,40 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Notifications\PushNotification;
+use Illuminate\Support\Facades\Log;
 
 class PushController extends Controller
 {
     public function subscribe(Request $request)
     {
-        $user = auth()->user();
+        // validação mínima
+        $data = $request->validate([
+            'endpoint'      => 'required|url',
+            'keys.p256dh'   => 'required|string',
+            'keys.auth'     => 'required|string',
+        ]);
 
-        $user->updatePushSubscription(
-            $request->input('endpoint'),
-            $request->input('keys.p256dh'),
-            $request->input('keys.auth'),
-            $request->input('options', [])
-        );
+        $user = $request->user();
 
-        return response()->json(['success' => true]);
+        try {
+            // chama o trait HasPushSubscriptions
+            $user->updatePushSubscription(
+                $data['endpoint'],
+                $data['keys']['p256dh'],
+                $data['keys']['auth']
+            // não passe quarto parâmetro: content_encoding usará 'aesgcm' por padrão
+            );
+
+            return response()->json(['success' => true]);
+
+        } catch (\Throwable $e) {
+            // para debugar, registra no log
+            Log::error('Erro em PushController@subscribe: '.$e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function showForm()

@@ -15,7 +15,8 @@ return new class extends Migration
     {
         Schema::connection(config('webpush.database_connection'))->create(config('webpush.table_name'), function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->morphs('subscribable');
+            $table->string('subscribable_type');
+            $table->uuid('subscribable_id');
             $table->string('endpoint', 500)->unique();
             $table->string('public_key')->nullable();
             $table->string('auth_token')->nullable();

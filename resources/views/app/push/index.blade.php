@@ -1,23 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Enviar Notificação Push</title>
+</head>
+<body>
+<div style="max-width:400px;margin:1rem auto">
+    @if(session('success'))
+        <p>Notificação enviada com sucesso!</p>
+    @endif
 
-    <div class="container">
-        <h4>Enviar Notificação Push</h4>
+    <h4>Enviar Notificação Push</h4>
+    <form method="POST" action="{{ url('/push/teste') }}">
+        @csrf
+        <div>
+            <label>Título</label><br>
+            <input type="text" name="title" placeholder="Título da notificação">
+        </div>
+        <div style="margin-top:1rem">
+            <label>Mensagem</label><br>
+            <textarea name="body" placeholder="Mensagem..."></textarea>
+        </div>
+        <button style="margin-top:1rem">Enviar</button>
+    </form>
+</div>
 
-        @if(session('success'))
-            <div class="alert alert-success">{{ session('success') }}</div>
-        @endif
-
-        <form method="POST" action="{{ url('/push/teste') }}">
-            @csrf
-            <div class="mb-3">
-                <label class="form-label">Título</label>
-                <input type="text" name="title" class="form-control" placeholder="Título da notificação">
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Mensagem</label>
-                <textarea name="body" class="form-control" placeholder="Mensagem..."></textarea>
-            </div>
-            <button class="btn btn-primary">Enviar</button>
-        </form>
-    </div>
-
-    <script src="{{ asset('laravelpwa/push-register.js') }}"></script>
+<script src="{{ asset('js/push-register.js') }}"></script>
+</body>
+</html>

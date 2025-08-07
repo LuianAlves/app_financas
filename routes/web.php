@@ -73,9 +73,8 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
 
 
     // Push Notifications
-    Route::get('/vapid-public-key', function () {
-        return env('VAPID_PUBLIC_KEY');
-    });
+    Route::get('/vapid-public-key', fn() => env('VAPID_PUBLIC_KEY'));
+
 
     Route::post('/push/subscribe', [PushController::class, 'subscribe']);
     Route::get('/push/teste', [PushController::class, 'showForm']);

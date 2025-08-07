@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\CardTransaction;
+use App\Models\InvoiceItem;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 
-class CardTransactionController extends Controller
+class InvoiceItemController extends Controller
 {
     public function index()
     {
         return response()->json(
-            CardTransaction::whereIn('card_id', Auth::user()->cards()->pluck('id'))
+            InvoiceItem::whereIn('card_id', Auth::user()->cards()->pluck('id'))
                 ->latest('date')
                 ->get()
         );
@@ -31,20 +31,20 @@ class CardTransactionController extends Controller
             'category_id' => 'nullable|uuid|exists:categories,id'
         ]);
 
-        $transaction = CardTransaction::create($data);
+        $transaction = InvoiceItem::create($data);
 
         return response()->json($transaction, 201);
     }
 
-    public function show(CardTransaction $cardTransaction)
+    public function show(InvoiceItem $invoiceItem)
     {
-        $this->authorize('view', $cardTransaction);
-        return response()->json($cardTransaction);
+        $this->authorize('view', $invoiceItem);
+        return response()->json($invoiceItem);
     }
 
-    public function update(Request $request, CardTransaction $cardTransaction)
+    public function update(Request $request, InvoiceItem $invoiceItem)
     {
-        $this->authorize('update', $cardTransaction);
+        $this->authorize('update', $invoiceItem);
 
         $data = $request->validate([
             'description' => 'sometimes|string|max:255',
@@ -55,15 +55,15 @@ class CardTransactionController extends Controller
             'category_id' => 'nullable|uuid|exists:categories,id'
         ]);
 
-        $cardTransaction->update($data);
+        $invoiceItem->update($data);
 
-        return response()->json($cardTransaction);
+        return response()->json($invoiceItem);
     }
 
-    public function destroy(CardTransaction $cardTransaction)
+    public function destroy(InvoiceItem $invoiceItem)
     {
-        $this->authorize('delete', $cardTransaction);
-        $cardTransaction->delete();
+        $this->authorize('delete', $invoiceItem);
+        $invoiceItem->delete();
 
         return response()->json(null, 204);
     }

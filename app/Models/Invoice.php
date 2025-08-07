@@ -22,6 +22,6 @@ class Invoice extends BaseModel
 
     public function transactions(): HasMany
     {
-        return $this->hasMany(CardTransaction::class);
+        return $this->hasMany(InvoiceItem::class);
     }
 }

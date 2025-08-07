@@ -5,7 +5,7 @@ namespace App\Models\Auth;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Account;
 use App\Models\Card;
-use App\Models\CardTransaction;
+use App\Models\InvoiceItem;
 use App\Models\Invoice;
 use App\Models\Notification;
 use App\Models\Recurrent;
@@ -92,7 +92,7 @@ class User extends Authenticatable
     public function transactions() { return $this->hasMany(Transaction::class); }
     public function recurrents() { return $this->hasMany(Recurrent::class); }
     public function invoices() { return $this->hasMany(Invoice::class); }
-    public function cardTransactions() { return $this->hasMany(CardTransaction::class); }
+    public function cardTransactions() { return $this->hasMany(InvoiceItem::class); }
     public function savings() { return $this->hasMany(Saving::class); }
     public function notifications() { return $this->hasMany(Notification::class); }
 }

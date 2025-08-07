@@ -77,6 +77,6 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
 
 
     Route::post('/push/subscribe', [PushController::class, 'subscribe']);
-    Route::get('/push/teste', [PushController::class, 'showForm']);
+    Route::get('/push/teste', [PushController::class, 'showForm'])->name('test.push');
     Route::post('/push/teste', [PushController::class, 'send']);
 });

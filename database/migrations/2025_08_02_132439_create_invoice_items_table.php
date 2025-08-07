@@ -11,16 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('card_transactions', function (Blueprint $table) {
+        Schema::create('invoice_items', function (Blueprint $table) {
             $table->uuid('id')->primary();
+
             $table->foreignUuid('invoice_id')->constrained()->onDelete('cascade');
+
             $table->foreignUuid('card_id')->constrained()->onDelete('cascade');
+
+            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
+
             $table->string('description');
+
             $table->decimal('amount', 12, 2);
+
             $table->date('date');
+
             $table->unsignedTinyInteger('installments')->default(1);
             $table->unsignedTinyInteger('current_installment')->default(1);
-            $table->foreignUuid('categoria_id')->references('id')->on('transaction_categories')->onDelete('cascade');
+
+            $table->foreignUuid('transaction_category_id')->references('id')->on('transaction_categories')->onDelete('cascade');
+
             $table->timestamps();
         });
     }

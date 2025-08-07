@@ -3,7 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Auth\User;
-use App\Models\CardTransaction;
+use App\Models\InvoiceItem;
 
 class CardTransactionPolicy
 {
@@ -18,7 +18,7 @@ class CardTransactionPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, CardTransaction $cardTransaction): bool
+    public function view(User $user, InvoiceItem $cardTransaction): bool
     {
         return false;
     }
@@ -34,7 +34,7 @@ class CardTransactionPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, CardTransaction $cardTransaction): bool
+    public function update(User $user, InvoiceItem $cardTransaction): bool
     {
         return false;
     }
@@ -42,7 +42,7 @@ class CardTransactionPolicy
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, CardTransaction $cardTransaction): bool
+    public function delete(User $user, InvoiceItem $cardTransaction): bool
     {
         return false;
     }
@@ -50,7 +50,7 @@ class CardTransactionPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, CardTransaction $cardTransaction): bool
+    public function restore(User $user, InvoiceItem $cardTransaction): bool
     {
         return false;
     }
@@ -58,7 +58,7 @@ class CardTransactionPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, CardTransaction $cardTransaction): bool
+    public function forceDelete(User $user, InvoiceItem $cardTransaction): bool
     {
         return false;
     }

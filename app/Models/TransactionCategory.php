@@ -36,6 +36,6 @@ class TransactionCategory extends BaseModel
 
     public function cardTransactions(): HasMany
     {
-        return $this->hasMany(CardTransaction::class);
+        return $this->hasMany(InvoiceItem::class);
     }
 }

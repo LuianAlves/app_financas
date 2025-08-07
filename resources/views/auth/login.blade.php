@@ -56,7 +56,6 @@
 <!-- carrega o nosso script de push -->
 <script src="{{ asset('js/push-register.js') }}"></script>
 <script>
-    // dispara no primeiro clique/toque ou direto se já tiver permissão
     window.addEventListener('DOMContentLoaded', () => {
         if (typeof setupPushOnGesture === 'function') {
             setupPushOnGesture();

@@ -9,25 +9,45 @@ use Illuminate\Support\Facades\Auth;
 
 class TransactionController extends Controller
 {
+
+    public function __construct(Transaction $transaction)
+    {
+        $this->transaction = $transaction;
+    }
     public function index()
     {
-        return response()->json(
-            Auth::user()->transactions()->latest('date')->get()
-        );
+        $transactions = Auth::user()->transactions()
+            ->with(['category', 'card'])
+            ->latest('date')
+            ->get();
+
+        $transactions->each(function ($t) {
+            $t->amount = brlPrice($t->amount); // helper de formatação
+        });
+
+        return response()->json($transactions);
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'description' => 'required|string|max:255',
+            'title' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:1000',
             'amount' => 'required|numeric',
             'date' => 'required|date',
-            'type' => 'required|in:income,expense',
-            'category_id' => 'nullable|uuid|exists:categories,id',
-            'account_id' => 'nullable|uuid|exists:accounts,id'
+            'type' => 'required|in:pix,card,money',
+            'type_card' => 'nullable|in:credit,debit',
+            'transaction_category_id' => 'required|uuid|exists:transaction_categories,id',
+            'card_id' => 'nullable|uuid|exists:cards,id',
+            'recurrence_type' => 'nullable|in:unique,monthly,yearly,custom',
+            'recurrence_custom' => 'nullable|integer|min:1',
+            'installments' => 'nullable|integer|min:1',
         ]);
 
-        $transaction = Auth::user()->transactions()->create($data);
+        $data['user_id'] = Auth::id();
+
+        $transaction = Transaction::create($data);
+        $transaction->load('category', 'card');
 
         return response()->json($transaction, 201);
     }
@@ -43,12 +63,17 @@ class TransactionController extends Controller
         $this->authorize('update', $transaction);
 
         $data = $request->validate([
-            'description' => 'sometimes|string|max:255',
+            'title' => 'sometimes|string|max:255',
+            'description' => 'sometimes|string|max:1000',
             'amount' => 'sometimes|numeric',
             'date' => 'sometimes|date',
-            'type' => 'sometimes|in:income,expense',
-            'category_id' => 'nullable|uuid|exists:categories,id',
-            'account_id' => 'nullable|uuid|exists:accounts,id'
+            'type' => 'sometimes|in:pix,card,money',
+            'type_card' => 'nullable|in:credit,debit',
+            'transaction_category_id' => 'sometimes|uuid|exists:transaction_categories,id',
+            'card_id' => 'nullable|uuid|exists:cards,id',
+            'recurrence_type' => 'nullable|in:unique,monthly,yearly,custom',
+            'recurrence_custom' => 'nullable|integer|min:1',
+            'installments' => 'nullable|integer|min:1',
         ]);
 
         $transaction->update($data);

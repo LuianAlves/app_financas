@@ -31,4 +31,9 @@ class Transaction extends BaseModel
     {
         return $this->belongsTo(Account::class);
     }
+
+    public function card(): BelongsTo
+    {
+        return $this->belongsTo(Card::class);
+    }
 }

@@ -58,6 +58,7 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
 
     // Transactions
     Route::get('/transaction', [WebTransactionController::class, 'index'])->name('transaction-view.index');
+    Route::resource('transactions', ApiTransactionController::class)->scoped(['transaction' => 'uuid']);
 
     //Savings
     Route::get('/saving', [WebSavingController::class, 'index'])->name('saving-view.index');

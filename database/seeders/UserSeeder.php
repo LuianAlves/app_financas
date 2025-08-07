@@ -20,7 +20,7 @@ class UserSeeder extends Seeder
             ]
         );
 
-        $user->syncRoles(['admin']);
+
 
         $user = User::firstOrCreate(
             ['email' => 'luian@teste.com'],
@@ -32,7 +32,7 @@ class UserSeeder extends Seeder
             ]
         );
 
-        $user->syncRoles(['admin']);
+
 
         $user = User::firstOrCreate(
             ['email' => 'douglas@teste.com'],
@@ -44,6 +44,6 @@ class UserSeeder extends Seeder
             ]
         );
 
-        $user->syncRoles(['admin']);
+
     }
 }

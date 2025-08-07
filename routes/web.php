@@ -30,7 +30,7 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     // Users
     Route::resource('users', UserController::class)->scoped(['user' => 'uuid']);
 
-    Route::get('/account', [WebAccountController::class, 'indexView'])->name('account-view.index');
+    Route::get('/account', [WebAccountController::class, 'index'])->name('account-view.index');
     Route::resource('accounts', AccountController::class)->scoped(['account' => 'uuid']);
 
     Route::resource('cards', CardController::class)->scoped(['card' => 'uuid']);

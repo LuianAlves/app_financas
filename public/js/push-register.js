@@ -1,4 +1,5 @@
-// urlBase64ToUint8Array vem de ex.: https://stackoverflow.com/a/46475254
+// public/js/push-register.js
+
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -8,29 +9,34 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 async function initializePush() {
-    if (!('serviceWorker' in navigator && 'PushManager' in window)) return;
+    if (!('serviceWorker' in navigator && 'PushManager' in window)) {
+        console.warn('Push não suportado neste navegador');
+        return;
+    }
 
-    // 1) registra o SW (ajuste o path se estiver em subpasta)
+    // 1) registra o Service Worker
     try {
-        await navigator.serviceWorker.register('/laravelpwa/sw.js');
+        await navigator.serviceWorker.register('/sw.js');
         console.log('Service Worker registrado');
     } catch (e) {
-        return console.error('Falha ao registrar SW:', e);
+        console.error('Falha ao registrar SW:', e);
+        return;
     }
 
     const registration = await navigator.serviceWorker.ready;
     console.log('Service Worker pronto');
 
-    // 2) se ainda não granted, pede permissão
-    if (Notification.permission !== 'granted') {
+    // 2) pede permissão (vai abrir prompt imediatamente)
+    if (Notification.permission === 'default') {
         const perm = await Notification.requestPermission();
-        console.log('Permissão:', perm);
+        console.log('Permissão de notificação:', perm);
         if (perm !== 'granted') {
-            return console.warn('Notificações negadas');
+            console.warn('Notificações negadas');
+            return;
         }
     }
 
-    // 3) cria ou recupera a subscription
+    // 3) cria ou obtém a subscription
     const vapidKey = await fetch('/vapid-public-key').then(r => r.text());
     let sub = await registration.pushManager.getSubscription();
     if (!sub) {
@@ -43,12 +49,12 @@ async function initializePush() {
         console.log('Subscription existente', sub);
     }
 
-    // 4) envia pro backend
+    // 4) envia ao backend
     try {
         const resp = await fetch('/push/subscribe', {
             method: 'POST',
             headers: {
-                'Content-Type':'application/json',
+                'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
             body: JSON.stringify(sub.toJSON())
@@ -57,13 +63,21 @@ async function initializePush() {
     } catch (err) {
         console.error('Erro enviando subscription:', err);
     }
+
+    // 5) dispara uma notificação local de confirmação
+    registration.showNotification('🔔 Permissões OK!', {
+        body: 'Toque aqui para instalar o app na sua tela inicial.',
+        icon: '/laravelpwa/icons/icon-192x192.png',
+        data: { url: '/' }
+    });
 }
 
 function setupPushOnGesture() {
-    if (Notification.permission === 'granted') {
-        initializePush();          // já concedido: dispara agora
-    } else if (Notification.permission === 'default') {
-        // aguarda o primeiro clique ou toque
+    // dispara direto no load para browsers que aceitam
+    initializePush();
+
+    // fallback: se requestPermission não disparar (ex: Safari PWA), aguarda o primeiro toque
+    if (Notification.permission === 'default') {
         const handler = () => {
             initializePush();
             window.removeEventListener('click', handler);
@@ -71,10 +85,8 @@ function setupPushOnGesture() {
         };
         window.addEventListener('click', handler);
         window.addEventListener('touchstart', handler);
-    } else {
-        console.warn('Notificações negadas — ative manualmente nas configurações.');
     }
 }
 
-// expõe no escopo global
-window.setupPushOnGesture = setupPushOnGesture;
+// expõe globalmente e dispara no load
+window.addEventListener('DOMContentLoaded', setupPushOnGesture);

@@ -11,29 +11,29 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('transactions', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+            Schema::create('transactions', function (Blueprint $table) {
+                $table->uuid('id')->primary();
 
-            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('card_id')->nullable()->constrained('cards')->onDelete('set null');
-            $table->foreignUuid('transaction_category_id')->references('id')->on('transaction_categories')->onDelete('cascade');
+                $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
+                $table->foreignUuid('card_id')->nullable()->constrained('cards')->onDelete('set null');
+                $table->foreignUuid('transaction_category_id')->constrained('transaction_categories')->onDelete('cascade');
 
-            $table->string('title')->nullable();
-            $table->string('description')->nullable();
-            $table->decimal('amount', 12, 2);
-            $table->date('date')->nullable();
+                $table->string('title')->nullable();
+                $table->string('description')->nullable();
+                $table->decimal('amount', 12, 2);
+                $table->date('date');
 
-            $table->enum('type', ['pix', 'card', 'money'])->default('pix');
+                $table->enum('type', ['pix', 'card', 'money'])->default('pix');
+                $table->enum('type_card', ['credit', 'debit'])->nullable();
 
-            $table->enum('type_card', ['credit', 'debit'])->default('credit')->nullable();
+                $table->enum('recurrence_type', ['unique', 'monthly', 'yearly', 'custom'])->default('unique');
+                $table->integer('custom_occurrences')->nullable();
 
-            $table->enum('recurrence_type', ['unique', 'monthly', 'yearly', 'custom'])->default('unique')->nullable();
-            $table->integer('recurrence_custom')->nullable(); // 'Número de repetições se for recorrência personalizada'
+                $table->unsignedTinyInteger('installments')->default(1);
 
-            $table->unsignedTinyInteger('installments')->nullable()->default(1);
-
-            $table->timestamps();
-        });
+                $table->enum('status', ['pending', 'completed', 'cancelled'])->default('completed');
+                $table->timestamps();
+            });
     }
 
     /**

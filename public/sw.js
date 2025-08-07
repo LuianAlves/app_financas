@@ -10,7 +10,7 @@ self.addEventListener('push', event => {
     const title = data.title || 'Nova Notificação';
     const options = {
         body: data.body || '',
-        icon: data.icon || '/icons/icon-192x192.png',
+        icon: data.icon || '/laravelpwa/icons/icon-192x192.png',
         data: data.data || {}
     };
     event.waitUntil(self.registration.showNotification(title, options));

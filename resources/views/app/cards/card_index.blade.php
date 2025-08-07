@@ -1,5 +1,5 @@
-@extends('layouts.templates.mobile')
-@section('content-mobile')
+@extends('layouts.templates.app')
+@section('content')
     <x-card-header
         prevRoute="{{ route('dashboard') }}"
         iconRight="fa-solid fa-credit-card"

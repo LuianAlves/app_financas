@@ -3,7 +3,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>Financial App UI</title>
+    <title>Finanças Cliqis</title>
 
     <link rel="manifest" href="{{ asset('laravelpwa/manifest.json') }}">
     <meta name="theme-color" content="#00bfa6">

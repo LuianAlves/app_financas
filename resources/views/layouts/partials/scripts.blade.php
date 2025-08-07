@@ -1,3 +1,19 @@
+<script src="{{ asset('assets/js/push-register.js') }}"></script>
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker
+            .register('{{ asset('sw.js') }}')
+            .then(() => console.log('SW registrado'))
+            .catch(e => console.error('SW falhou', e));
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        if (typeof setupPushOnGesture === 'function') {
+            setupPushOnGesture();
+        }
+    });
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
 <script>
@@ -76,11 +92,3 @@
     exibirEventos(formatDateISO(new Date()));
 </script>
 
-<script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker
-            .register('{{ asset('laravelpwa/sw.js') }}')
-            .then(() => console.log('SW registrado'))
-            .catch(e => console.error('SW falhou', e));
-    }
-</script>

@@ -1,6 +1,6 @@
-@extends('layouts.templates.mobile')
+@extends('layouts.templates.app')
 
-@section('content-mobile')
+@section('content')
     <x-card-header
         prevRoute="{{ route('dashboard') }}"
         iconRight="fa-solid fa-money-bill-transfer"

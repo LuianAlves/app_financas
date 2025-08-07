@@ -8,7 +8,9 @@
 
 <div class="app-container">
     <!-- Include:head -->
-    @include('layouts.partials.sidenav')
+    @auth
+        @include('layouts.partials.sidenav')
+    @endauth
 
     <main class="content-area scroll-content">
         @yield('content')

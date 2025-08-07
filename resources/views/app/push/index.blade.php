@@ -11,7 +11,9 @@
         <p>Notificação enviada com sucesso!</p>
     @endif
 
-    <h4>Enviar Notificação Push</h4>
+        <button id="enable-notifications">Ativar Notificações</button>
+
+        <h4>Enviar Notificação Push</h4>
     <form method="POST" action="{{ url('/push/teste') }}">
         @csrf
         <div>

@@ -16,8 +16,6 @@ return new class extends Migration
 
             $table->foreignUuid('invoice_id')->constrained()->onDelete('cascade');
 
-            $table->foreignUuid('card_id')->constrained()->onDelete('cascade');
-
             $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
 
             $table->string('description');

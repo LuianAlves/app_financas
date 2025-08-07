@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
+use NotificationChannels\WebPush\WebPushChannel;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +22,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        $this->app
+            ->make(ChannelManager::class)
+            ->extend('webpush', function ($app) {
+                // deixa o container injetar as dependências corretas
+                return $app->make(WebPushChannel::class);
+            });
     }
 }

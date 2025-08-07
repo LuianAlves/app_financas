@@ -14,11 +14,12 @@ return new class extends Migration
         Schema::create('invoices', function (Blueprint $table) {
             $table->uuid('id')->primary();                                                // 20
             $table->foreignUuid('user_id')->constrained()->onDelete('cascade');     // 01
-            $table->foreignUuid('card_id')->constrained()->onDelete('cascade');     // 05
-            $table->decimal('total_amount', 12, 2)->default(0);
-            $table->string('current_month');                                              // ago/25
-            $table->boolean('paid')->default(false);
 
+            $table->foreignUuid('card_id')->constrained()->onDelete('cascade');     // 05
+
+            $table->string('current_month');                                              // ago/25
+
+            $table->boolean('paid')->default(false);
 
             $table->timestamps();
         });

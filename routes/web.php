@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PushController;
 use Illuminate\Support\Facades\Route;
 
 // Auth
@@ -69,4 +70,14 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     Route::get('notifications', [WebNotificationController::class, 'index'])->name('notifications.index');
     Route::patch('notifications/{notification}/read', [WebNotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::delete('notifications/{notification}', [WebNotificationController::class, 'destroy'])->name('notifications.destroy');
+
+
+    // Push Notifications
+    Route::get('/vapid-public-key', function () {
+        return env('VAPID_PUBLIC_KEY');
+    });
+
+    Route::post('/push/subscribe', [PushController::class, 'subscribe']);
+    Route::get('/push/teste', [PushController::class, 'showForm']);
+    Route::post('/push/teste', [PushController::class, 'send']);
 });

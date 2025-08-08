@@ -28,6 +28,8 @@ use App\Http\Controllers\Web\{
     TransactionCategoryController as WebTransactionCategoryController,
     TransactionController as WebTransactionController,
     SavingController as WebSavingController,
+    InvoiceController as WebInvoiceController,
+    InvoiceItemController as WebInvoiceItemController,
 };
 
 Route::get('/', [AuthController::class, 'welcome']);
@@ -65,7 +67,13 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     Route::resource('savings', ApiSavingController::class)->scoped(['saving' => 'uuid']);
 
     Route::resource('recurrents', ApiRecurrentController::class)->scoped(['recurrent' => 'uuid']);
+
+    //Invoices
+    Route::get('/invoice', [WebInvoiceController::class, 'index'])->name('invoice-view.index');
     Route::resource('invoices', ApiInvoiceController::class)->scoped(['invoice' => 'uuid']);
+
+    //InvoiceItem
+    Route::get('/invoice-item', [WebInvoiceItemController::class, 'index'])->name('invoiceItem-view.index');
     Route::resource('invoice-items', ApiInvoiceItemController::class)->scoped(['invoiceItem' => 'uuid']);
 
     Route::get('notifications', [WebNotificationController::class, 'index'])->name('notifications.index');

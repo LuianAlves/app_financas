@@ -194,7 +194,19 @@
     .flatpickr-calendar {
         border-radius: 16px !important;
         width: 100% !important;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06) !important;
+        border: 1px solid #e5e7eb !important;
     }
+
+    .flatpickr-day {
+        border-radius: 8px !important;
+    }
+
+    .flatpickr-day.selected {
+        background-color: #111827 !important;
+        color: #fff !important;
+    }
+
     .flatpickr-day.tem-evento::after {
         content: '';
         display: block;

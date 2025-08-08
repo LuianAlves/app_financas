@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use AllowDynamicProperties;
+use App\Models\Card;
 use App\Models\CustomItemRecurrents;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -66,13 +67,48 @@ use Illuminate\Support\Facades\Auth;
 
     public function store(Request $request)
     {
-        $isCard = $request->card_id != null;
+        $isCard = $request->card_id !== null;
+        $typeCard = $isCard ? $request->type_card : null;
 
-        $typeCard = $isCard
-            ? $request->type_card
-            : null;
+        if($isCard && $typeCard === 'credit') {
+            $request->recurrence_type = null;
 
-        // dd($request->all(), $isCard, $typeCard);
+            $txDate = Carbon::parse($request->date);
+
+            $card = Card::findOrFail($request->card_id);
+            $closingDay = $card->closing_day;
+
+            $firstInvoiceMonth = $txDate->day > $closingDay
+                ? $txDate->copy()->addMonth()->startOfMonth()
+                : $txDate->copy()->startOfMonth();
+
+            $totalInstallments = (int) $request->installments;
+            $perInstallment   = $request->amount / $totalInstallments;
+
+            for ($i = 0; $i < $totalInstallments; $i++) {
+                $invoiceMonth = $firstInvoiceMonth->copy()->addMonths($i);
+                $monthKey     = $invoiceMonth->format('Y-m');
+
+                $invoice = $this->invoice->firstOrCreate(
+                    [
+                        'user_id'      => Auth::id(),
+                        'card_id'      => $card->id,
+                        'current_month'=> $monthKey,
+                    ],
+                    ['paid' => false]
+                );
+
+                $this->invoiceItem->create([
+                    'invoice_id'             => $invoice->id,
+                    'title'                  => $request->title,
+                    'amount'                 => $perInstallment,
+                    'date'                   => $txDate->copy()->addMonths($i),
+                    'transaction_category_id'=> $request->transaction_category_id,
+                    'installments'           => $totalInstallments,
+                    'current_installment'    => $i + 1,
+                ]);
+            }
+        }
 
         $transaction = $this->transaction->create([
             'user_id' => Auth::id(),
@@ -88,7 +124,7 @@ use Illuminate\Support\Facades\Auth;
             'custom_occurrences' => $request->custom_occurrences ?? null,
         ]);
 
-        if ($transaction->recurrence_type !== 'unique') {
+        if ($transaction->recurrence_type !== 'unique' && !$isCard) {
             $recurrent = $this->recurrent->create([
                 'user_id' => $transaction->user_id,
                 'transaction_id' => $transaction->id,

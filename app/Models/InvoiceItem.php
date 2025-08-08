@@ -2,19 +2,21 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToUser;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InvoiceItem extends BaseModel
 {
+    use BelongsToUser;
+
     protected $fillable = [
         'invoice_id',
-        'card_id',
-        'description',
+        'transaction_category_id',
+        'title',
         'amount',
         'date',
         'installments',
-        'current_installment',
-        'category_id',
+        'current_installment'
     ];
 
     public function card(): BelongsTo

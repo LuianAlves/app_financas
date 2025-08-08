@@ -64,7 +64,7 @@
         </div>
 
         <div class="icon-button">
-            <a href="{{route('transactionCategory-view.index')}}" class="nav-link-atalho">
+            <a href="{{route('transaction-view.index')}}" class="nav-link-atalho">
                 <i class="fas fa-retweet"></i>
                 <span>Transações</span>
             </a>

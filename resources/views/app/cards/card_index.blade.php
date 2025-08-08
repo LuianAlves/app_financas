@@ -19,10 +19,101 @@
     <div id="cardList" class="mt-4"></div>
 
     <script>
-        const route = '{{route('cards.index')}}'
-    </script>
+        const modal = document.getElementById('modalCard');
+        const openBtn = document.getElementById('openModal');
+        const closeBtn = document.getElementById('closeModal');
 
-    <script type="module" src="{{asset('assets/js/views/card.js')}}"></script>
+        openBtn.addEventListener('click', () => modal.classList.add('show'));
+        closeBtn.addEventListener('click', () => modal.classList.remove('show'));
+
+        function brl(valor) {
+            return parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        const brandMap = {
+            1: 'Visa',
+            2: 'Mastercard',
+            3: 'American Express',
+            4: 'Discover',
+            5: 'Diners Club',
+            6: 'JCB',
+            7: 'Elo'
+        };
+
+        function formatCardNumber(last4) {
+            return '**** **** **** ' + String(last4).padStart(4, '0');
+        }
+
+        const assetUrl = "{{ asset('assets/img') }}";
+
+        document.getElementById('formCard').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const data = new FormData(form);
+
+            try {
+                const response = await fetch("{{ route('cards.store') }}", {
+                    method: "POST",
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: data
+                });
+
+                if (!response.ok) throw new Error('Erro ao salvar cartão.');
+                const card = await response.json();
+
+                modal.classList.remove('show');
+                form.reset();
+                storeCard(card);
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        function storeCard(card) {
+            const container = document.getElementById('cardList');
+            if (!container) return;
+
+            const brandName = brandMap[card.brand];
+            const cardAfterStore = `
+                <div class="balance-box" style="background: ${card.color_card}">
+                    <img src="${assetUrl}/credit_card/chip_card.png" class="card-chip" alt="Chip" />
+                    <img src="${assetUrl}/brands/${brandName}.png" class="card-brand" alt="${brandName}" />
+                    <div class="card-number">
+                        ${formatCardNumber(card.last_four_digits)}
+                    </div>
+                    <div class="card-details">
+                      <div class="detail-row mb-3">
+                        <div class="detail-left">${card.cardholder_name}</div>
+                        <div class="detail-right">${card.account.bank_name}</div>
+                      </div>
+                      <div class="detail-row flex-column" style="font-size: 10px; letter-spacing: 1px;">
+                        <div>Fatura: R$ 2.731,00</div>
+                        <div>Limite Atual: ${card.credit_limit}</div>
+                      </div>
+                    </div>
+                 </div>
+            `;
+            container.insertAdjacentHTML('beforeend', cardAfterStore);
+        }
+
+        async function loadCards() {
+            try {
+                const response = await fetch("{{ route('cards.index') }}", {
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (!response.ok) throw new Error('Erro ao carregar cartões.');
+                const cards = await response.json();
+                cards.forEach(storeCard);
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', loadCards);
+    </script>
 
     @push('styles')
         <style>

@@ -19,9 +19,8 @@
         modalId="modalTransaction"
         formId="formTransaction"
         pathForm="app.transactions.transaction.transaction_form"
-        :categories="$categories"
-        :cards="$cards"
-        :transaction="null" />
+        :data="['cards' => $cards, 'categories' => $categories, 'transactions' => null]"
+         />
 
     <script>
         const modal = document.getElementById('modalTransaction');

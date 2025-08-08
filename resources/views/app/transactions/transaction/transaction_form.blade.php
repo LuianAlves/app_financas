@@ -11,13 +11,9 @@
 </div>
 
 <div class="row">
-    <x-input col="6" set="" type="number" step="0.01" title="Valor" id="amount" name="amount"
-             value="{{ old('amount', $transaction->amount ?? '') }}" placeholder="R$ 0,00">
-    </x-input>
+    <x-input col="6" set="" type="number" step="0.01" title="Valor" id="amount" name="amount" value="{{ old('amount', $transaction->amount ?? '') }}" placeholder="R$ 0,00"></x-input>
 
-    <x-input col="6" set="" type="date" title="Data" id="date" name="date"
-             value="{{ old('date', $transaction->date ?? date('Y-m-d')) }}">
-    </x-input>
+    <x-input col="6" set="" type="date" title="Data" id="date" name="date" value="{{ old('date', $transaction->date ?? date('Y-m-d')) }}"></x-input>
 </div>
 
 {{--<div class="row">--}}
@@ -30,25 +26,25 @@
 
 <div class="row">
     <label for="type">Forma de pagamento</label>
-    <x-input-check col="12" set="" id="pix" value="pix" name="type" title="Pix" checked="1"></x-input-check>
-    <x-input-check col="12" set="" id="card" value="card" name="type" title="Cartão"></x-input-check>
-    <x-input-check col="12" set="" id="money" value="money" name="type" title="Dinheiro"></x-input-check>
+    <x-input-check col="12" set="" id="pix" value="pix" name="type" title="Pix" checked="1" disabled=""></x-input-check>
+    <x-input-check col="12" set="" id="card" value="card" name="type" title="Cartão" disabled=""></x-input-check>
+    <x-input-check col="12" set="" id="money" value="money" name="type" title="Dinheiro" disabled=""></x-input-check>
 </div>
 
 <div class="row d-none" id="typeCardContainer">
     <label for="type_card">Tipo de cartão</label>
-    <x-input-check col="12" set="" id="credit" value="credit" name="type_card" title="Crédito"></x-input-check>
-    <x-input-check col="12" set="" id="debit" value="debit" name="type_card" title="Débito"></x-input-check>
+    <x-input-check col="12" set="" id="credit" value="credit" name="type_card" title="Crédito" disabled=""></x-input-check>
+    <x-input-check col="12" set="" id="debit" value="debit" name="type_card" title="Débito" disabled=""></x-input-check>
 </div>
 
-{{--<div class="row d-none" id="cardSelectContainer">--}}
-{{--    <x-select col="12" set="" name="card_id" id="card_id" title="Cartão vinculado">--}}
-{{--        <option value="">Selecione um cartão</option>--}}
-{{--        @foreach($cards as $card)--}}
-{{--            <option value="{{ $card->id }}">{{ $card->name }}</option>--}}
-{{--        @endforeach--}}
-{{--    </x-select>--}}
-{{--</div>--}}
+<div class="row d-none" id="cardSelectContainer">
+    <x-select col="12" set="" name="card_id" id="card_id" title="Cartão vinculado">
+        <option value="">Selecione um cartão</option>
+        @foreach($cards as $card)
+            <option value="{{ $card->id }}">{{ $card->name }}</option>
+        @endforeach
+    </x-select>
+</div>
 
 <div class="row">
     <x-select col="12" set="" name="recurrence_type" id="recurrence_type" title="Recorrência">
@@ -83,6 +79,7 @@
             typeRadios.forEach(radio => {
                 radio.addEventListener('change', () => {
                     const isCard = radio.value === 'card';
+
                     typeCardContainer.classList.toggle('d-none', !isCard);
                     cardSelectContainer.classList.toggle('d-none', !isCard);
                 });

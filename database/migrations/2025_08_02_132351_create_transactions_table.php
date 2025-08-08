@@ -32,6 +32,7 @@ return new class extends Migration
                 $table->unsignedTinyInteger('installments')->default(1);
 
                 $table->enum('status', ['pending', 'completed', 'cancelled'])->default('completed');
+
                 $table->timestamps();
             });
     }

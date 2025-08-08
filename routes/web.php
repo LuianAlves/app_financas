@@ -11,9 +11,9 @@ use App\Http\Controllers\Api\{
     UserController as ApiUserController,
     AccountController as ApiAccountController,
     CardController as ApiCardController,
-    CardTransactionController as ApiCardTransactionController,
     TransactionCategoryController as ApiTransactionCategoryController,
     InvoiceController as ApiInvoiceController,
+    InvoiceItemController as ApiInvoiceItemController,
     RecurrentController as ApiRecurrentController,
     SavingController as ApiSavingController,
     TransactionController as ApiTransactionController,
@@ -66,7 +66,7 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
 
     Route::resource('recurrents', ApiRecurrentController::class)->scoped(['recurrent' => 'uuid']);
     Route::resource('invoices', ApiInvoiceController::class)->scoped(['invoice' => 'uuid']);
-    Route::resource('card-transactions', ApiCardTransactionController::class)->scoped(['cardTransaction' => 'uuid']);
+    Route::resource('invoice-items', ApiInvoiceItemController::class)->scoped(['invoiceItem' => 'uuid']);
 
     Route::get('notifications', [WebNotificationController::class, 'index'])->name('notifications.index');
     Route::patch('notifications/{notification}/read', [WebNotificationController::class, 'markAsRead'])->name('notifications.read');

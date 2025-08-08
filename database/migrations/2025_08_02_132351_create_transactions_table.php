@@ -26,7 +26,7 @@ return new class extends Migration
                 $table->enum('type', ['pix', 'card', 'money'])->default('pix');
                 $table->enum('type_card', ['credit', 'debit'])->nullable();
 
-                $table->enum('recurrence_type', ['unique', 'monthly', 'yearly', 'custom'])->default('unique');
+                $table->enum('recurrence_type', ['unique', 'monthly', 'yearly', 'custom'])->nullable();
 
                 $table->integer('custom_occurrences')->nullable();
 

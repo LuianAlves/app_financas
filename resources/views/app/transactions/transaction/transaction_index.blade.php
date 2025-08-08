@@ -22,7 +22,7 @@
         <i class="fas fa-landmark text-white"></i>
     </a>
 
-    <a href="{{route('account-view.index')}}" class="create-btn create-other-3">
+    <a href="{{route('card-view.index')}}" class="create-btn create-other-3">
         <i class="fas fa-credit-card text-white"></i>
     </a>
 

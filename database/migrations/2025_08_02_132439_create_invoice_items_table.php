@@ -15,10 +15,9 @@ return new class extends Migration
             $table->uuid('id')->primary();
 
             $table->foreignUuid('invoice_id')->constrained()->onDelete('cascade');
+            $table->foreignUuid('transaction_category_id')->references('id')->on('transaction_categories')->onDelete('cascade');
 
-            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
-
-            $table->string('description');
+            $table->string('title')->nullable();
 
             $table->decimal('amount', 12, 2);
 
@@ -26,8 +25,6 @@ return new class extends Migration
 
             $table->unsignedTinyInteger('installments')->default(1);
             $table->unsignedTinyInteger('current_installment')->default(1);
-
-            $table->foreignUuid('transaction_category_id')->references('id')->on('transaction_categories')->onDelete('cascade');
 
             $table->timestamps();
         });

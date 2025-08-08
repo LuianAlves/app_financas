@@ -72,9 +72,7 @@
 </div>
 
 <div class="row mt-2 d-none" id="installmentsContainer">
-    <x-input col="12" set="" type="number" title="Parcelas" id="installments"
-             name="installments" placeholder="Ex: 3 parcelas" value="">
-    </x-input>
+    <x-input col="12" set="" type="number" title="Parcelas" id="installments" name="installments" placeholder="Ex: 3 parcelas" value=""></x-input>
 </div>
 
 @push('scripts')

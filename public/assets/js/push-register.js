@@ -17,59 +17,62 @@ async function initializePush() {
     // 1) registra o Service Worker
     try {
         await navigator.serviceWorker.register('/sw.js');
-        console.log('Service Worker registrado');
+        //console.log('Service Worker registrado');
     } catch (e) {
         console.error('Falha ao registrar SW:', e);
         return;
     }
 
     const registration = await navigator.serviceWorker.ready;
-    console.log('Service Worker pronto');
+    //console.log('Service Worker pronto');
 
     // 2) pede permissão (vai abrir prompt imediatamente)
     if (Notification.permission === 'default') {
         const perm = await Notification.requestPermission();
-        console.log('Permissão de notificação:', perm);
+        //console.log('Permissão de notificação:', perm);
         if (perm !== 'granted') {
             console.warn('Notificações negadas');
             return;
         }
     }
 
-    // 3) cria ou obtém a subscription
     const vapidKey = await fetch('/vapid-public-key').then(r => r.text());
+
     let sub = await registration.pushManager.getSubscription();
+
     if (!sub) {
         sub = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(vapidKey)
         });
-        console.log('Subscription criada', sub);
+
+        //console.log('Subscription criada', sub);
     } else {
-        console.log('Subscription existente', sub);
+        // console.log('Subscription existente', sub);
     }
 
-    // 4) envia ao backend
-    try {
-        const resp = await fetch('/push/subscribe', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify(sub.toJSON())
+    if (!sub) {
+        try {
+            const resp = await fetch('/push/subscribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify(sub.toJSON())
+            });
+
+            console.log('/push/subscribe →', await resp.json());
+        } catch (err) {
+            console.error('Erro enviando subscription:', err);
+        }
+
+        registration.showNotification('🔔 Permissões OK!', {
+            body: 'Toque aqui para instalar o app na sua tela inicial.',
+            icon: '/laravelpwa/icons/icon-192x192.png',
+            data: { url: '/' }
         });
-        console.log('/push/subscribe →', await resp.json());
-    } catch (err) {
-        console.error('Erro enviando subscription:', err);
     }
-
-    // 5) dispara uma notificação local de confirmação
-    registration.showNotification('🔔 Permissões OK!', {
-        body: 'Toque aqui para instalar o app na sua tela inicial.',
-        icon: '/laravelpwa/icons/icon-192x192.png',
-        data: { url: '/' }
-    });
 }
 
 function setupPushOnGesture() {

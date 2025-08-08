@@ -27,19 +27,13 @@ class Transaction extends BaseModel
         return $this->belongsTo(User::class);
     }
 
-    public function transactionCategory(): BelongsTo
-    {
-        return $this->belongsTo(TransactionCategory::class);
-    }
-
-    public function account(): BelongsTo
-    {
-        return $this->belongsTo(Account::class);
-    }
-
     public function card(): BelongsTo
     {
         return $this->belongsTo(Card::class);
     }
 
+    public function transactionCategory(): BelongsTo
+    {
+        return $this->belongsTo(TransactionCategory::class, 'transaction_category_id');
+    }
 }

@@ -42,7 +42,7 @@ use Illuminate\Support\Facades\Auth;
 
     public function index()
     {
-        $transactions = $this->transaction->with('transactionCategory')->latest('date')->get();
+        $transactions = $this->transaction->with('transactionCategory')->orderBy('date', 'asc')->get();
 
         $transactions->each(function ($transaction) {
             $transaction->amount = brlPrice($transaction->amount);
@@ -75,30 +75,32 @@ use Illuminate\Support\Facades\Auth;
 
             $txDate = Carbon::parse($request->date);
 
-            $card = Card::findOrFail($request->card_id);
-            $closingDay = $card->closing_day;
+            $card       = Card::findOrFail($request->card_id);
+            $closingDay = $card->closing_day; // ex: 2
 
-            $firstInvoiceMonth = $txDate->day > $closingDay
-                ? $txDate->copy()->addMonth()->startOfMonth()
-                : $txDate->copy()->startOfMonth();
+            $cycleMonth = $txDate->day > $closingDay
+                ? $txDate->copy()->addMonth()->format('Y-m')
+                : $txDate->copy()->format('Y-m');
 
             $totalInstallments = (int) $request->installments;
-            $perInstallment   = $request->amount / $totalInstallments;
+            $perInstallment    = $request->amount / $totalInstallments;
+
+            $firstCycleDate = Carbon::createFromFormat('Y-m-d', $cycleMonth . '-01');
 
             for ($i = 0; $i < $totalInstallments; $i++) {
-                $invoiceMonth = $firstInvoiceMonth->copy()->addMonths($i);
-                $monthKey     = $invoiceMonth->format('Y-m');
+                $cycleDate = $firstCycleDate->copy()->addMonths($i);
+                $monthKey  = $cycleDate->format('Y-m');
 
-                $invoice = $this->invoice->firstOrCreate(
+                $invoice = Invoice::firstOrCreate(
                     [
-                        'user_id'      => Auth::id(),
-                        'card_id'      => $card->id,
-                        'current_month'=> $monthKey,
+                        'user_id'       => Auth::id(),
+                        'card_id'       => $card->id,
+                        'current_month' => $monthKey,
                     ],
                     ['paid' => false]
                 );
 
-                $this->invoiceItem->create([
+                InvoiceItem::create([
                     'invoice_id'             => $invoice->id,
                     'title'                  => $request->title,
                     'amount'                 => $perInstallment,
@@ -121,7 +123,7 @@ use Illuminate\Support\Facades\Auth;
             'type' => $request->type,
             'type_card' => $typeCard ?? null,
             'recurrence_type' => $request->recurrence_type,
-            'custom_occurrences' => $request->custom_occurrences ?? null,
+            'custom_occurrences' => $request->custom_occurrences ?? $request->installments,
         ]);
 
         if ($transaction->recurrence_type !== 'unique' && !$isCard) {

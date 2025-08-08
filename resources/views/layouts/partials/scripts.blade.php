@@ -3,7 +3,7 @@
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker
             .register('{{ asset('sw.js') }}')
-            .then(() => console.log('SW registrado'))
+            .then(() => console.log())
             .catch(e => console.error('SW falhou', e));
     }
 

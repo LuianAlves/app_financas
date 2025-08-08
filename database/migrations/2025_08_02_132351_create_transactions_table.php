@@ -27,11 +27,8 @@ return new class extends Migration
                 $table->enum('type_card', ['credit', 'debit'])->nullable();
 
                 $table->enum('recurrence_type', ['unique', 'monthly', 'yearly', 'custom'])->default('unique');
+
                 $table->integer('custom_occurrences')->nullable();
-
-                $table->unsignedTinyInteger('installments')->default(1);
-
-                $table->enum('status', ['pending', 'completed', 'cancelled'])->default('completed');
 
                 $table->timestamps();
             });

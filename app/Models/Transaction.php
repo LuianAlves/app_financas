@@ -9,12 +9,16 @@ class Transaction extends BaseModel
 {
     protected $fillable = [
         'user_id',
+        'card_id',
+        'transaction_category_id',
+        'title',
         'description',
         'amount',
         'date',
         'type',
-        'category_id',
-        'account_id',
+        'type_card',
+        'recurrence_type',
+        'custom_occurrences'
     ];
 
     public function user(): BelongsTo
@@ -22,7 +26,7 @@ class Transaction extends BaseModel
         return $this->belongsTo(User::class);
     }
 
-    public function category(): BelongsTo
+    public function transactionCategory(): BelongsTo
     {
         return $this->belongsTo(TransactionCategory::class);
     }

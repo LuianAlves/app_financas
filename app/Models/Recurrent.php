@@ -9,13 +9,9 @@ class Recurrent extends BaseModel
 {
     protected $fillable = [
         'user_id',
-        'description',
-        'amount',
-        'type',
-        'frequency',
-        'next_date',
-        'category_id',
-        'account_id',
+        'transaction_id',
+        'payment_day',
+        'amount'
     ];
 
     public function user(): BelongsTo

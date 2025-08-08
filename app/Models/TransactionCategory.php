@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class TransactionCategory extends BaseModel
 {
     use BelongsToUser;
-
     protected $fillable = [
         'user_id',
         'name',

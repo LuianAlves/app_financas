@@ -51,17 +51,19 @@ class CardController extends Controller
         return response()->json($card);
     }
 
-    public function show(Card $card)
+    public function show($id)
     {
-        $this->authorize('view', $card);
+        $card = $this->card->with('account')->find($id);
 
-        return response()->json($card);
+        if($card) {
+            return response()->json($card);
+        } else {
+            return response()->json('Nenhum card foi encontrado');
+        }
     }
 
     public function update(Request $request, Card $card)
     {
-        $this->authorize('update', $card);
-
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
             'credit_limit' => 'sometimes|numeric',
@@ -77,7 +79,6 @@ class CardController extends Controller
 
     public function destroy(Card $card)
     {
-        $this->authorize('delete', $card);
         $card->delete();
 
         return response()->json(null, 204);

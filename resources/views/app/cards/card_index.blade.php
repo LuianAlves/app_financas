@@ -50,6 +50,8 @@
 
         const assetUrl = "{{ asset('assets/img') }}";
 
+        const route = "{{ url('/invoice/') }}";
+
         document.getElementById('formCard').addEventListener('submit', async function(e) {
             e.preventDefault();
             const form = e.target;
@@ -82,7 +84,7 @@
 
             const brandName = brandMap[card.brand];
             const cardAfterStore = `
-                <div class="balance-box" style="background: ${card.color_card}">
+                <a href="${route + '/' +card.id}" style="text-decoration: none !important"><div class="balance-box" style="background: ${card.color_card}">
                     <img src="${assetUrl}/credit_card/chip_card.png" class="card-chip" alt="Chip" />
                     <img src="${assetUrl}/brands/${brandName}.png" class="card-brand" alt="${brandName}" />
                     <div class="card-number">
@@ -93,12 +95,12 @@
                         <div class="detail-left">${card.cardholder_name}</div>
                         <div class="detail-right">${card.account.bank_name}</div>
                       </div>
-                      <div class="detail-row flex-column" style="font-size: 10px; letter-spacing: 1px;">
+                      <div class="detail-row flex-column" style="font-size: 12px; letter-spacing: 1px;">
                         <div>Fatura: R$ 2.731,00</div>
                         <div>Limite Atual: ${card.credit_limit}</div>
                       </div>
                     </div>
-                 </div>
+                 </div></a>
             `;
             container.insertAdjacentHTML('beforeend', cardAfterStore);
         }
@@ -130,8 +132,8 @@
             .balance-box {
                 background-repeat: no-repeat;
                 background-size: cover;
-                width: 290px;
-                height: 175px;
+                width: auto;
+                height: 200px;
                 border-radius: 12px;
                 color: #fff;
                 padding: 16px;
@@ -145,23 +147,23 @@
                 position: absolute;
                 top: 16px;
                 left: 16px;
-                width: 35px;
+                width: 50px;
             }
             .balance-box .card-chip {
                 position: absolute;
-                top: 7.5px;
+                top: 10px;
                 right: 16px;
-                width: 35px;
+                width: 40px;
             }
 
             .balance-box .card-details .detail-left, .balance-box .card-details .detail-right , .balance-box .card-number {
-                letter-spacing: 2px;
+                letter-spacing: 5px;
                 text-shadow: 1px 1px 1px #000;
             }
 
             .balance-box .card-number {
-                margin-top: 40px;
-                font-size: 12.5px;
+                margin-top: 60px;
+                font-size: 16px;
             }
 
             .balance-box .card-details {
@@ -184,8 +186,8 @@
 
             .balance-box .card-details .detail-left {
                 text-align: left;
-                font-size: 10px;
-                letter-spacing: 1px;
+                font-size: 12px;
+                letter-spacing: 2.5px;
             }
 
             .balance-box .card-details .detail-right {

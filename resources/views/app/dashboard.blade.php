@@ -2,6 +2,7 @@
 @section('content')
     <div class="header">
         <h1>Tela inicial</h1>
+
         <div class="balance-box">
             <div class="d-flex justify-content-between">
                 <span>Saldo</span>
@@ -109,7 +110,6 @@
                 <div class="transaction-info">
                     <div class="icon">
                         @if($categoryType === 'entrada')
-                            {{-- Verde para cima --}}
                             <i class="fas fa-arrow-up text-success"></i>
                         @elseif($categoryType === 'despesa')
                             {{-- Vermelha para baixo --}}

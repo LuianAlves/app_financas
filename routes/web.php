@@ -69,7 +69,7 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     Route::resource('recurrents', ApiRecurrentController::class)->scoped(['recurrent' => 'uuid']);
 
     //Invoices
-    Route::get('/invoice', [WebInvoiceController::class, 'index'])->name('invoice-view.index');
+    Route::get('/invoice/{cardId}', [WebInvoiceController::class, 'index'])->name('invoice-view.index');
     Route::resource('invoices', ApiInvoiceController::class)->scoped(['invoice' => 'uuid']);
 
     //InvoiceItem

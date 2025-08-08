@@ -11,15 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('recurrents', function (Blueprint $table) {
+        Schema::create('yearly_item_recurrents', function (Blueprint $table) {
             $table->uuid('id')->primary();
 
-            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
-            $table->foreignUuid('transaction_id')->references('id')->on('transactions')->onDelete('cascade');
+            $table->foreignUuid('recurrent_id')->references('id')->on('recurrents')->onDelete('cascade');
 
             $table->string('payment_day');
+            $table->string('reference_year');
 
             $table->decimal('amount', 12, 2);
+
+            $table->boolean('status')->default(false);
 
             $table->timestamps();
         });
@@ -30,6 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('recurrents');
+        Schema::dropIfExists('yearly_item_recurrents');
     }
 };

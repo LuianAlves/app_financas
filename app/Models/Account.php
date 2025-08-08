@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Models\Auth\User;
+use App\Traits\BelongsToUser;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Account extends BaseModel
 {
+    use BelongsToUser;
     protected $fillable = [
         'user_id',
         'bank_name',

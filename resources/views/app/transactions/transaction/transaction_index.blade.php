@@ -14,12 +14,23 @@
         <i class="fa fa-plus text-white"></i>
     </button>
 
-    {{-- ✅ Corrigido: enviando as variáveis para o formulário --}}
+    <a href="{{route('transactionCategory-view.index')}}" class="create-btn create-other">
+        <i class="fa-solid fa-tags text-white"></i>
+    </a>
+
+    <a href="{{route('account-view.index')}}" class="create-btn create-other-2">
+        <i class="fas fa-landmark text-white"></i>
+    </a>
+
+    <a href="{{route('account-view.index')}}" class="create-btn create-other-3">
+        <i class="fas fa-credit-card text-white"></i>
+    </a>
+
     <x-modal
         modalId="modalTransaction"
         formId="formTransaction"
         pathForm="app.transactions.transaction.transaction_form"
-        :data="['cards' => $cards, 'categories' => $categories, 'transactions' => null]"
+        :data="['cards' => $cards, 'categories' => $categories, 'accounts' => $accounts]"
          />
 
     <script>
@@ -79,18 +90,18 @@
 
             const transactionBox = `
                 <div class="balance-box">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="d-flex flex-column">
+                    <div class="d-flex justify-content-between">
+                        <div class="d-flex flex-column justify-content-between">
                             <span class="text-muted fw-bold" style="font-size: 16px;">
                                 ${transaction.title ?? 'Sem título'}
                             </span>
-                            <small class="text-muted">${new Date(transaction.date).toLocaleDateString('pt-BR')}</small>
+                            <small style="letter-spacing: 0.75px; color: #b5b5b5;">Em ${transaction.date}</small>
                         </div>
                         <div class="text-end">
-                            <span class="fw-bold ${transaction.category_type === 'expense' ? 'text-danger' : 'text-success'}">
-                                ${brlPrice(transaction.amount)}
+                            <span class="fw-bold ${transaction.typeColor}">
+                                ${transaction.amount}
                             </span><br>
-                            <span class="badge" style="color: ${typeColor[transaction.type]}; font-size: 10px; border: 1px solid ${typeColor[transaction.type]}; background: ${typeColor[transaction.type]}0a">
+                            <span class="badge text-bg-${transaction.typeColor}" style="font-size: 10px;">
                                 ${typeLabel[transaction.type]}
                             </span>
                         </div>
@@ -110,6 +121,9 @@
                 if (!response.ok) throw new Error('Erro ao carregar transações.');
 
                 const transactions = await response.json();
+
+                console.log(transactions)
+
                 transactions.forEach(storeTransaction);
             } catch (err) {
                 alert(err.message);

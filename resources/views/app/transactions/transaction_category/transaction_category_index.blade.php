@@ -11,6 +11,10 @@
 
     <button id="openModal" class="create-btn"><i class="fa fa-plus text-white"></i></button>
 
+    <a href="{{route('transaction-view.index')}}" class="create-btn create-other" title="Transações">
+        <i class="fas fa-retweet text-white"></i>
+    </a>
+
     <x-modal modalId="modalTransactionCategory" formId="formTransactionCategory"
              pathForm="app.transactions.transaction_category.transaction_category_form"></x-modal>
 

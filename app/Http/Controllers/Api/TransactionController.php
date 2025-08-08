@@ -2,27 +2,63 @@
 
 namespace App\Http\Controllers\Api;
 
+use AllowDynamicProperties;
+use App\Models\CustomItemRecurrents;
+use App\Models\Invoice;
+use App\Models\InvoiceItem;
+use App\Models\MonthlyItemRecurrents;
+use App\Models\Recurrent;
 use App\Models\Transaction;
+use App\Models\YearlyItemRecurrents;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 
-class TransactionController extends Controller
+#[AllowDynamicProperties] class TransactionController extends Controller
 {
+    public $transaction;
+    public $recurrent;
 
-    public function __construct(Transaction $transaction)
+    public function __construct(
+        Transaction           $transaction,
+        Recurrent             $recurrent,
+        Invoice               $invoice,
+        InvoiceItem           $invoiceItem,
+        MonthlyItemRecurrents $monthlyItemRecurrents,
+        YearlyItemRecurrents  $yearlyItemRecurrents,
+        CustomItemRecurrents  $customItemRecurrents
+    )
     {
         $this->transaction = $transaction;
+        $this->recurrent = $recurrent;
+        $this->invoice = $invoice;
+        $this->invoiceItem = $invoiceItem;
+        $this->monthlyItemRecurrents = $monthlyItemRecurrents;
+        $this->yearlyItemRecurrents = $yearlyItemRecurrents;
+        $this->customItemRecurrents = $customItemRecurrents;
     }
+
     public function index()
     {
-        $transactions = Auth::user()->transactions()
-            ->with(['category', 'card'])
-            ->latest('date')
-            ->get();
+        $transactions = $this->transaction->with('transactionCategory')->latest('date')->get();
 
-        $transactions->each(function ($t) {
-            $t->amount = brlPrice($t->amount); // helper de formatação
+        $transactions->each(function ($transaction) {
+            $transaction->amount = brlPrice($transaction->amount);
+
+            switch ($transaction->transactionCategory->type) {
+                case 'entrada':
+                    $transaction->typeColor = 'success';
+                    break;
+                case 'despesa':
+                    $transaction->typeColor = 'danger';
+                    break;
+                case 'investimento':
+                    $transaction->typeColor = 'info';
+                    break;
+            }
+
+            $transaction->date = Carbon::parse($transaction->date)->locale('pt_BR')->isoFormat('DD/MMM.');
         });
 
         return response()->json($transactions);
@@ -30,31 +66,84 @@ class TransactionController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'title' => 'nullable|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'amount' => 'required|numeric',
-            'date' => 'required|date',
-            'type' => 'required|in:pix,card,money',
-            'type_card' => 'nullable|in:credit,debit',
-            'transaction_category_id' => 'required|uuid|exists:transaction_categories,id',
-            'card_id' => 'nullable|uuid|exists:cards,id',
-            'recurrence_type' => 'nullable|in:unique,monthly,yearly,custom',
-            'recurrence_custom' => 'nullable|integer|min:1',
-            'installments' => 'nullable|integer|min:1',
+        $isCard = $request->card_id != null;
+
+        $typeCard = $isCard
+            ? $request->type_card
+            : null;
+
+        // dd($request->all(), $isCard, $typeCard);
+
+        $transaction = $this->transaction->create([
+            'user_id' => Auth::id(),
+            'card_id' => $request->card_id ?? null,
+            'transaction_category_id' => $request->transaction_category_id,
+            'title' => $request->title ?? null,
+            'description' => $request->description ?? null,
+            'amount' => $request->amount,
+            'date' => Carbon::parse($request->date),
+            'type' => $request->type,
+            'type_card' => $typeCard ?? null,
+            'recurrence_type' => $request->recurrence_type,
+            'custom_occurrences' => $request->custom_occurrences ?? null,
         ]);
 
-        $data['user_id'] = Auth::id();
+        if ($transaction->recurrence_type !== 'unique') {
+            $recurrent = $this->recurrent->create([
+                'user_id' => $transaction->user_id,
+                'transaction_id' => $transaction->id,
+                'payment_day' => Carbon::parse($transaction->date)->format('d'),
+                'amount' => $transaction->amount
+            ]);
 
-        $transaction = Transaction::create($data);
-        $transaction->load('category', 'card');
+            if ($transaction->recurrence_type === 'monthly') {
+                $this->monthlyItemRecurrents->create([
+                    'recurrent_id' => $recurrent->id,
+                    'payment_day' => Carbon::parse($transaction->date)->format('d'),
+                    'reference_month' => Carbon::parse($transaction->date)->format('m'),
+                    'reference_year' => Carbon::parse($transaction->date)->format('Y'),
+                    'amount' => $transaction->amount,
+                    'status' => false
+                ]);
+            }
 
-        return response()->json($transaction, 201);
+            if ($transaction->recurrence_type === 'yearly') {
+                $this->yearlyItemRecurrents->create([
+                    'recurrent_id' => $recurrent->id,
+                    'payment_day' => Carbon::parse($transaction->date)->format('d'),
+                    'reference_year' => Carbon::parse($transaction->date)->format('Y'),
+                    'amount' => $transaction->amount,
+                    'status' => false
+                ]);
+            }
+
+            if ($transaction->recurrence_type === 'custom') {
+                $total     = (int) $transaction->custom_occurrences;
+                $startDate = Carbon::parse($transaction->date);
+
+                for ($i = 0; $i < $total; $i++) {
+                    $current = $startDate->copy()->addMonths($i);
+
+                    $this->customItemRecurrents->create([
+                        'recurrent_id'             => $recurrent->id,
+                        'payment_day'              => $current->format('d'),
+                        'reference_month'          => $current->format('m'),
+                        'reference_year'           => $current->format('Y'),
+                        'amount'                   => $transaction->amount,
+                        'custom_occurrence_number' => $i + 1,
+                        'status'                   => false,
+                    ]);
+                }
+            }
+        }
+
+        return response()->json($transaction);
     }
 
     public function show(Transaction $transaction)
     {
         $this->authorize('view', $transaction);
+
         return response()->json($transaction);
     }
 

@@ -21,6 +21,7 @@ class Transaction extends BaseModel
         'custom_occurrences'
     ];
 
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -40,4 +41,5 @@ class Transaction extends BaseModel
     {
         return $this->belongsTo(Card::class);
     }
+
 }

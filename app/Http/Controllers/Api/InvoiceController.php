@@ -9,26 +9,40 @@ use Illuminate\Support\Facades\Auth;
 
 class InvoiceController extends Controller
 {
+    public $invoice;
+
+    public function __construct(Invoice $invoice)
+    {
+        $this->invoice = $invoice;
+    }
     public function index()
     {
-        return response()->json(
-            Invoice::whereIn('card_id', Auth::user()->cards()->pluck('id'))
-                ->orderByDesc('closing_date')
-                ->get()
-        );
+
+        $invoice = $this->invoice::with('account')->get();
+
+        $invoice->each(function($invoice){
+            $invoice->card = strtoupper($invoice->card->name);
+            $invoice->current_month = strtoupper($invoice->current_month);
+            $invoice->paid =  strtoupper($invoice->paid);
+        });
+
+        return response()->json($invoice);
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'card_id' => 'required|uuid|exists:cards,id',
-            'closing_date' => 'required|date',
-            'due_date' => 'required|date|after_or_equal:closing_date',
-            'total_amount' => 'required|numeric',
-            'paid' => 'boolean'
+        $invoice = $this->invoice::with('account')->create([
+            'user_id' => Auth::id(),
+            'card_id' => $request->card_id,
+            'current_month' => $request->month,
+            'paid' => $request->paid,
         ]);
 
-        $invoice = Invoice::create($data);
+        $invoice->each(function($invoice){
+            $invoice->card = strtoupper($invoice->card->name);
+            $invoice->current_month = strtoupper($invoice->current_month);
+            $invoice->paid =  strtoupper($invoice->paid);
+        });
 
         return response()->json($invoice, 201);
     }
@@ -44,9 +58,7 @@ class InvoiceController extends Controller
         $this->authorize('update', $invoice);
 
         $data = $request->validate([
-            'closing_date' => 'sometimes|date',
-            'due_date' => 'sometimes|date|after_or_equal:closing_date',
-            'total_amount' => 'sometimes|numeric',
+            'current_month' => 'required|string|max:10',
             'paid' => 'sometimes|boolean'
         ]);
 

@@ -299,21 +299,24 @@
         background: dodgerblue;
         border: none;
         padding: 10px 16px;
-        bottom: 17.5%;
+        bottom: 20%;
+        right: 8%;
     }
 
     .create-other-2 {
         background: #ffbf1e;
         border: none;
         padding: 10px 16px;
-        bottom: 24%;
+        bottom: 26.5%;
+        right: 8%;
     }
 
     .create-other-3 {
         background: #ff5a1e;
         border: none;
         padding: 10px 16px;
-        bottom: 30.5%;
+        bottom: 33%;
+        right: 8%;
     }
 
     .custom-modal {

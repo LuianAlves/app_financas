@@ -62,6 +62,7 @@
     .header {
         padding-bottom: 8px;
     }
+
     .header h1 {
         font-weight: 600;
         font-size: 1.4rem;
@@ -184,7 +185,7 @@
         left: 0;
         right: 0;
         bottom: 0;                       /* cola no fundo */
-        height: 56px;
+        height: 60px;
 
         display: flex;
         align-items: center;
@@ -194,9 +195,9 @@
         border-top-left-radius: 24px;
         border-top-right-radius: 24px;
 
-        /* ícones acima da barra do iPhone, sem ficar “flutuando” */
+        padding-top: 15px;
+
         padding-bottom: max(8px, env(safe-area-inset-bottom));
-        /* fallback iOS antigo */
         padding-bottom: max(8px, constant(safe-area-inset-bottom));
 
         z-index: 1000;

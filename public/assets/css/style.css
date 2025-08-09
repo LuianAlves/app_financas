@@ -51,14 +51,12 @@
         padding: 24px 24px calc(24px + var(--safe-bottom));
     }
 
-    .scroll-content {
+    .scroll-content{
         overflow-y: auto;
-        padding-bottom: calc(80px + var(--safe-bottom));
+        padding-bottom: calc(56px + env(safe-area-inset-bottom));
+        /* fallback */
+        padding-bottom: calc(56px + constant(safe-area-inset-bottom));
         -webkit-overflow-scrolling: touch;
-        scroll-padding-bottom: calc(80px + var(--safe-bottom));
-    }
-    .scroll-content::-webkit-scrollbar {
-        display: none;
     }
 
     .header {
@@ -183,12 +181,11 @@
 
     .bottom-nav{
         position: fixed;
-        left: 50%;
-        bottom: var(--safe-bottom);     /* sobe o nav acima da barra */
-        transform: translateX(-50%);
-
-        width: min(100%, 400px);
+        left: 0;
+        right: 0;
+        bottom: 0;                       /* cola no fundo */
         height: 56px;
+
         display: flex;
         align-items: center;
         justify-content: space-around;
@@ -197,8 +194,11 @@
         border-top-left-radius: 24px;
         border-top-right-radius: 24px;
 
-        /* só um respiro interno, sem empurrar pra cima da barra */
-        padding: 0  max(8px, var(--safe-right))  0  max(8px, var(--safe-left));
+        /* ícones acima da barra do iPhone, sem ficar “flutuando” */
+        padding-bottom: max(8px, env(safe-area-inset-bottom));
+        /* fallback iOS antigo */
+        padding-bottom: max(8px, constant(safe-area-inset-bottom));
+
         z-index: 1000;
     }
 
@@ -289,8 +289,8 @@
         box-shadow: 1px 1px 10px rgba(0,0,0,.5);
         padding: 16px 20px;
         position: absolute;
-        bottom: calc(16px + var(--safe-bottom));
-        right: calc(16px + var(--safe-right));
+        bottom: calc(16px + env(safe-area-inset-bottom));
+        right:  calc(16px + env(safe-area-inset-right));
         border-radius: 100%;
         z-index: 9999;
     }

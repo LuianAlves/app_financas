@@ -185,7 +185,7 @@
         left: 0;
         right: 0;
         bottom: 0;                       /* cola no fundo */
-        height: auto;
+        height: 70px;
 
         display: flex;
         align-items: center;
@@ -292,7 +292,7 @@
         box-shadow: 1px 1px 10px rgba(0,0,0,.5);
         padding: 16px 20px;
         position: absolute;
-        bottom: calc(10% + env(safe-area-inset-bottom));
+        bottom: calc(7.5% + env(safe-area-inset-bottom));
         right:  calc(16px + env(safe-area-inset-right));
         border-radius: 100%;
         z-index: 9999;
@@ -302,21 +302,21 @@
         background: dodgerblue;
         border: none;
         padding: 10px 16px;
-        bottom: calc(19% + env(safe-area-inset-bottom));
+        bottom: calc(16.5% + env(safe-area-inset-bottom));
     }
 
     .create-other-2 {
         background: #ffbf1e;
         border: none;
         padding: 10px 16px;
-        bottom: calc(26% + env(safe-area-inset-bottom));
+        bottom: calc(23.5% + env(safe-area-inset-bottom));
     }
 
     .create-other-3 {
         background: #ff5a1e;
         border: none;
         padding: 10px 16px;
-        bottom: calc(33% + env(safe-area-inset-bottom));
+        bottom: calc(30.5% + env(safe-area-inset-bottom));
     }
 
     .custom-modal {

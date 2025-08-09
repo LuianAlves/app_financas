@@ -2,7 +2,7 @@
 @section('content')
     <div class="header">
         <div class="d-flex justify-content-between align-items-center mb-2">
-            <h1 class="m-0">Tela inicial</h1>
+            <h1 class="m-0 mb-3">Tela inicial</h1>
         </div>
 
         {{-- Seletor de mês full width --}}
@@ -155,25 +155,14 @@
 
             <div class="transaction-card">
                 <div class="transaction-info">
-                    @if($categoryType === 'entrada')
-                        <div class="icon bg-color">
-                            <i class="fas fa-arrow-up"></i>
-                        </div>
-                    @elseif($categoryType === 'despesa')
-                        <div class="icon bg-danger">
-                            <i class="fas fa-arrow-down"></i>
-                        </div>
-                    @else
-                        <div class="icon bg-info">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                    @endif
+                    <div class="icon" style="background: {{$transaction->transactionCategory->color}}">
+                        <i class="{{$transaction->transactionCategory->icon}}"></i>
+                    </div>
 
                     <div class="details">
                         <p class="m-0 p-0">{{ $transaction->title ?? $categoryName }}</p>
                         @if($transaction->date)
-                            <span class="text-muted mt-2"
-                                  style="font-size: 12px;">{{ \Carbon\Carbon::parse($transaction->date)->format('d/m/Y') }}</span>
+                            <span class="text-muted mt-2" style="font-size: 12px;">{{ \Carbon\Carbon::parse($transaction->date)->format('d/m/Y') }}</span>
                         @endif
                     </div>
                 </div>
@@ -197,8 +186,8 @@
         @forelse($upcomingPayments as $payment)
             <div class="transaction-card">
                 <div class="transaction-info">
-                    <div class="icon">
-                        <i class="fas fa-calendar-day"></i>
+                    <div class="icon text-white" style="background: {{$payment->transactionCategory->color}};">
+                        <i class="{{$payment->transactionCategory->icon}}"></i>
                     </div>
                     <div class="details">
                         {{ $payment->title ?? $payment->category_name }}

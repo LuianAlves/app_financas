@@ -35,11 +35,12 @@ class TransactionCategoryController extends Controller
             : 0;
 
         $transactionCategory = $this->transactionCategory->create([
-            'user_id'      => Auth::id(),
-            'name'         => $request->name,
-            'type'         => $request->type,
-            'monthly_limit'=> $limit,
-            'color'          => $request->color,
+            'user_id' => Auth::id(),
+            'name' => $request->name,
+            'type' => $request->type,
+            'monthly_limit' => $limit,
+            'color' => $request->color,
+            'icon' => $request->icon
         ]);
 
         $transactionCategory->monthly_limit = brlPrice($transactionCategory->monthly_limit);

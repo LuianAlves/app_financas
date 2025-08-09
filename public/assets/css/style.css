@@ -130,7 +130,7 @@
         color: #151515 !important;
     }
 
-    .recent-transactions h2, .next-payments h2, .card-invoice h2 {
+    .recent-transactions h2, .next-payments h2, .card-invoice h2, #calendar-results h2 {
         font-size: 16px;
         font-weight: 600;
         letter-spacing: 0.75px;

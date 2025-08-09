@@ -15,7 +15,8 @@ class TransactionCategory extends BaseModel
         'name',
         'type',
         'monthly_limit',
-        'color'
+        'color',
+        'icon'
     ];
 
     public function user(): BelongsTo

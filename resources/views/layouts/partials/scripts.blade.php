@@ -30,6 +30,7 @@
         const d = String(dateObj.getDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
     }
+
     function formatBRL(v) {
         if (typeof v === 'string' && v.startsWith('R$')) return v;
         const n = Number(v ?? 0);
@@ -53,6 +54,8 @@
         const tipo = (ev.extendedProps?.type || '').toLowerCase().trim(); // 'entrada' | 'despesa' | 'investimento'
         const item = {
             tipo,
+            color: ev.bg,
+            icon: ev.icon,
             descricao: ev.title ?? ev.extendedProps?.category_name ?? 'Sem descrição',
             valor: Number(ev.extendedProps?.amount ?? 0),
             valor_brl: ev.extendedProps?.amount_brl ?? formatBRL(ev.extendedProps?.amount ?? 0),
@@ -66,7 +69,7 @@
         const dataBR = formatDateBR(dataSelecionada);
         const eventos = eventosCache[dataSelecionada] ?? [];
 
-        let html = `<h6>Lançamentos do dia ${dataBR}</h6>`;
+        let html = `<h2 class="mt-3">Lançamentos do dia ${dataBR}</h2>`;
 
         if (!eventos.length){
             html += `
@@ -81,17 +84,16 @@
         }
 
         eventos.forEach(ev => {
+            console.log(ev)
             const isExpense  = ev.tipo === 'despesa';
             const isIncome   = ev.tipo === 'entrada';
-            const amountCls  = isExpense ? 'text-danger' : 'text-success';
             const sinal      = isExpense ? '-' : (isIncome ? '+' : '');
-            const icone      = iconHtml(ev.tipo);
 
             html += `
         <div class="transaction-card">
           <div class="transaction-info">
-            <div class="icon">
-              ${icone}
+            <div class="icon text-white" style="background-color: ${ev.color} !important;">
+              <i class="${ev.icon}"></i>
             </div>
             <div class="details">
               ${ev.descricao}
@@ -99,7 +101,7 @@
               <span>${dataBR}</span>
             </div>
           </div>
-          <div class="transaction-amount ${amountCls}">
+          <div class="transaction-amount price-default">
             ${sinal} ${ev.valor_brl}
           </div>
         </div>`;

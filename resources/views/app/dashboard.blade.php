@@ -208,9 +208,9 @@
 
     <!-- Bottom nav -->
     <div class="bottom-nav">
-        <i class="fas fa-home"></i>
-        <i class="fas fa-bars"></i>
-        <i class="fas fa-layer-group"></i>
+        <a href="{{route('dashboard')}}"><i class="fas fa-home"></i></a>
+        <a href="{{ route('transaction-view.index') }}"><i class="fas fa-retweet"></i></a>
+        <a href="{{ route('transaction-view.index') }}"><i class="fas fa-chart-line"></i></a>
         <i class="fas fa-user"></i>
     </div>
 

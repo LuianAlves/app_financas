@@ -11,33 +11,28 @@ class PushController extends Controller
 {
     public function subscribe(Request $request)
     {
-        // validação mínima
+        if (!$request->user()) {
+            return response()->json(['success' => false, 'error' => 'Unauthenticated'], 401);
+        }
+
         $data = $request->validate([
-            'endpoint'      => 'required|url',
-            'keys.p256dh'   => 'required|string',
-            'keys.auth'     => 'required|string',
+            'endpoint'    => 'required|url',
+            'keys.p256dh' => 'required|string',
+            'keys.auth'   => 'required|string',
         ]);
 
-        $user = $request->user();
-
         try {
-            // chama o trait HasPushSubscriptions
-            $user->updatePushSubscription(
+            $request->user()->updatePushSubscription(
                 $data['endpoint'],
                 $data['keys']['p256dh'],
                 $data['keys']['auth']
-            // não passe quarto parâmetro: content_encoding usará 'aesgcm' por padrão
             );
 
             return response()->json(['success' => true]);
-
         } catch (\Throwable $e) {
-            // para debugar, registra no log
-            Log::error('Erro em PushController@subscribe: '.$e->getMessage());
-            return response()->json([
-                'success' => false,
-                'error'   => $e->getMessage(),
-            ], 500);
+            Log::error('Push subscribe error: '.$e->getMessage());
+
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
 

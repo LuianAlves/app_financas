@@ -43,6 +43,8 @@ class InvoiceController extends Controller
         $currentInv  = $card->invoices->firstWhere('current_month', $cycle);
         $faturaAtual = $currentInv ? $currentInv->items->sum('amount') : 0;
 
+        App\Http\Controllers\Api\CardController::getTotalInvoice($faturaAtual);
+
         $transactions = Transaction::query()
             ->where('type', 'card')
             ->where('type_card', 'credit')

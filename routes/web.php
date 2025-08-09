@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\{
     RecurrentController as ApiRecurrentController,
     SavingController as ApiSavingController,
     TransactionController as ApiTransactionController,
+    InvestmentController as ApiInvestmentController,
 };
 
 // Web Controllers
@@ -30,6 +31,7 @@ use App\Http\Controllers\Web\{
     SavingController as WebSavingController,
     InvoiceController as WebInvoiceController,
     InvoiceItemController as WebInvoiceItemController,
+    InvestmentController as WebInvestmentController,
 };
 
 Route::get('/', [AuthController::class, 'welcome']);
@@ -75,6 +77,11 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     //InvoiceItem
     Route::get('/invoice-item', [WebInvoiceItemController::class, 'index'])->name('invoiceItem-view.index');
     Route::resource('invoice-items', ApiInvoiceItemController::class)->scoped(['invoiceItem' => 'uuid']);
+
+    //Investments
+    Route::get('/investment', [WebInvestmentController::class, 'index'])->name('investment-view.index');
+    Route::resource('investments', ApiInvestmentController::class)->scoped(['investment' => 'uuid']);
+
 
     Route::get('notifications', [WebNotificationController::class, 'index'])->name('notifications.index');
     Route::patch('notifications/{notification}/read', [WebNotificationController::class, 'markAsRead'])->name('notifications.read');

@@ -25,9 +25,9 @@ class CardController extends Controller
             $card->cardholder_name = strtoupper($card->cardholder_name);
             $card->credit_limit = brlPrice($card->credit_limit);
             $card->account->bank_name = strtoupper($card->account->bank_name);
-
-
         });
+
+        dd(getTotalInvoice());
 
         return response()->json($cards);
     }
@@ -84,5 +84,9 @@ class CardController extends Controller
         $card->delete();
 
         return response()->json(null, 204);
+    }
+
+    public function getTotalInvoice($total) {
+        return $total;
     }
 }

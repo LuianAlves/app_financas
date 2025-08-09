@@ -80,12 +80,13 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     Route::patch('notifications/{notification}/read', [WebNotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::delete('notifications/{notification}', [WebNotificationController::class, 'destroy'])->name('notifications.destroy');
 
-
-    // Push Notifications
-    Route::get('/vapid-public-key', fn() => env('VAPID_PUBLIC_KEY'));
-
-
     Route::post('/push/subscribe', [PushController::class, 'subscribe']);
     Route::get('/push/teste', [PushController::class, 'showForm'])->name('test.push');
     Route::post('/push/teste', [PushController::class, 'send']);
 });
+
+
+// Push Notifications
+Route::get('/vapid-public-key', fn () =>
+response(trim(env('VAPID_PUBLIC_KEY')), 200, ['Content-Type' => 'text/plain'])
+);

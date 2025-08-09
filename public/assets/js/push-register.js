@@ -1,95 +1,152 @@
-// public/js/push-register.js
-
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-        .replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = atob(base64);
-    return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
-}
-
-async function initializePush() {
-    if (!('serviceWorker' in navigator && 'PushManager' in window)) {
-        console.warn('Push não suportado neste navegador');
-        return;
+(function () {
+    // ==== helpers ====
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
     }
 
-    // 1) registra o Service Worker
-    try {
-        await navigator.serviceWorker.register('/sw.js');
-        //console.log('Service Worker registrado');
-    } catch (e) {
-        console.error('Falha ao registrar SW:', e);
-        return;
-    }
-
-    const registration = await navigator.serviceWorker.ready;
-    //console.log('Service Worker pronto');
-
-    // 2) pede permissão (vai abrir prompt imediatamente)
-    if (Notification.permission === 'default') {
-        const perm = await Notification.requestPermission();
-        //console.log('Permissão de notificação:', perm);
-        if (perm !== 'granted') {
-            console.warn('Notificações negadas');
-            return;
+    async function registerSW() {
+        if (!('serviceWorker' in navigator)) return null;
+        try {
+            return await navigator.serviceWorker.register(window.PUSH_CFG.swUrl);
+        } catch (e) {
+            console.error('Falha ao registrar SW:', e);
+            return null;
         }
     }
 
-    const vapidKey = await fetch('/vapid-public-key').then(r => r.text());
-
-    let sub = await registration.pushManager.getSubscription();
-
-    if (!sub) {
-        sub = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidKey)
+    async function postSubscription(subJSON) {
+        // se não logado, guarda e sai
+        if (!window.AUTH) {
+            localStorage.setItem('pendingPushSub', JSON.stringify(subJSON));
+            return;
+        }
+        // logado → envia
+        await fetch(window.PUSH_CFG.subscribeUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(subJSON)
         });
-
-        //console.log('Subscription criada', sub);
-    } else {
-        // console.log('Subscription existente', sub);
     }
 
-    if (!sub) {
+    async function sendPendingIfAny() {
+        if (!window.AUTH) return;
+        const pending = localStorage.getItem('pendingPushSub');
+        if (!pending) return;
         try {
-            const resp = await fetch('/push/subscribe', {
+            await fetch(window.PUSH_CFG.subscribeUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: JSON.stringify(sub.toJSON())
+                body: pending
             });
+        } finally {
+            localStorage.removeItem('pendingPushSub');
+        }
+    }
 
-            console.log('/push/subscribe →', await resp.json());
-        } catch (err) {
-            console.error('Erro enviando subscription:', err);
+    let initializing = false; // trava simples para não duplicar
+
+    async function initializePush() {
+        if (initializing) return;
+        initializing = true;
+
+        try {
+            if (!('serviceWorker' in navigator && 'PushManager' in window)) {
+                console.warn('Push não suportado neste navegador');
+                return;
+            }
+
+            const registration = await registerSW();
+            if (!registration) return;
+            await navigator.serviceWorker.ready;
+
+            // permissão
+            if (Notification.permission === 'default') {
+                const perm = await Notification.requestPermission();
+                if (perm !== 'granted') {
+                    console.warn('Notificações negadas');
+                    return;
+                }
+            } else if (Notification.permission !== 'granted') {
+                console.warn('Notificações negadas');
+                return;
+            }
+
+            // VAPID
+            let vapidKey;
+            try {
+                const respKey = await fetch(window.PUSH_CFG.vapidKeyUrl, { cache: 'no-store' });
+                vapidKey = (await respKey.text()).trim();
+            } catch (e) {
+                console.error('Falha ao obter VAPID:', e);
+                return;
+            }
+
+            // assinatura
+            let sub = await registration.pushManager.getSubscription();
+            if (!sub) {
+                try {
+                    sub = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(vapidKey)
+                    });
+                } catch (e) {
+                    console.error('Falha ao assinar Push:', e);
+                    return;
+                }
+            }
+
+            await postSubscription(sub.toJSON());
+
+            // marcou como concedido → não precisa mais de gesto
+            localStorage.setItem('pushGranted', '1');
+        } finally {
+            initializing = false;
+        }
+    }
+
+    async function ensurePermissionByGesture() {
+        // iOS precisa de gesto NA TELA DE LOGIN
+        const loginPath = new URL(window.PUSH_CFG.loginPath, location.origin).pathname.replace(/\/+$/, '');
+        const onLogin = location.pathname.replace(/\/+$/, '') === loginPath;
+        const needGesture =
+            window.PUSH_CFG.isIOS &&
+            onLogin &&
+            Notification.permission === 'default' &&
+            !localStorage.getItem('pushGranted');
+
+        if (needGesture) {
+            const handler = async () => {
+                await initializePush();
+                document.removeEventListener('click', handler);
+                document.removeEventListener('touchstart', handler);
+            };
+            document.addEventListener('click', handler, { once: true });
+            document.addEventListener('touchstart', handler, { once: true });
+            return;
         }
 
-        registration.showNotification('🔔 Permissões OK!', {
-            body: 'Toque aqui para instalar o app na sua tela inicial.',
-            icon: '/laravelpwa/icons/icon-192x192.png',
-            data: { url: '/' }
-        });
+        // não precisa de gesto
+        if (Notification.permission === 'granted') {
+            await initializePush();
+        } else if (Notification.permission === 'default' && !window.PUSH_CFG.isIOS) {
+            // em não-iOS pode pedir direto
+            await initializePush();
+        }
     }
-}
 
-function setupPushOnGesture() {
-    // dispara direto no load para browsers que aceitam
-    initializePush();
-
-    // fallback: se requestPermission não disparar (ex: Safari PWA), aguarda o primeiro toque
-    if (Notification.permission === 'default') {
-        const handler = () => {
-            initializePush();
-            window.removeEventListener('click', handler);
-            window.removeEventListener('touchstart', handler);
-        };
-        window.addEventListener('click', handler);
-        window.addEventListener('touchstart', handler);
-    }
-}
-
-// expõe globalmente e dispara no load
-window.addEventListener('DOMContentLoaded', setupPushOnGesture);
+    window.addEventListener('DOMContentLoaded', async () => {
+        await sendPendingIfAny();   // se logou agora, envia a sub pendente
+        await ensurePermissionByGesture();
+    });
+})();

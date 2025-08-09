@@ -15,13 +15,14 @@
     <main class="content-area scroll-content">
         @yield('content')
 
-        <!-- Bottom nav -->
-        <div class="bottom-nav">
-            <a href="{{route('dashboard')}}"><i class="fas fa-home"></i></a>
-            <a href="{{ route('transaction-view.index') }}"><i class="fas fa-retweet"></i></a>
-            <a href="{{ route('transaction-view.index') }}"><i class="fas fa-chart-line"></i></a>
-            <i class="fas fa-user"></i>
-        </div>
+        @auth
+            <div class="bottom-nav">
+                <a href="{{route('dashboard')}}"><i class="fas fa-home"></i></a>
+                <a href="{{ route('transaction-view.index') }}"><i class="fas fa-retweet"></i></a>
+                <a href="{{ route('transaction-view.index') }}"><i class="fas fa-chart-line"></i></a>
+                <i class="fas fa-user"></i>
+            </div>
+        @endauth
     </main>
 </div>
 

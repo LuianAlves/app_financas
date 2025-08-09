@@ -70,44 +70,44 @@ use Illuminate\Support\Facades\Auth;
         $isCard = $request->card_id !== null;
         $typeCard = $isCard ? $request->type_card : null;
 
-        if($isCard && $typeCard === 'credit') {
+        if ($isCard && $typeCard === 'credit') {
             $request->recurrence_type = null;
 
             $txDate = Carbon::parse($request->date);
 
-            $card       = Card::findOrFail($request->card_id);
+            $card = Card::findOrFail($request->card_id);
             $closingDay = $card->closing_day; // ex: 2
 
             $cycleMonth = $txDate->day > $closingDay
                 ? $txDate->copy()->addMonth()->format('Y-m')
                 : $txDate->copy()->format('Y-m');
 
-            $totalInstallments = (int) $request->installments;
-            $perInstallment    = $request->amount / $totalInstallments;
+            $totalInstallments = (int)$request->installments;
+            $perInstallment = $request->amount / $totalInstallments;
 
             $firstCycleDate = Carbon::createFromFormat('Y-m-d', $cycleMonth . '-01');
 
             for ($i = 0; $i < $totalInstallments; $i++) {
                 $cycleDate = $firstCycleDate->copy()->addMonths($i);
-                $monthKey  = $cycleDate->format('Y-m');
+                $monthKey = $cycleDate->format('Y-m');
 
                 $invoice = Invoice::firstOrCreate(
                     [
-                        'user_id'       => Auth::id(),
-                        'card_id'       => $card->id,
+                        'user_id' => Auth::id(),
+                        'card_id' => $card->id,
                         'current_month' => $monthKey,
                     ],
                     ['paid' => false]
                 );
 
                 InvoiceItem::create([
-                    'invoice_id'             => $invoice->id,
-                    'title'                  => $request->title,
-                    'amount'                 => $perInstallment,
-                    'date'                   => $txDate->copy()->addMonths($i),
-                    'transaction_category_id'=> $request->transaction_category_id,
-                    'installments'           => $totalInstallments,
-                    'current_installment'    => $i + 1,
+                    'invoice_id' => $invoice->id,
+                    'title' => $request->title,
+                    'amount' => $perInstallment,
+                    'date' => $txDate->copy()->addMonths($i),
+                    'transaction_category_id' => $request->transaction_category_id,
+                    'installments' => $totalInstallments,
+                    'current_installment' => $i + 1,
                 ]);
             }
         }
@@ -156,24 +156,41 @@ use Illuminate\Support\Facades\Auth;
             }
 
             if ($transaction->recurrence_type === 'custom') {
-                $total     = (int) $transaction->custom_occurrences;
+                $total = (int)$transaction->custom_occurrences;
                 $startDate = Carbon::parse($transaction->date);
 
                 for ($i = 0; $i < $total; $i++) {
                     $current = $startDate->copy()->addMonths($i);
 
                     $this->customItemRecurrents->create([
-                        'recurrent_id'             => $recurrent->id,
-                        'payment_day'              => $current->format('d'),
-                        'reference_month'          => $current->format('m'),
-                        'reference_year'           => $current->format('Y'),
-                        'amount'                   => $transaction->amount,
+                        'recurrent_id' => $recurrent->id,
+                        'payment_day' => $current->format('d'),
+                        'reference_month' => $current->format('m'),
+                        'reference_year' => $current->format('Y'),
+                        'amount' => $transaction->amount,
                         'custom_occurrence_number' => $i + 1,
-                        'status'                   => false,
+                        'status' => false,
                     ]);
                 }
             }
         }
+
+
+        $transaction->amount = brlPrice($transaction->amount);
+
+        switch ($transaction->transactionCategory->type) {
+            case 'entrada':
+                $transaction->typeColor = 'success';
+                break;
+            case 'despesa':
+                $transaction->typeColor = 'danger';
+                break;
+            case 'investimento':
+                $transaction->typeColor = 'info';
+                break;
+        }
+
+        $transaction->date = Carbon::parse($transaction->date)->locale('pt_BR')->isoFormat('DD/MMM.');
 
         return response()->json($transaction);
     }

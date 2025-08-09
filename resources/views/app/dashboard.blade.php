@@ -99,7 +99,7 @@
 
     <!-- Transações recentes -->
     <div class="recent-transactions">
-        <h6>Transações recentes</h6>
+        <h2>Transações recentes</h2>
         @forelse($recentTransactions as $transaction)
             @php
                 $categoryType = optional($transaction->transactionCategory)->type;
@@ -108,25 +108,29 @@
 
             <div class="transaction-card">
                 <div class="transaction-info">
-                    <div class="icon">
-                        @if($categoryType === 'entrada')
-                            <i class="fas fa-arrow-up text-success"></i>
-                        @elseif($categoryType === 'despesa')
-                            {{-- Vermelha para baixo --}}
-                            <i class="fas fa-arrow-down text-danger"></i>
-                        @else
-                            <i class="fas fa-chart-line text-primary"></i>
-                        @endif
-                    </div>
+                    @if($categoryType === 'entrada')
+                        <div class="icon bg-color">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                    @elseif($categoryType === 'despesa')
+                        <div class="icon bg-danger">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                    @else
+                        <div class="icon bg-info">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                    @endif
+
                     <div class="details">
-                        {{ $transaction->title ?? $categoryName }}
-                        <br>
+                        <p class="m-0 p-0">{{ $transaction->title ?? $categoryName }}</p>
                         @if($transaction->date)
-                            <span>{{ \Carbon\Carbon::parse($transaction->date)->format('d/m/Y') }}</span>
+                            <span class="text-muted mt-2"
+                                  style="font-size: 12px;">{{ \Carbon\Carbon::parse($transaction->date)->format('d/m/Y') }}</span>
                         @endif
                     </div>
                 </div>
-                <div class="transaction-amount {{ $categoryType === 'despesa' ? 'text-danger' : 'text-success' }}">
+                <div class="transaction-amount price-default">
                     {{ $categoryType === 'despesa' ? '-' : '+' }}
                     {{ brlPrice($transaction->amount) }}
                 </div>
@@ -136,14 +140,18 @@
         @endforelse
     </div>
 
+    <div class="card-invoice mt-4">
+        <h2>Cartões de crédito</h2>
+    </div>
+
     <!-- Próximos pagamentos -->
     <div class="next-payments mt-4">
-        <h6>Próximos pagamentos</h6>
+        <h2>Próximos pagamentos</h2>
         @forelse($upcomingPayments as $payment)
             <div class="transaction-card">
                 <div class="transaction-info">
                     <div class="icon">
-                        <i class="fas fa-calendar-day text-warning"></i>
+                        <i class="fas fa-calendar-day"></i>
                     </div>
                     <div class="details">
                         {{ $payment->title ?? $payment->category_name }}
@@ -151,7 +159,7 @@
                         <span>{{ \Carbon\Carbon::parse($payment->date)->format('d/m/Y') }}</span>
                     </div>
                 </div>
-                <div class="transaction-amount text-danger">
+                <div class="transaction-amount price-default">
                     - {{ brlPrice($payment->amount) }}
                 </div>
             </div>

@@ -182,28 +182,23 @@
     }
 
     .bottom-nav{
-        background: #00bfa6;
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
+        position: fixed;
+        left: 50%;
+        bottom: var(--safe-bottom);     /* sobe o nav acima da barra */
+        transform: translateX(-50%);
 
-        height: 56px;                /* altura real do nav */
+        width: min(100%, 400px);
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+
+        background: #00bfa6;
         border-top-left-radius: 24px;
         border-top-right-radius: 24px;
 
-        position: fixed;
-        left: 50%;
-        bottom: 0;
-        transform: translateX(-50%);
-
-        /* ocupa toda a largura até 400px (ou ajuste) */
-        width: min(100%, 400px);
-
-        /* levanta no iPhone */
-        padding-bottom: max(8px, var(--safe-bottom));
-        padding-left: var(--safe-left);
-        padding-right: var(--safe-right);
-
+        /* só um respiro interno, sem empurrar pra cima da barra */
+        padding: 0  max(8px, var(--safe-right))  0  max(8px, var(--safe-left));
         z-index: 1000;
     }
 

@@ -289,7 +289,7 @@
         box-shadow: 1px 1px 10px rgba(0,0,0,.5);
         padding: 16px 20px;
         position: fixed;
-        bottom: 3.5%;
+        bottom: 10%;
         right: 7.5%;
         border-radius: 100%;
         z-index: 9999;
@@ -299,21 +299,21 @@
         background: dodgerblue;
         border: none;
         padding: 10px 16px;
-        bottom: 14%;
+        bottom: 17.5%;
     }
 
     .create-other-2 {
         background: #ffbf1e;
         border: none;
         padding: 10px 16px;
-        bottom: 21.5%;
+        bottom: 24%;
     }
 
     .create-other-3 {
         background: #ff5a1e;
         border: none;
         padding: 10px 16px;
-        bottom: 29%;
+        bottom: 30.5%;
     }
 
     .custom-modal {

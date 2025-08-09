@@ -23,12 +23,32 @@
     <div id="cardList" class="mt-4"></div>
 
     <script>
-        const modal = document.getElementById('modalCard');
+        const modal   = document.getElementById('modalCard');
         const openBtn = document.getElementById('openModal');
         const closeBtn = document.getElementById('closeModal');
 
-        openBtn.addEventListener('click', () => modal.classList.add('show'));
-        closeBtn.addEventListener('click', () => modal.classList.remove('show'));
+        function resetFormCard() {
+            const form = document.getElementById('formCard');
+            if (!form) return;
+
+            form.reset();
+
+            form.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(el => el.checked = false);
+            form.querySelectorAll('input[type="file"]').forEach(el => el.value = '');
+        }
+
+        openBtn.addEventListener('click', () => {
+            resetFormCard();
+
+            modal.classList.add('show');
+        });
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                modal.classList.remove('show');
+                resetFormCard();
+            });
+        }
 
         function brl(valor) {
             return parseFloat(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -49,7 +69,6 @@
         }
 
         const assetUrl = "{{ asset('assets/img') }}";
-
         const route = "{{ url('/invoice/') }}";
 
         document.getElementById('formCard').addEventListener('submit', async function(e) {
@@ -84,7 +103,8 @@
 
             const brandName = brandMap[card.brand];
             const cardAfterStore = `
-                <a href="${route + '/' +card.id}" style="text-decoration: none !important"><div class="balance-box" style="background: ${card.color_card}">
+            <a href="${route + '/' + card.id}" style="text-decoration: none !important">
+                <div class="balance-box" style="background: ${card.color_card}">
                     <img src="${assetUrl}/credit_card/chip_card.png" class="card-chip" alt="Chip" />
                     <img src="${assetUrl}/brands/${brandName}.png" class="card-brand" alt="${brandName}" />
                     <div class="card-number">
@@ -100,8 +120,9 @@
                         <div>Limite Atual: ${card.credit_limit}</div>
                       </div>
                     </div>
-                 </div></a>
-            `;
+                </div>
+            </a>
+        `;
             container.insertAdjacentHTML('beforeend', cardAfterStore);
         }
 

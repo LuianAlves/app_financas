@@ -124,9 +124,17 @@
         font-size: 1rem;
     }
 
-    .recent-transactions h2 {
-        font-size: 1rem;
-        margin-bottom: 12px;
+    .price-default {
+        font-size: 12.5px !important;
+        letter-spacing: .5px !important;
+        color: #151515 !important;
+    }
+
+    .recent-transactions h2, .next-payments h2, .card-invoice h2 {
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: 0.75px;
+        margin-bottom: 17.5px;
     }
     .transaction-card {
         background-color: white;
@@ -191,7 +199,6 @@
         background: #00bfa6;
         border-top-left-radius: 24px;
         border-top-right-radius: 24px;
-
 
         padding-top: max(12px, env(safe-area-inset-bottom));
         padding-top: max(12px, constant(safe-area-inset-bottom));

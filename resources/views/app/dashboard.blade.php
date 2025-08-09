@@ -29,6 +29,7 @@
         </form>
 
         <div class="balance-box mt-2">
+
             <div class="d-flex justify-content-between">
                 <span>Saldo do mês</span>
                 <i class="fa fa-eye"></i>

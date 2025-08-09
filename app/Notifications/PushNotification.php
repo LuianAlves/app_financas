@@ -31,7 +31,7 @@ class PushNotification extends Notification
         return (new WebPushMessage)
             ->title($this->title)
             ->body($this->body)
-            ->icon('/icons/icon-192x192.png')
+            ->icon('/laravelpwa/icons/icon-192x192.png')
             ->action('Abrir app', '/')
             ->data(['url' => '/']);
     }

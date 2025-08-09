@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Auth\User;
 
 use App\Traits\BelongsToUser;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Card extends BaseModel
 {
@@ -42,6 +43,18 @@ class Card extends BaseModel
 
     public function transactions(): HasMany
     {
-        return $this->hasMany(InvoiceItem::class);
+        return $this->hasMany(Transaction::class);
+    }
+
+    public function invoiceItems(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            InvoiceItem::class,
+            Invoice::class,
+            'card_id',
+            'invoice_id',
+            'id',
+            'id'
+        );
     }
 }

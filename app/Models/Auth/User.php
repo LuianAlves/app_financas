@@ -11,6 +11,7 @@ use App\Models\Notification;
 use App\Models\Recurrent;
 use App\Models\Saving;
 use App\Models\Transaction;
+use App\Models\TransactionCategory;
 use App\Traits\BelongsToUser;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use App\Traits\HasUuid;

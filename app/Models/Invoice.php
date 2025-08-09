@@ -22,7 +22,8 @@ class Invoice extends BaseModel
         return $this->belongsTo(Card::class);
     }
 
-    public function transactions(): HasMany
+    // itens desta fatura
+    public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
     }

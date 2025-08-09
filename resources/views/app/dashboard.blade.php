@@ -1,47 +1,91 @@
 @extends('layouts.templates.app')
 @section('content')
     <div class="header">
-        <h1>Tela inicial</h1>
-        <div class="balance-box">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h1 class="m-0">Tela inicial</h1>
+        </div>
+
+        {{-- Seletor de mês full width --}}
+        <form method="GET" class="d-flex align-items-center justify-content-between w-100 mb-3">
+            <button type="button" class="btn btn-light rounded-circle shadow-sm px-3"
+                    onclick="changeMonth(-1)">
+                <i class="fa fa-chevron-left"></i>
+            </button>
+
+            <input
+                type="month"
+                name="month"
+                id="monthPicker"
+                class="form-control text-center fw-bold mx-2"
+                value="{{ $startOfMonth->format('Y-m') }}"
+                style="max-width: 250px; flex: 1;"
+                onchange="this.form.submit()"
+            >
+
+            <button type="button" class="btn btn-light rounded-circle shadow-sm px-3"
+                    onclick="changeMonth(1)">
+                <i class="fa fa-chevron-right"></i>
+            </button>
+        </form>
+
+        <div class="balance-box mt-2">
             <div class="d-flex justify-content-between">
-                <span>Saldo</span>
+                <span>Saldo do mês</span>
                 <i class="fa fa-eye"></i>
             </div>
+
             <strong>{{ brlPrice($total) }}</strong>
+
             <div class="d-flex justify-content-between align-items-center mt-2 mb-1">
                 <small>
                     <b class="text-muted">A receber <a href="{{ route('transactionCategory-view.index') }}"><i
-                                class="fa fa-arrow-right text-color mx-2"
-                                style="font-size: 12px;"></i></a></b>
+                                class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i></a></b>
 
-                    <div class="d-flex flex-column">
-                        <div class="d-flex align-items-center">
-                            <span>{{ brlPrice($totalIncome) }}</span>
-                            <small class="text-success mx-2">+17%</small>
-                        </div>
-                        <b class="text-muted">Saldo contas<a href="{{ route('account-view.index') }}"><i
-                                    class="fa fa-arrow-right text-color mx-2"
-                                    style="font-size: 12px;"></i></a></b>
-                        <div>
-                            <span>{{ brlPrice($accountsBalance) }}</span>
-                        </div>
-                        <b class="text-muted">Cofrinhos<a href="{{ route('saving-view.index') }}"><i
-                                    class="fa fa-arrow-right text-color mx-2"
-                                    style="font-size: 12px;"></i></a></b>
-                        <div>
-                            <span>{{ brlPrice($savingsBalance) }}</span>
-                        </div>
+                    @php
+                        $incPct = $incomeMoM; // pode ser null
+                        $incSign = $incPct !== null && $incPct > 0 ? '+' : '';
+                        $incClass = $incPct === null ? 'text-muted'
+                                    : ($incPct >= 0 ? 'text-success' : 'text-danger');
+                    @endphp
+
+                    <div class="d-flex align-items-center">
+                        <span>{{ brlPrice($totalIncome) }}</span>
+                        <small class="{{ $incClass }} mx-2">
+                            {{ $incPct === null ? '—' : $incSign . number_format($incPct, 0) . '%' }}
+                        </small>
+                    </div>
+
+                    <b class="text-muted">Saldo contas <a href="{{ route('account-view.index') }}"><i
+                                class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i></a></b>
+                    <div>
+                        <span>{{ brlPrice($accountsBalance) }}</span>
+                    </div>
+
+                    <b class="text-muted">Cofrinhos <a href="{{ route('saving-view.index') }}"><i
+                                class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i></a></b>
+                    <div>
+                        <span>{{ brlPrice($savingsBalance) }}</span>
                     </div>
                 </small>
 
                 <small>
                     <b class="text-muted">A pagar <a href="{{ route('transactionCategory-view.index') }}"><i
-                                class="fa fa-arrow-right text-danger mx-2"
-                                style="font-size: 12px;"></i></a></b>
+                                class="fa fa-arrow-right text-danger mx-2" style="font-size: 12px;"></i></a></b>
+
+                    @php
+                        $expPct = $expenseMoM; // pode ser null
+                        $expSign = $expPct !== null && $expPct > 0 ? '+' : '';
+                        $expClass = $expPct === null ? 'text-muted'
+                                   : ($expPct > 0 ? 'text-danger' : 'text-success');
+                    @endphp
+
                     <div class="d-flex align-items-center">
                         <span>{{ brlPrice($categorySums['despesa'] ?? 0, 2, ',', '.') }}</span>
-                        <small class="text-danger mx-2"> +3%</small>
+                        <small class="{{ $expClass }} mx-2">
+                            {{ $expPct === null ? '—' : $expSign . number_format($expPct, 0) . '%' }}
+                        </small>
                     </div>
+
                     <b class="text-muted">Balanço <a href="#"><i class="fa fa-arrow-right text-info mx-2"
                                                                  style="font-size: 12px;"></i></a></b>
                     <div class="d-flex align-items-center">
@@ -49,9 +93,12 @@
                     </div>
                 </small>
             </div>
+
             <div class="d-flex justify-content-end align-items-center mt-3">
-                <a href="#" class="text-muted fw-bold" style="text-decoration: none; font-size: 13px;">Extrato do mês<i
-                        class="fa fa-chevron-right mx-2" style="font-size: 12px;"></i></a>
+                <a href="{{ url()->current() . '?month=' . $startOfMonth->format('Y-m') }}"
+                   class="text-muted fw-bold" style="text-decoration: none; font-size: 13px;">
+                    Extrato do mês<i class="fa fa-chevron-right mx-2" style="font-size: 12px;"></i>
+                </a>
             </div>
         </div>
     </div>
@@ -109,10 +156,8 @@
                 <div class="transaction-info">
                     <div class="icon">
                         @if($categoryType === 'entrada')
-                            {{-- Verde para cima --}}
                             <i class="fas fa-arrow-up text-success"></i>
                         @elseif($categoryType === 'despesa')
-                            {{-- Vermelha para baixo --}}
                             <i class="fas fa-arrow-down text-danger"></i>
                         @else
                             <i class="fas fa-chart-line text-primary"></i>
@@ -167,4 +212,16 @@
         <i class="fas fa-layer-group"></i>
         <i class="fas fa-user"></i>
     </div>
+
+    @push('scripts')
+        <script>
+            function changeMonth(delta) {
+                const input = document.getElementById('monthPicker');
+                const [year, month] = input.value.split('-').map(Number);
+                const date = new Date(year, month - 1 + delta, 1);
+                input.value = date.toISOString().slice(0, 7);
+                input.form.submit();
+            }
+        </script>
+    @endpush
 @endsection

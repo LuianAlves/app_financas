@@ -51,16 +51,13 @@
         padding: 24px 24px calc(24px + var(--safe-bottom));
     }
 
-    .scroll-content{
+    .scroll-content {
         overflow-y: auto;
-        padding-bottom: calc(56px + env(safe-area-inset-bottom));
-        /* fallback */
-        padding-bottom: calc(56px + constant(safe-area-inset-bottom));
+        padding-bottom: 80px;
         -webkit-overflow-scrolling: touch;
     }
-
-    .header {
-        padding-bottom: 8px;
+    .scroll-content::-webkit-scrollbar {
+        display: none;
     }
 
     .header h1 {
@@ -292,8 +289,8 @@
         box-shadow: 1px 1px 10px rgba(0,0,0,.5);
         padding: 16px 20px;
         position: absolute;
-        bottom: calc(7.5% + env(safe-area-inset-bottom));
-        right:  calc(16px + env(safe-area-inset-right));
+        bottom: 3.5%;
+        right: 7.5%;
         border-radius: 100%;
         z-index: 9999;
     }
@@ -302,21 +299,21 @@
         background: dodgerblue;
         border: none;
         padding: 10px 16px;
-        bottom: calc(16.5% + env(safe-area-inset-bottom));
+        bottom: 14%;
     }
 
     .create-other-2 {
         background: #ffbf1e;
         border: none;
         padding: 10px 16px;
-        bottom: calc(23.5% + env(safe-area-inset-bottom));
+        bottom: 21.5%;
     }
 
     .create-other-3 {
         background: #ff5a1e;
         border: none;
         padding: 10px 16px;
-        bottom: calc(30.5% + env(safe-area-inset-bottom));
+        bottom: 29%;
     }
 
     .custom-modal {

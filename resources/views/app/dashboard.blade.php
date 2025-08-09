@@ -5,7 +5,6 @@
             <h1 class="m-0 mb-3">Tela inicial</h1>
         </div>
 
-        {{-- Seletor de mês full width --}}
         <form method="GET" class="d-flex align-items-center justify-content-between w-100 mb-3">
             <button type="button" class="btn btn-light rounded-circle shadow-sm px-3"
                     onclick="changeMonth(-1)">
@@ -144,7 +143,6 @@
 
     <div class="py-3" id="calendar-results"></div>
 
-    <!-- Transações recentes -->
     <div class="recent-transactions">
         <h2>Transações recentes</h2>
         @forelse($recentTransactions as $transaction)
@@ -162,7 +160,8 @@
                     <div class="details">
                         <p class="m-0 p-0">{{ $transaction->title ?? $categoryName }}</p>
                         @if($transaction->date)
-                            <span class="text-muted mt-2" style="font-size: 12px;">{{ \Carbon\Carbon::parse($transaction->date)->format('d/m/Y') }}</span>
+                            <span class="text-muted mt-2"
+                                  style="font-size: 12px;">{{ \Carbon\Carbon::parse($transaction->date)->format('d/m/Y') }}</span>
                         @endif
                     </div>
                 </div>
@@ -176,11 +175,6 @@
         @endforelse
     </div>
 
-    <div class="card-invoice mt-4">
-        <h2>Cartões de crédito</h2>
-    </div>
-
-    <!-- Próximos pagamentos -->
     <div class="next-payments mt-4">
         <h2>Próximos pagamentos</h2>
         @forelse($upcomingPayments as $payment)
@@ -202,6 +196,100 @@
         @empty
             <p class="text-muted">Nenhum pagamento futuro</p>
         @endforelse
+    </div>
+
+    <div class="card-invoice mt-4">
+        <h2>Faturas atuais</h2>
+
+        <div class="balance-box">
+            <div class="d-flex">
+                <i class="fa-solid fa-credit-card"></i>
+                <small class="mx-3 text-dark">Utilize o cartão <b style="letter-spacing: 1.5px;">0377</b> até
+                    13/AGO.</small>
+            </div>
+        </div>
+
+        <div class="balance-box mt-2">
+
+            <div class="d-flex justify-content-between">
+                <span>Nubank 0766</span>
+            </div>
+            <strong style="font-size: 18px;">{{ brlPrice($total) }}</strong>
+
+            <div class="d-flex justify-content-between">
+                <span>Limite disponível <b>R$ 1.000,00</b></span>
+            </div>
+
+
+            <div class="d-flex justify-content-between">
+                <span>Vence em <b>18/Ago.</b></span>
+            </div>
+
+            {{--            <div class="d-flex justify-content-between align-items-center mt-2 mb-1">--}}
+            {{--                <small>--}}
+            {{--                    <b class="text-muted">A receber <a href="{{ route('transactionCategory-view.index') }}"><i--}}
+            {{--                                class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i></a></b>--}}
+
+            {{--                    @php--}}
+            {{--                        $incPct = $incomeMoM; // pode ser null--}}
+            {{--                        $incSign = $incPct !== null && $incPct > 0 ? '+' : '';--}}
+            {{--                        $incClass = $incPct === null ? 'text-muted'--}}
+            {{--                                    : ($incPct >= 0 ? 'text-success' : 'text-danger');--}}
+            {{--                    @endphp--}}
+
+            {{--                    <div class="d-flex align-items-center">--}}
+            {{--                        <span>{{ brlPrice($totalIncome) }}</span>--}}
+            {{--                        <small class="{{ $incClass }} mx-2">--}}
+            {{--                            {{ $incPct === null ? '—' : $incSign . number_format($incPct, 0) . '%' }}--}}
+            {{--                        </small>--}}
+            {{--                    </div>--}}
+
+            {{--                    <b class="text-muted">Saldo contas <a href="{{ route('account-view.index') }}"><i--}}
+            {{--                                class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i></a></b>--}}
+            {{--                    <div>--}}
+            {{--                        <span>{{ brlPrice($accountsBalance) }}</span>--}}
+            {{--                    </div>--}}
+
+            {{--                    <b class="text-muted">Cofrinhos <a href="{{ route('saving-view.index') }}"><i--}}
+            {{--                                class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i></a></b>--}}
+            {{--                    <div>--}}
+            {{--                        <span>{{ brlPrice($savingsBalance) }}</span>--}}
+            {{--                    </div>--}}
+            {{--                </small>--}}
+
+            {{--                <small>--}}
+            {{--                    <b class="text-muted">A pagar <a href="{{ route('transactionCategory-view.index') }}"><i--}}
+            {{--                                class="fa fa-arrow-right text-danger mx-2" style="font-size: 12px;"></i></a></b>--}}
+
+            {{--                    @php--}}
+            {{--                        $expPct = $expenseMoM; // pode ser null--}}
+            {{--                        $expSign = $expPct !== null && $expPct > 0 ? '+' : '';--}}
+            {{--                        $expClass = $expPct === null ? 'text-muted'--}}
+            {{--                                   : ($expPct > 0 ? 'text-danger' : 'text-success');--}}
+            {{--                    @endphp--}}
+
+            {{--                    <div class="d-flex align-items-center">--}}
+            {{--                        <span>{{ brlPrice($categorySums['despesa'] ?? 0, 2, ',', '.') }}</span>--}}
+            {{--                        <small class="{{ $expClass }} mx-2">--}}
+            {{--                            {{ $expPct === null ? '—' : $expSign . number_format($expPct, 0) . '%' }}--}}
+            {{--                        </small>--}}
+            {{--                    </div>--}}
+
+            {{--                    <b class="text-muted">Balanço <a href="#"><i class="fa fa-arrow-right text-info mx-2"--}}
+            {{--                                                                 style="font-size: 12px;"></i></a></b>--}}
+            {{--                    <div class="d-flex align-items-center">--}}
+            {{--                        <span>{{ brlPrice($balance) }}</span>--}}
+            {{--                    </div>--}}
+            {{--                </small>--}}
+            {{--            </div>--}}
+
+            {{--            <div class="d-flex justify-content-end align-items-center mt-3">--}}
+            {{--                <a href="{{ url()->current() . '?month=' . $startOfMonth->format('Y-m') }}"--}}
+            {{--                   class="text-muted fw-bold" style="text-decoration: none; font-size: 13px;">--}}
+            {{--                    Extrato do mês<i class="fa fa-chevron-right mx-2" style="font-size: 12px;"></i>--}}
+            {{--                </a>--}}
+            {{--            </div>--}}
+        </div>
     </div>
 
     @push('scripts')

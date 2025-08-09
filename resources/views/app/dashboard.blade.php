@@ -155,19 +155,9 @@
 
             <div class="transaction-card">
                 <div class="transaction-info">
-                    @if($categoryType === 'entrada')
-                        <div class="icon bg-color">
-                            <i class="fas fa-arrow-up"></i>
-                        </div>
-                    @elseif($categoryType === 'despesa')
-                        <div class="icon bg-danger">
-                            <i class="fas fa-arrow-down"></i>
-                        </div>
-                    @else
-                        <div class="icon bg-info">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                    @endif
+                    <div class="icon" style="background: {{$transaction->transactionCategory->color}}">
+                        <i class="{{$transaction->transactionCategory->icon}}"></i>
+                    </div>
 
                     <div class="details">
                         <p class="m-0 p-0">{{ $transaction->title ?? $categoryName }}</p>
@@ -197,7 +187,7 @@
             <div class="transaction-card">
                 <div class="transaction-info">
                     <div class="icon text-white" style="background: {{$payment->transactionCategory->color}};">
-                        <i class="fas fa-calendar-day"></i>
+                        <i class="{{$payment->transactionCategory->icon}}"></i>
                     </div>
                     <div class="details">
                         {{ $payment->title ?? $payment->category_name }}

@@ -14,7 +14,6 @@ class DashboardController extends Controller
 {
     public function dashboard(Request $request)
     {
-        // ----- Mês selecionado (YYYY-MM) ou mês atual -----
         $monthParam = $request->query('month'); // ex.: 2025-09
         $startOfMonth = $monthParam
             ? Carbon::createFromFormat('Y-m', $monthParam)->startOfMonth()
@@ -23,11 +22,9 @@ class DashboardController extends Controller
         $endOfMonth = (clone $startOfMonth)->endOfMonth();
         $today = Carbon::today();
 
-        // ----- Saldos (não entram no total do mês) -----
         $accountsBalance = Account::where('user_id', Auth::id())->sum('current_balance');
         $savingsBalance  = Saving::where('user_id', Auth::id())->sum('current_amount');
 
-        // ----- Somatórios por tipo DENTRO DO MÊS selecionado -----
         $categorySums = Transaction::query()
             ->where('transactions.user_id', Auth::id())
             ->whereBetween('transactions.date', [$startOfMonth, $endOfMonth])
@@ -53,7 +50,7 @@ class DashboardController extends Controller
             ->get(['id','title','amount','date','transaction_category_id']);
 
         // ----- Próximas 10 DESPESAS (>= hoje) -----
-        $upcomingPayments = Transaction::with(['transactionCategory:id,name,type'])
+        $upcomingPayments = Transaction::with(['transactionCategory:id,name,type,color'])
             ->where('user_id', Auth::id())
             ->whereHas('transactionCategory', fn($q) => $q->where('type', 'despesa'))
             ->whereNotNull('date')
@@ -63,7 +60,7 @@ class DashboardController extends Controller
             ->get(['id','title','amount','date','transaction_category_id']);
 
         // ----- Próximas 10 ENTRADAS (>= hoje) — pro calendário -----
-        $upcomingIncomes = Transaction::with(['transactionCategory:id,name,type'])
+        $upcomingIncomes = Transaction::with(['transactionCategory:id,name,type,color'])
             ->where('user_id', Auth::id())
             ->whereHas('transactionCategory', fn($q) => $q->where('type', 'entrada'))
             ->whereNotNull('date')

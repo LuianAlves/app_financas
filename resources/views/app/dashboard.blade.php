@@ -36,17 +36,25 @@
 
             <strong>{{ brlPrice($total) }}</strong>
 
+            @php
+                $incPct = $incomeMoM;
+                $incSign = $incPct !== null && $incPct > 0 ? '+' : '';
+                $incClass = $incPct === null ? 'text-muted'
+                            : ($incPct >= 0 ? 'text-success' : 'text-danger');
+            @endphp
+
+{{--            <div class="d-flex align-items-center justify-content-between">--}}
+{{--                <small>A receber <b>{{ brlPrice($totalIncome) }}</b></small>--}}
+{{--                <i class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i>--}}
+{{--            </div>--}}
+
             <div class="d-flex justify-content-between align-items-center mt-2 mb-1">
                 <small>
-                    <b class="text-muted">A receber <a href="{{ route('transactionCategory-view.index') }}"><i
-                                class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i></a></b>
-
-                    @php
-                        $incPct = $incomeMoM; // pode ser null
-                        $incSign = $incPct !== null && $incPct > 0 ? '+' : '';
-                        $incClass = $incPct === null ? 'text-muted'
-                                    : ($incPct >= 0 ? 'text-success' : 'text-danger');
-                    @endphp
+                    <b class="text-muted">
+                        A receber <a href="{{ route('transactionCategory-view.index') }}">
+                            <i class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i>
+                        </a>
+                    </b>
 
                     <div class="d-flex align-items-center">
                         <span>{{ brlPrice($totalIncome) }}</span>

@@ -4,6 +4,7 @@ namespace App\Models\Auth;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Account;
+use App\Models\AdditionalUser;
 use App\Models\Card;
 use App\Models\InvoiceItem;
 use App\Models\Invoice;
@@ -13,6 +14,9 @@ use App\Models\Saving;
 use App\Models\Transaction;
 use App\Models\TransactionCategory;
 use App\Traits\BelongsToUser;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use NotificationChannels\WebPush\HasPushSubscriptions;
 use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -43,6 +47,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'image',
+        'is_active'
     ];
 
     /**
@@ -98,4 +104,43 @@ class User extends Authenticatable
     public function cardTransactions() { return $this->hasMany(InvoiceItem::class); }
     public function savings() { return $this->hasMany(Saving::class); }
     public function notifications() { return $this->hasMany(Notification::class); }
+
+    /**
+     * Registros da tabela additional_users onde ESTE usuário é o DONO (user_id).
+     */
+    public function additionalUsers(): HasMany
+    {
+        return $this->hasMany(AdditionalUser::class, 'user_id', 'id');
+    }
+
+    /**
+     * Registro da tabela additional_users que liga ESTE usuário como adicional (linked_user_id).
+     * Nulo se for um usuário principal.
+     */
+    public function asAdditional(): HasOne
+    {
+        return $this->hasOne(AdditionalUser::class, 'linked_user_id', 'id');
+    }
+
+    /**
+     * Acesso direto aos usuários (tabela users) que são adicionais deste dono.
+     * Útil quando você quer os USERS já prontos para autenticação, sem passar pelo model AdditionalUser.
+     */
+    public function additionals(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'additional_users', 'user_id', 'linked_user_id')
+            ->withPivot(['id','name','email','is_active','created_at'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Dono (principal) deste usuário caso ele seja adicional.
+     * Retorna uma coleção com 0/1 itens (use ->first()).
+     */
+    public function owner(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'additional_users', 'linked_user_id', 'user_id')
+            ->withPivot(['id'])
+            ->withTimestamps();
+    }
 }

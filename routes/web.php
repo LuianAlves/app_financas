@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\{
 
 // Web Controllers
 use App\Http\Controllers\Web\{
+    UserController as WebUserController,
     AccountController as WebAccountController,
     CardController as WebCardController,
     DashboardController as WebDashboardController,
@@ -50,6 +51,7 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     Route::get('/dashboard', [WebDashboardController::class, 'dashboard'])->name('dashboard');
 
     // Users
+    Route::get('/user', [WebUserController::class, 'index'])->name('user-view.index');
     Route::resource('users', ApiUserController::class)->scoped(['user' => 'uuid']);
 
     // Accounts

@@ -387,6 +387,10 @@
     position: relative;
 }
 
+.custom-modal-content form {
+    margin-top: 30px;
+}
+
 .close-btn {
     top: 12px;
     right: 16px;
@@ -410,7 +414,7 @@
     background: var(--bg-input);
     border: none;
     border-radius: var(--radius);
-    height: 44px;
+    height: 36px;
     padding: 0 1rem;
     font-size: 0.95rem;
     color: var(--text-dark);

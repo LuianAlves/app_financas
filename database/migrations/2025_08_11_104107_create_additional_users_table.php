@@ -6,23 +6,29 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::create('accounts', function (Blueprint $table) {
+        Schema::create('additional_users', function (Blueprint $table) {
             $table->uuid('id')->primary();
+
             $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
-            $table->string('bank_name');
-            $table->decimal('current_balance', 12, 2)->default(0);
-            $table->string('type');
+
+            $table->foreignUuid('linked_user_id')->constrained('users')->cascadeOnDelete();
+            $table->index(['user_id','linked_user_id']);
+            $table->unique('linked_user_id');
+
             $table->timestamps();
         });
-
     }
 
-
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        Schema::dropIfExists('accounts');
+        Schema::dropIfExists('additional_users');
     }
 };

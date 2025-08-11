@@ -47,16 +47,18 @@ use Illuminate\Support\Facades\Auth;
         $transactions->each(function ($transaction) {
             $transaction->amount = brlPrice($transaction->amount);
 
-            switch ($transaction->transactionCategory->type) {
-                case 'entrada':
-                    $transaction->typeColor = 'success';
-                    break;
-                case 'despesa':
-                    $transaction->typeColor = 'danger';
-                    break;
-                case 'investimento':
-                    $transaction->typeColor = 'info';
-                    break;
+            if($transaction->transactionCategory && $transaction->transactionCategory->type) {
+                switch ($transaction->transactionCategory->type) {
+                    case 'entrada':
+                        $transaction->typeColor = 'success';
+                        break;
+                    case 'despesa':
+                        $transaction->typeColor = 'danger';
+                        break;
+                    case 'investimento':
+                        $transaction->typeColor = 'info';
+                        break;
+                }
             }
 
             $transaction->date = Carbon::parse($transaction->date)->locale('pt_BR')->isoFormat('DD/MMM.');

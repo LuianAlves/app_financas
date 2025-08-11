@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use App\Models\Auth\User;
+use App\Traits\BelongsToUser;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Transaction extends BaseModel
 {
+    use BelongsToUser;
+
     protected $fillable = [
         'user_id',
         'card_id',
@@ -21,10 +24,9 @@ class Transaction extends BaseModel
         'custom_occurrences'
     ];
 
-
-    public function user(): BelongsTo
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(\App\Models\Auth\User::class);
     }
 
     public function card(): BelongsTo

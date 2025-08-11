@@ -28,4 +28,9 @@ class Recurrent extends BaseModel
     {
         return $this->belongsTo(Account::class);
     }
+
+    public function transaction(): BelongsTo
+    {
+        return $this->belongsTo(Transaction::class);
+    }
 }

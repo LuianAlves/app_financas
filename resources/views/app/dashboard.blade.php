@@ -43,10 +43,10 @@
                             : ($incPct >= 0 ? 'text-success' : 'text-danger');
             @endphp
 
-{{--            <div class="d-flex align-items-center justify-content-between">--}}
-{{--                <small>A receber <b>{{ brlPrice($totalIncome) }}</b></small>--}}
-{{--                <i class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i>--}}
-{{--            </div>--}}
+            {{--            <div class="d-flex align-items-center justify-content-between">--}}
+            {{--                <small>A receber <b>{{ brlPrice($totalIncome) }}</b></small>--}}
+            {{--                <i class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i>--}}
+            {{--            </div>--}}
 
             <div class="d-flex justify-content-between align-items-center mt-2 mb-1">
                 <small>
@@ -143,6 +143,13 @@
         <div class="icon-button"><i class="fas fa-exchange-alt"></i><span>Exchange</span></div>
         <div class="icon-button"><i class="fas fa-gift"></i><span>Cashbacks</span></div>
         <div class="icon-button"><i class="fas fa-cog"></i><span>Configurações</span></div>
+
+        <div class="icon-button">
+            <a href="{{route('projection-view.index')}}" class="nav-link-atalho">
+                <i class="fas fa-calendar"></i>
+                <span>Projeção</span>
+            </a>
+        </div>
     </div>
 
     <div class="">

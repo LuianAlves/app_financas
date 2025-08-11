@@ -5,16 +5,19 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\AdditionalUser;
+use App\Models\CustomItemRecurrents;
+use App\Models\Recurrent;
 use App\Models\Saving;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Collection;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
     public function dashboard(Request $request)
     {
+        // ===== dono + adicionais =====
         $ownerId = AdditionalUser::ownerIdFor();
         $userIds = AdditionalUser::query()
             ->where('user_id', $ownerId)
@@ -23,16 +26,19 @@ class DashboardController extends Controller
             ->unique()
             ->values();
 
-        $monthParam   = $request->query('month'); // ex.: 2025-09
+        // ===== mês atual para KPIs =====
+        $monthParam   = $request->query('month');
         $startOfMonth = $monthParam
             ? Carbon::createFromFormat('Y-m', $monthParam)->startOfMonth()
             : Carbon::now()->startOfMonth();
         $endOfMonth   = (clone $startOfMonth)->endOfMonth();
         $today        = Carbon::today();
 
+        // ===== saldos =====
         $accountsBalance = Account::whereIn('accounts.user_id', $userIds)->sum('current_balance');
         $savingsBalance  = Saving::whereIn('savings.user_id', $userIds)->sum('current_amount');
 
+        // ===== totais por tipo (mês atual) =====
         $categorySums = Transaction::query()
             ->join('transaction_categories as tc', 'tc.id', '=', 'transactions.transaction_category_id')
             ->whereIn('transactions.user_id', $userIds)
@@ -43,18 +49,15 @@ class DashboardController extends Controller
 
         $totalIncome  = (float) ($categorySums['entrada'] ?? 0);
         $totalExpense = (float) ($categorySums['despesa'] ?? 0);
-
         $balance = $totalIncome - $totalExpense;
         $total   = $balance;
 
+        // ===== listas (últimas / próximas) =====
         $recentTransactions = Transaction::with(['transactionCategory:id,name,type,color,icon'])
             ->whereIn('transactions.user_id', $userIds)
             ->orderByDesc('transactions.date')
             ->limit(5)
-            ->get([
-                'transactions.id','transactions.title','transactions.amount',
-                'transactions.date','transactions.transaction_category_id'
-            ]);
+            ->get(['transactions.id','transactions.title','transactions.amount','transactions.date','transactions.transaction_category_id']);
 
         $upcomingPayments = Transaction::with(['transactionCategory:id,name,type,color,icon'])
             ->whereIn('transactions.user_id', $userIds)
@@ -63,10 +66,7 @@ class DashboardController extends Controller
             ->whereDate('transactions.date', '>=', $today)
             ->orderBy('transactions.date')
             ->limit(10)
-            ->get([
-                'transactions.id','transactions.title','transactions.amount',
-                'transactions.date','transactions.transaction_category_id'
-            ]);
+            ->get(['transactions.id','transactions.title','transactions.amount','transactions.date','transactions.transaction_category_id']);
 
         $upcomingIncomes = Transaction::with(['transactionCategory:id,name,type,color,icon'])
             ->whereIn('transactions.user_id', $userIds)
@@ -75,21 +75,28 @@ class DashboardController extends Controller
             ->whereDate('transactions.date', '>=', $today)
             ->orderBy('transactions.date')
             ->limit(10)
-            ->get([
-                'transactions.id','transactions.title','transactions.amount',
-                'transactions.date','transactions.transaction_category_id'
-            ]);
+            ->get(['transactions.id','transactions.title','transactions.amount','transactions.date','transactions.transaction_category_id']);
 
-        $mergedRows = $recentTransactions
-            ->concat($upcomingPayments)
-            ->concat($upcomingIncomes)
-            ->unique('id');
+        // ===========================================================
+        // ============ CALENDÁRIO: PRÓXIMOS 12 MESES ================
+        // janela: do início do mês atual até +11 meses
+        $winStart = (clone $startOfMonth)->startOfMonth();
+        $winEnd   = (clone $winStart)->addMonthsNoOverflow(11)->endOfMonth();
 
-        $calendarEvents = $mergedRows->map(function (Transaction $t) {
-            $cat  = optional($t->transactionCategory);
+        $events = collect();
+
+        // 1) Transações "únicas" dentro da janela
+        $uniqueTx = Transaction::withoutGlobalScopes()
+            ->with(['transactionCategory:id,name,type,color,icon'])
+            ->whereIn('transactions.user_id', $userIds)
+            ->where('recurrence_type', 'unique')
+            ->whereBetween('transactions.date', [$winStart, $winEnd])
+            ->get(['transactions.id','transactions.title','transactions.amount','transactions.date','transactions.transaction_category_id']);
+
+        foreach ($uniqueTx as $t) {
+            $cat  = $t->transactionCategory;
             $type = in_array($cat?->type, ['entrada','despesa','investimento'], true) ? $cat->type : 'investimento';
-
-            return [
+            $events->push([
                 'id'    => $t->id,
                 'title' => $t->title ?? $cat?->name,
                 'start' => $t->date,
@@ -102,9 +109,113 @@ class DashboardController extends Controller
                     'category_name' => $cat?->name,
                     'type'          => $type,
                 ],
-            ];
-        })->values();
+            ]);
+        }
 
+        // 2) Recorrentes MONTHLY / YEARLY
+        $recMY = Recurrent::withoutGlobalScopes()
+            ->with(['transaction.transactionCategory:id,name,type,color,icon'])
+            ->whereIn('recurrents.user_id', $userIds)
+            ->whereHas('transaction', fn($q) => $q->whereIn('recurrence_type', ['monthly','yearly']))
+            ->get(['recurrents.id','recurrents.user_id','recurrents.transaction_id','recurrents.payment_day','recurrents.amount']);
+
+        foreach ($recMY as $r) {
+            $t = $r->transaction; if (!$t) continue;
+            $cat  = $t->transactionCategory;
+            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true) ? $cat->type : 'investimento';
+            $startBase = Carbon::parse($t->date)->startOfDay();
+            $paymentDay = max(1, (int) $r->payment_day);
+            $amount = (float) $r->amount; // valor por ocorrência
+
+            if ($t->recurrence_type === 'monthly') {
+                $m = $winStart->copy()->startOfMonth();
+                while ($m->lte($winEnd)) {
+                    $occ = $m->copy()->day(min($paymentDay, $m->daysInMonth));
+
+                    if ($occ->gte($startBase)) {
+                        $events->push([
+                            'id'    => "rec_m_{$r->id}_".$occ->format('Ymd'),
+                            'title' => $t->title ?? $cat?->name,
+                            'start' => $occ->toDateString(),
+                            'bg'    => $cat?->color,
+                            'icon'  => $cat?->icon,
+                            'color' => $type === 'despesa' ? '#ef4444' : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
+                            'extendedProps' => [
+                                'amount'        => $type === 'entrada' ? abs($amount) : -abs($amount),
+                                'amount_brl'    => function_exists('brlPrice') ? brlPrice($amount) : number_format($amount, 2, ',', '.'),
+                                'category_name' => $cat?->name,
+                                'type'          => $type,
+                            ],
+                        ]);
+                    }
+                    $m->addMonth();
+                }
+            } else { // yearly
+                $anchorMonth = (int) $startBase->month;
+                $y = $winStart->year;
+                $yEnd = $winEnd->year;
+                for (; $y <= $yEnd; $y++) {
+                    $daysIn = Carbon::create($y, $anchorMonth, 1)->daysInMonth;
+                    $occ = Carbon::create($y, $anchorMonth, min($paymentDay, $daysIn));
+                    if ($occ->betweenIncluded($winStart, $winEnd) && $occ->gte($startBase)) {
+                        $events->push([
+                            'id'    => "rec_y_{$r->id}_".$occ->format('Ymd'),
+                            'title' => $t->title ?? $cat?->name,
+                            'start' => $occ->toDateString(),
+                            'bg'    => $cat?->color,
+                            'icon'  => $cat?->icon,
+                            'color' => $type === 'despesa' ? '#ef4444' : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
+                            'extendedProps' => [
+                                'amount'        => $type === 'entrada' ? abs($amount) : -abs($amount),
+                                'amount_brl'    => function_exists('brlPrice') ? brlPrice($amount) : number_format($amount, 2, ',', '.'),
+                                'category_name' => $cat?->name,
+                                'type'          => $type,
+                            ],
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // 3) Recorrentes CUSTOM (com cronograma)
+        $recCustom = Recurrent::withoutGlobalScopes()
+            ->with(['transaction.transactionCategory:id,name,type,color,icon'])
+            ->whereIn('recurrents.user_id', $userIds)
+            ->whereHas('transaction', fn($q) => $q->where('recurrence_type', 'custom'))
+            ->get(['recurrents.id','recurrents.user_id','recurrents.transaction_id']);
+
+        foreach ($recCustom as $r) {
+            $t = $r->transaction; if (!$t) continue;
+            $cat  = $t->transactionCategory;
+            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true) ? $cat->type : 'investimento';
+
+            $items = CustomItemRecurrents::where('recurrent_id', $r->id)->get(['payment_day','reference_month','reference_year','amount','custom_occurrence_number']);
+            foreach ($items as $ci) {
+                $daysIn = Carbon::create($ci->reference_year, $ci->reference_month, 1)->daysInMonth;
+                $occ = Carbon::create($ci->reference_year, $ci->reference_month, min((int)$ci->payment_day, $daysIn));
+                if (!$occ->betweenIncluded($winStart, $winEnd)) continue;
+
+                $amount = (float) $ci->amount;
+                $events->push([
+                    'id'    => "rec_c_{$r->id}_".$occ->format('Ymd')."_".$ci->custom_occurrence_number,
+                    'title' => $t->title ?? $cat?->name,
+                    'start' => $occ->toDateString(),
+                    'bg'    => $cat?->color,
+                    'icon'  => $cat?->icon,
+                    'color' => $type === 'despesa' ? '#ef4444' : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
+                    'extendedProps' => [
+                        'amount'        => $type === 'entrada' ? abs($amount) : -abs($amount),
+                        'amount_brl'    => function_exists('brlPrice') ? brlPrice($amount) : number_format($amount, 2, ',', '.'),
+                        'category_name' => $cat?->name,
+                        'type'          => $type,
+                    ],
+                ]);
+            }
+        }
+
+        $calendarEvents = $events->values();
+
+        // ===== mês anterior (para % M/M dos KPIs) =====
         $prevStart = (clone $startOfMonth)->subMonth()->startOfMonth();
         $prevEnd   = (clone $prevStart)->endOfMonth();
 
@@ -138,5 +249,130 @@ class DashboardController extends Controller
             return null; // evita “infinito”; na view mostramos "—"
         }
         return (($current - $previous) / $previous) * 100.0;
+    }
+
+    public function calendarEvents(Request $request)
+    {
+        $ownerId = AdditionalUser::ownerIdFor();
+        $userIds = AdditionalUser::where('user_id', $ownerId)
+            ->pluck('linked_user_id')->push($ownerId)->unique()->values();
+
+        $start  = $request->query('start', now()->format('Y-m'));
+        $months = max(1, min((int)$request->query('months', 2), 24));
+
+        $winStart = Carbon::createFromFormat('Y-m', $start)->startOfMonth();
+        $winEnd   = (clone $winStart)->addMonthsNoOverflow($months - 1)->endOfMonth();
+
+        return response()->json($this->buildWindowEvents($userIds, $winStart, $winEnd)->values());
+    }
+
+    private function buildWindowEvents(Collection $userIds, Carbon $winStart, Carbon $winEnd): Collection
+    {
+        $events = collect();
+
+        // 1) Únicas
+        $uniqueTx = Transaction::withoutGlobalScopes()
+            ->with(['transactionCategory:id,name,type,color,icon'])
+            ->whereIn('transactions.user_id', $userIds)
+            ->where('recurrence_type', 'unique')
+            ->whereBetween('transactions.date', [$winStart, $winEnd])
+            ->get(['transactions.id','transactions.title','transactions.amount','transactions.date','transactions.transaction_category_id']);
+
+        foreach ($uniqueTx as $t) {
+            $cat  = $t->transactionCategory;
+            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true) ? $cat->type : 'investimento';
+            $events->push([
+                'id'    => $t->id,
+                'title' => $t->title ?? $cat?->name,
+                'start' => $t->date,
+                'bg'    => $cat?->color,
+                'icon'  => $cat?->icon,
+                'color' => $type === 'despesa' ? '#ef4444' : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
+                'extendedProps' => [
+                    'amount'        => (float) $t->amount,
+                    'amount_brl'    => function_exists('brlPrice') ? brlPrice($t->amount) : number_format((float)$t->amount, 2, ',', '.'),
+                    'category_name' => $cat?->name,
+                    'type'          => $type,
+                ],
+            ]);
+        }
+
+        // 2) MONTHLY / YEARLY (mesma lógica que já usamos)
+        $recMY = Recurrent::withoutGlobalScopes()
+            ->with(['transaction.transactionCategory:id,name,type,color,icon'])
+            ->whereIn('recurrents.user_id', $userIds)
+            ->whereHas('transaction', fn($q) => $q->whereIn('recurrence_type', ['monthly','yearly']))
+            ->get(['recurrents.id','recurrents.user_id','recurrents.transaction_id','recurrents.payment_day','recurrents.amount']);
+
+        foreach ($recMY as $r) {
+            $t = $r->transaction; if (!$t) continue;
+            $cat  = $t->transactionCategory;
+            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true) ? $cat->type : 'investimento';
+            $startBase  = Carbon::parse($t->date)->startOfDay();
+            $paymentDay = max(1, (int)$r->payment_day);
+            $amount     = (float)$r->amount;
+
+            if ($t->recurrence_type === 'monthly') {
+                $m = $winStart->copy()->startOfMonth();
+                while ($m->lte($winEnd)) {
+                    $occ = $m->copy()->day(min($paymentDay, $m->daysInMonth()));
+                    if ($occ->gte($startBase)) $events->push($this->ev($r->id,'m',$t,$cat,$type,$occ,$amount));
+                    $m->addMonth();
+                }
+            } else {
+                $anchorMonth = (int) $startBase->month;
+                for ($y = $winStart->year; $y <= $winEnd->year; $y++) {
+                    $daysIn = Carbon::create($y, $anchorMonth, 1)->daysInMonth;
+                    $occ = Carbon::create($y, $anchorMonth, min($paymentDay, $daysIn));
+                    if ($occ->betweenIncluded($winStart, $winEnd) && $occ->gte($startBase)) {
+                        $events->push($this->ev($r->id,'y',$t,$cat,$type,$occ,$amount));
+                    }
+                }
+            }
+        }
+
+        // 3) CUSTOM (com cronograma)
+        $recC = Recurrent::withoutGlobalScopes()
+            ->with(['transaction.transactionCategory:id,name,type,color,icon'])
+            ->whereIn('recurrents.user_id', $userIds)
+            ->whereHas('transaction', fn($q) => $q->where('recurrence_type', 'custom'))
+            ->get(['recurrents.id','recurrents.user_id','recurrents.transaction_id']);
+
+        foreach ($recC as $r) {
+            $t = $r->transaction; if (!$t) continue;
+            $cat  = $t->transactionCategory;
+            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true) ? $cat->type : 'investimento';
+
+            $items = CustomItemRecurrents::where('recurrent_id', $r->id)
+                ->get(['payment_day','reference_month','reference_year','amount','custom_occurrence_number']);
+
+            foreach ($items as $ci) {
+                $daysIn = Carbon::create($ci->reference_year, $ci->reference_month, 1)->daysInMonth;
+                $occ = Carbon::create($ci->reference_year, $ci->reference_month, min((int)$ci->payment_day, $daysIn));
+                if (!$occ->betweenIncluded($winStart, $winEnd)) continue;
+
+                $events->push($this->ev($r->id,'c',$t,$cat,$type,$occ,(float)$ci->amount,$ci->custom_occurrence_number));
+            }
+        }
+
+        return $events;
+    }
+
+    private function ev($rid,$kind,$t,$cat,$type,Carbon $occ,float $amount,?int $n=null): array
+    {
+        return [
+            'id'    => "rec_{$kind}_{$rid}_".$occ->format('Ymd').($n ? "_$n" : ''),
+            'title' => $t->title ?? $cat?->name,
+            'start' => $occ->toDateString(),
+            'bg'    => $cat?->color,
+            'icon'  => $cat?->icon,
+            'color' => $type === 'despesa' ? '#ef4444' : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
+            'extendedProps' => [
+                'amount'        => $type === 'entrada' ? abs($amount) : -abs($amount),
+                'amount_brl'    => function_exists('brlPrice') ? brlPrice($amount) : number_format($amount, 2, ',', '.'),
+                'category_name' => $cat?->name,
+                'type'          => $type,
+            ],
+        ];
     }
 }

@@ -10,28 +10,31 @@ use App\Models\Recurrent;
 use App\Models\CustomItemRecurrents;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class ProjectionService
 {
-    public function build(string $userId, string $start, string $end): array
+    public function build(?string $userId, string $start, string $end): array
     {
+        $uid  = $userId ?: Auth::id();
+        [$ownerId, $userIds] = $this->resolveOwnerAndAdditionals($uid);
+
         $tz   = 'America/Sao_Paulo';
         $from = Carbon::parse($start, $tz)->startOfDay();
-        $to   = Carbon::parse($end, $tz)->endOfDay();
+        $to   = Carbon::parse($end,   $tz)->endOfDay();
 
-        $opening = $this->openingBalance($userId);
+        $opening = $this->openingBalance($userIds);
 
         // 1) Lançamentos: únicos + recorrentes (monthly/yearly/custom)
-        $occ = collect();
-        $occ = $occ
-            ->merge($this->expandUnique($userId, $from, $to))
-            ->merge($this->expandRecurrentsMonthlyYearly($userId, $from, $to))
-            ->merge($this->expandRecurrentsCustom($userId, $from, $to));
+        $occ = collect()
+            ->merge($this->expandUnique($userIds, $from, $to))
+            ->merge($this->expandRecurrentsMonthlyYearly($userIds, $from, $to))
+            ->merge($this->expandRecurrentsCustom($userIds, $from, $to));
 
-        // 2) Faturas de cartão (gera UMA saída no due_day por cartão/ciclo)
-        $bills = $this->cardBillsFromOccurrences($userId, $from, $to, $occ);
+        // 2) Faturas de cartão
+        $bills = $this->cardBillsFromOccurrences($userIds, $from, $to, $occ);
 
-        // 3) Consolidar extrato diário
+        // 3) Extrato diário consolidado
         $days = $this->consolidateDays($from, $to, $opening, $occ, $bills);
 
         return [
@@ -43,58 +46,71 @@ class ProjectionService
         ];
     }
 
-    /** ===== regras ===== */
-
-    protected function openingBalance(string $userId): float
+    private function resolveOwnerAndAdditionals(string $uid): array
     {
-        // usa saldo atual das contas como "abertura"
-        return (float) Account::where('user_id', $userId)->sum('current_balance');
+        $ownerId = DB::table('additional_users')->where('linked_user_id', $uid)->value('user_id') ?? $uid;
+
+        $ids = DB::table('additional_users')
+            ->where('user_id', $ownerId)
+            ->pluck('linked_user_id')
+            ->all();
+
+        $ids[] = $ownerId;
+        $ids = array_values(array_unique($ids));
+
+        return [$ownerId, $ids];
     }
 
-    protected function expandUnique(string $userId, Carbon $from, Carbon $to): Collection
+    protected function openingBalance(array $userIds): float
     {
-        $rows = Transaction::query()
-            ->with('transactionCategory:id,name,type') // type: entrada|despesa|investimento
-            ->where('user_id', $userId)
+        return (float) Account::withoutGlobalScopes()
+            ->whereIn('accounts.user_id', $userIds)
+            ->sum('current_balance');
+    }
+
+    protected function expandUnique(array $userIds, Carbon $from, Carbon $to): Collection
+    {
+        $rows = Transaction::withoutGlobalScopes()
+            ->with(['transactionCategory:id,name,type'])
+            ->whereIn('transactions.user_id', $userIds)
             ->where('recurrence_type', 'unique')
-            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
-            ->get();
+            ->whereBetween('transactions.date', [$from->toDateString(), $to->toDateString()])
+            ->get(['id','user_id','transaction_category_id','title','amount','date','type','type_card','card_id']);
 
         return $rows->map(fn($t) => $this->mapTx($t, Carbon::parse($t->date)));
     }
 
-    protected function expandRecurrentsMonthlyYearly(string $userId, Carbon $from, Carbon $to): Collection
+    protected function expandRecurrentsMonthlyYearly(array $userIds, Carbon $from, Carbon $to): Collection
     {
-        // Regrinha: pega todos os recurrents (ligados a transaction) cujo recurrence_type seja monthly ou yearly.
-        $recurrents = Recurrent::query()
-            ->with(['transaction.transactionCategory:id,name,type'])
-            ->where('user_id', $userId)
-            ->whereHas('transaction', function($q){
-                $q->whereIn('recurrence_type', ['monthly','yearly']);
-            })
-            ->get();
+        $recurrents = Recurrent::withoutGlobalScopes()
+            ->with(['transaction' => function($q) use ($userIds) {
+                $q->withoutGlobalScopes()
+                    ->with(['transactionCategory:id,name,type'])
+                    ->whereIn('transactions.user_id', $userIds)
+                    ->select('id','user_id','transaction_category_id','title','amount','date','type','type_card','card_id','recurrence_type');
+            }])
+            ->whereIn('recurrents.user_id', $userIds)
+            ->whereHas('transaction', fn($q) => $q->whereIn('recurrence_type', ['monthly','yearly']))
+            ->get(['id','user_id','transaction_id','payment_day','amount']);
 
         $out = collect();
         foreach ($recurrents as $r) {
-            $t   = $r->transaction;
+            $t = $r->transaction;
             if (!$t) continue;
 
-            $paymentDay = max(1, (int)$r->payment_day); // string na tabela -> força inteiro simples
-            $amount     = (float) $r->amount;           // valor por ocorrência (fixo todo mês/ano)
+            $paymentDay = max(1, (int)$r->payment_day);
+            $amount     = (float) $r->amount;
             $startBase  = Carbon::parse($t->date)->startOfDay();
 
             $cursor = $from->copy()->day($paymentDay);
-            // se a transaction começou depois, alinha início
             if ($cursor->lt($startBase)) $cursor = $startBase->copy()->day($paymentDay);
 
             if ($t->recurrence_type === 'monthly') {
-                // todo mês no payment_day
                 while ($cursor->lte($to)) {
                     $out->push($this->mapTxLike($t, $cursor, $amount, 'monthly'));
                     $cursor->addMonthNoOverflow()->day($paymentDay);
                 }
-            } else { // yearly
-                // 1x ao ano no payment_day do mês original da transaction
+            } else {
                 $monthAnchor = (int) $startBase->month;
                 $cursor = Carbon::create($cursor->year, $monthAnchor, min($paymentDay, 28))->startOfDay();
                 if ($cursor->lt($from)) $cursor->addYear();
@@ -107,15 +123,18 @@ class ProjectionService
         return $out;
     }
 
-    protected function expandRecurrentsCustom(string $userId, Carbon $from, Carbon $to): Collection
+    protected function expandRecurrentsCustom(array $userIds, Carbon $from, Carbon $to): Collection
     {
-        // PRIORIDADE: se houver custom_item_recurrents, usa o cronograma.
-        // Se não houver, divide por parcelas = transaction.custom_occurrences (mensalmente).
-        $recs = Recurrent::query()
-            ->with(['transaction.transactionCategory:id,name,type'])
-            ->where('user_id', $userId)
+        $recs = Recurrent::withoutGlobalScopes()
+            ->with(['transaction' => function($q) use ($userIds) {
+                $q->withoutGlobalScopes()
+                    ->with(['transactionCategory:id,name,type'])
+                    ->whereIn('transactions.user_id', $userIds)
+                    ->select('id','user_id','transaction_category_id','title','amount','date','type','type_card','card_id','recurrence_type','custom_occurrences');
+            }])
+            ->whereIn('recurrents.user_id', $userIds)
             ->whereHas('transaction', fn($q) => $q->where('recurrence_type', 'custom'))
-            ->get();
+            ->get(['id','user_id','transaction_id','payment_day','amount']);
 
         $out = collect();
 
@@ -123,27 +142,25 @@ class ProjectionService
             $t = $r->transaction;
             if (!$t) continue;
 
-            $items = CustomItemRecurrents::where('recurrent_id', $r->id)->get();
+            $items = CustomItemRecurrents::where('recurrent_id', $r->id)->get(['payment_day','reference_month','reference_year','amount','custom_occurrence_number']);
             if ($items->count()) {
                 foreach ($items as $ci) {
                     $dt = $this->dateFromRefs((int)$ci->payment_day, (int)$ci->reference_month, (int)$ci->reference_year);
                     if ($dt->betweenIncluded($from, $to)) {
-                        $out->push($this->mapTxLike($t, $dt, (float)$ci->amount, 'custom', $ci->custom_occurrence_number ?? null));
+                        $out->push($this->mapTxLike($t, $dt, (float)$ci->amount, 'custom', $ci->custom_occurrence_number));
                     }
                 }
                 continue;
             }
 
-            // fallback: gerar parcelas mensais a partir de transaction.date
-            $totalParc = max(1, (int)($t->custom_occurrences ?? 1));
+            $totalParc  = max(1, (int)($t->custom_occurrences ?? 1));
             $paymentDay = (int)($r->payment_day ?? Carbon::parse($t->date)->day);
-            $first = Carbon::parse($t->date)->startOfDay()->day($paymentDay);
-            $parcValue = $this->inferCustomInstallmentAmount($t, $r, $totalParc);
+            $first      = Carbon::parse($t->date)->startOfDay()->day($paymentDay);
+            $parcValue  = $this->inferCustomInstallmentAmount($t, $r, $totalParc);
 
             for ($i=1; $i <= $totalParc; $i++) {
                 $dt = $first->copy()->addMonthsNoOverflow($i-1)->day($paymentDay);
                 if ($dt->betweenIncluded($from, $to)) {
-                    // ajusta última parcela para fechar centavos
                     $val = $i === $totalParc ? $this->fixLastInstallment($parcValue, $totalParc, $t->amount) : $parcValue;
                     $out->push($this->mapTxLike($t, $dt, $val, 'custom', $i));
                 }
@@ -155,55 +172,48 @@ class ProjectionService
 
     protected function inferCustomInstallmentAmount($t, $r, int $totalParc): float
     {
-        // Se o Recurrent.amount estiver preenchido, assume que JÁ é o valor por parcela.
         if (!is_null($r->amount) && (float)$r->amount != 0.0) {
             return round((float)$r->amount, 2);
         }
-        // Caso contrário, divide o total da transação em N parcelas.
-        $base = (float) $t->amount;
-        // Se categoria for 'entrada', mantém sinal +; se 'despesa'/'investimento', mantém sinal -.
-        return round($base / $totalParc, 2);
+        return round((float)$t->amount / $totalParc, 2);
     }
 
     protected function fixLastInstallment(float $parcValue, int $totalParc, $total): float
     {
         $sumNminus1 = round($parcValue * ($totalParc - 1), 2);
-        $last = round(((float)$total) - $sumNminus1, 2);
-        return $last;
+        return round(((float)$total) - $sumNminus1, 2);
     }
 
     protected function dateFromRefs(int $paymentDay, int $month, int $year): Carbon
     {
         $m = max(1, min(12, $month ?: 1));
-        $d = max(1, min(28, $paymentDay ?: 1)); // evita overflow
+        $d = max(1, min(28, $paymentDay ?: 1));
         return Carbon::create($year ?: now()->year, $m, $d)->startOfDay();
     }
 
     /** ===== Fatura de cartão ===== */
-    protected function cardBillsFromOccurrences(string $userId, Carbon $from, Carbon $to, Collection $occ): array
+    protected function cardBillsFromOccurrences(array $userIds, Carbon $from, Carbon $to, Collection $occ): array
     {
-        // Considera SOMENTE lançamentos de cartão de crédito (despesas) projetados nas ocorrências
-        $cards = Card::where('user_id', $userId)->get(['id','cardholder_name','closing_day','due_day']);
+        $cards = Card::withoutGlobalScopes()
+            ->whereIn('cards.user_id', $userIds)
+            ->get(['id','cardholder_name','closing_day','due_day']);
+
         if ($cards->isEmpty()) return [];
 
-        // janela de meses a considerar
         $firstMonth = $from->copy()->startOfMonth();
         $lastMonth  = $to->copy()->startOfMonth()->addMonth();
 
         $bills = [];
-
         foreach ($cards as $card) {
             $m = $firstMonth->copy();
             while ($m->lte($lastMonth)) {
                 $closeDay = (int)($card->closing_day ?: $m->daysInMonth);
                 $dueDay   = (int)($card->due_day ?: 1);
 
-                // Ciclo: (close do mês anterior + 1) até (close do mês atual)
                 $cycleStart = $m->copy()->subMonth()->day(min($closeDay, $m->copy()->subMonth()->daysInMonth))->addDay();
                 $cycleEnd   = $m->copy()->day(min($closeDay, $m->daysInMonth));
                 $dueDate    = $m->copy()->day(min($dueDay, $m->daysInMonth));
 
-                // soma despesas do cartão nesse ciclo
                 $sum = $occ->filter(function($o) use ($card, $cycleStart, $cycleEnd){
                     if (($o['type'] ?? null) !== 'card') return false;
                     if (($o['type_card'] ?? null) !== 'credit') return false;
@@ -211,15 +221,15 @@ class ProjectionService
                     $dt = Carbon::parse($o['date']);
                     return $dt->betweenIncluded($cycleStart, $cycleEnd);
                 })
-                    ->sum(fn($o) => (float)$o['amount']); // valores negativos (despesa)
+                    ->sum(fn($o) => (float)$o['amount']);
 
-                $total = abs(min(0, $sum)); // só se houver despesa (negativo)
+                $total = abs(min(0, $sum));
 
                 if ($total > 0 && $dueDate->betweenIncluded($from, $to)) {
                     $bills[] = [
                         'id'        => "bill_{$card->id}_".$dueDate->format('Ym'),
                         'title'     => 'Fatura '.$card->cardholder_name.' (venc. '.$dueDate->format('d/m').')',
-                        'amount'    => -$total, // saída
+                        'amount'    => -$total,
                         'date'      => $dueDate->toDateString(),
                         'type'      => 'invoice',
                         'type_card' => 'credit',
@@ -236,10 +246,9 @@ class ProjectionService
         return $bills;
     }
 
-    /** ===== Consolidação (extrato diário) ===== */
+    /** ===== Consolidação ===== */
     protected function consolidateDays(Carbon $from, Carbon $to, float $opening, Collection $occ, array $bills): array
     {
-        // bucket diário
         $days = [];
         $cur = $from->copy();
         while ($cur->lte($to)) {
@@ -248,7 +257,6 @@ class ProjectionService
             $cur->addDay();
         }
 
-        // joga ocorrências
         foreach ($occ as $o) {
             $k = $o['date'];
             if (!isset($days[$k])) continue;
@@ -257,7 +265,6 @@ class ProjectionService
             $days[$k]['items'][] = $o;
         }
 
-        // joga faturas
         foreach ($bills as $b) {
             $k = $b['date'];
             if (!isset($days[$k])) continue;
@@ -265,7 +272,6 @@ class ProjectionService
             $days[$k]['items'][] = $b;
         }
 
-        // saldo acumulado
         $run = $opening;
         foreach ($days as $k => &$d) {
             $d['in']  = round($d['in'], 2);
@@ -273,7 +279,7 @@ class ProjectionService
             $d['net'] = round($d['in'] - $d['out'], 2);
             $run = round($run + $d['net'], 2);
             $d['balance'] = $run;
-            // ordena itens: entradas primeiro, depois saídas, ambos por título
+
             usort($d['items'], function($a,$b){
                 $sa = (float)$a['amount'] >= 0 ? 0 : 1;
                 $sb = (float)$b['amount'] >= 0 ? 0 : 1;
@@ -288,7 +294,6 @@ class ProjectionService
     /** ===== Helpers de mapeamento ===== */
     protected function mapTx($t, Carbon $date): array
     {
-        // Sinal pelo tipo da categoria: entrada = +, despesa/investimento = -
         $catType = $t->transactionCategory?->type ?? 'despesa';
         $amt = (float)$t->amount;
         $amt = ($catType === 'entrada') ? abs($amt) : -abs($amt);
@@ -298,8 +303,8 @@ class ProjectionService
             'title'      => $t->title ?? ($t->transactionCategory?->name ?? 'Lançamento'),
             'amount'     => round($amt, 2),
             'date'       => $date->toDateString(),
-            'type'       => $t->type,       // pix|card|money
-            'type_card'  => $t->type_card,  // credit|debit|null
+            'type'       => $t->type,
+            'type_card'  => $t->type_card,
             'card_id'    => $t->card_id,
             'category'   => $t->transactionCategory?->name,
             'is_invoice' => false,

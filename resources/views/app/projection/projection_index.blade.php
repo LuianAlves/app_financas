@@ -41,7 +41,6 @@
             gap: 10px;
             align-items: flex-start;
             flex-direction: column;
-            overflow: auto;
             padding: 8px 10px;
             border-radius: 10px;
             background: var(--card);
@@ -65,7 +64,7 @@
         .st-btn {
             border: 1px solid var(--line);
             background: #fff;
-            border-radius: 999px;
+            border-radius: 7.5px;
             padding: 6px 12px;
             font-size: .8rem;
             font-weight: 500
@@ -83,35 +82,38 @@
 
         /* Resumo topo */
         .sticky-summary {
-            position: sticky;
-            top: env(safe-area-inset-top, 0);
-            z-index: 9;
+            padding: 8px 12px;
             background: var(--card);
             border: 1px solid var(--line);
             border-radius: 10px;
-            padding: 8px 12px;
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr)); /* <-- permite encolher */
-            gap: 8px;
-            box-sizing: border-box;
-            width: 100%;
-            overflow: hidden; /* <-- bloqueia qualquer vazamento */
         }
 
         .sticky-summary > div {
-            min-width: 0
+            min-width: 0;
+            display: flex;
+            justify-content: space-between;
         }
 
-        /* filhos podem encolher */
         .sticky-summary .v {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis
+            letter-spacing: .75px;
+            font-size: 13.5px;
+            font-weight: 600;
         }
 
-        /* evita quebra longa */
+        .sticky-summary #sumOpening {
+            color: green;
+        }
 
-        /* Responsivo: 2 colunas no mobile, 1 em telas muito estreitas */
+        .sticky-summary #sumIn {
+            color: var(--pos)
+        }
+
+        .sticky-summary #sumOut {
+            color: var(--neg)
+        }
+
+        .sticky-summary #sumEnd {}
+
         @media (max-width: 768px) {
             .sticky-summary {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -157,9 +159,9 @@
         }
 
         .table-head, .tr {
-            display: grid;
-            grid-template-columns:120px 110px 1fr 130px;
-            align-items: center
+            display:grid;
+            grid-template-columns:130px 1fr 130px;
+            align-items:center;
         }
 
         .table-head {
@@ -172,7 +174,7 @@
         .tr {
             padding: 10px 12px;
             border-bottom: 1px solid var(--line);
-            background: #e3e3e3
+            background: #fbfdff;
         }
 
         .tr:hover {
@@ -186,7 +188,7 @@
         .col-date {
             color: #111827;
             font-weight: 500;
-            font-size: .85rem
+            font-size: .85rem;
         }
 
         .col-hist .title {
@@ -224,7 +226,10 @@
         }
 
         .tr.saldo .col-hist .title {
-            font-weight: 700
+            font-weight: 500;
+            font-size: 10px;
+            letter-spacing: 0.75px;
+            text-transform: uppercase;
         }
 
         .tr.saldo .col-amt {
@@ -244,10 +249,6 @@
 
         /* Mobile: esconde Doc e ajusta colunas */
         @media (max-width: 640px) {
-            .table-head, .tr {
-                grid-template-columns:110px 1fr 110px
-            }
-
             .col-amt {
                 font-size: .88rem
             }
@@ -255,6 +256,34 @@
             .col-hist .title {
                 font-size: .88rem
             }
+
+            .table-head{
+                grid-template-columns:1fr 110px;
+                grid-template-areas:"hist amt";
+            }
+
+            .table-head .col-date{display:none}
+            .table-head .col-hist{grid-area:hist}
+
+            .table-head .col-amt{grid-area:amt;justify-self:end}
+
+            .tr{
+                grid-template-columns:1fr 110px;
+                grid-template-areas:
+      "date date"
+      "hist amt";
+            }
+            .col-date{
+                grid-area:date;
+                font-size: 11.5px;
+                letter-spacing: .5px;
+                opacity:.7;
+                margin-bottom:7.5px;
+                color: var(--muted);
+            }
+
+            .col-hist{grid-area:hist}
+            .col-amt{grid-area:amt;justify-self:end}
         }
     </style>
 @endpush
@@ -268,9 +297,8 @@
     </x-card-header>
 
     <div class="st-wrap mt-3">
+
         {{-- filtros --}}
-
-
         <div class="st-filters">
             <div class="row">
                 <div class="col-6">
@@ -284,35 +312,37 @@
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-4">
+            <div class="row mt-2">
+                <div class="col">
                     <button class="st-btn" data-range="1">+1 mês</button>
                 </div>
-                <div class="col-4">
+                <div class="col">
                     <button class="st-btn" data-range="3">+3 mês</button>
                 </div>
-                <div class="col-4">
+                <div class="col">
                     <button class="st-btn" data-range="6">+6 mês</button>
                 </div>
             </div>
 
-            <div class="row my-3">
-                <div class="col-6">
+            <div class="row">
+                <div class="col">
                     <button class="st-btn" data-range="12">+12 mês</button>
                 </div>
-                <div class="col-6">
+                <div class="col">
                     <button class="st-btn" data-range="15">+15 mês</button>
                 </div>
             </div>
 
-            <button id="btnApply" class="btn btn-primary bg-color border-none ms-auto"><i class="fa fa-magnifying-glass me-1"></i>Aplicar
+            <button id="btnApply" class="btn bg-color border-none ms-auto">
+                <i class="fa fa-magnifying-glass me-1" style="font-size: 12px;"></i>
+                <span style="letter-spacing: .5px; font-size: 14px; margin-left: 2.5px;">Aplicar</span>
             </button>
         </div>
 
         {{-- resumo fixo --}}
         <div class="sticky-summary">
             <div>
-                <div class="k">Saldo inicial</div>
+                <div class="k">Saldo em conta</div>
                 <div id="sumOpening" class="v">—</div>
             </div>
             <div>
@@ -323,13 +353,13 @@
                 <div class="k">Saídas</div>
                 <div id="sumOut" class="v">—</div>
             </div>
+            <hr class="m-0 p-0 mt-2 pb-2 w-50">
             <div>
                 <div class="k">Saldo final</div>
                 <div id="sumEnd" class="v">—</div>
             </div>
         </div>
 
-        {{-- container do extrato --}}
         <div id="statement">Carregando…</div>
     </div>
 @endsection
@@ -345,7 +375,6 @@
             const $apply = document.getElementById('btnApply');
             const $statement = document.getElementById('statement');
 
-            // datas padrão: hoje → +3 meses
             const today = new Date();
             const defStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
             const defEnd = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate());

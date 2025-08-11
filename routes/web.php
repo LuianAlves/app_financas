@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ProjectionController;
 use App\Http\Controllers\PushController;
 use Illuminate\Support\Facades\Route;
 
@@ -82,6 +83,9 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     Route::get('/investment', [WebInvestmentController::class, 'index'])->name('investment-view.index');
     Route::resource('investments', ApiInvestmentController::class)->scoped(['investment' => 'uuid']);
 
+    // Projection
+    Route::get('/projection', [ProjectionController::class, 'index'])->name('projection-view.index');
+    Route::get('/projection/data', [ProjectionController::class, 'data'])->name('projection.data');
 
     Route::get('notifications', [WebNotificationController::class, 'index'])->name('notifications.index');
     Route::patch('notifications/{notification}/read', [WebNotificationController::class, 'markAsRead'])->name('notifications.read');

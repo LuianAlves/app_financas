@@ -35,11 +35,14 @@ use App\Http\Controllers\Web\{
     InvestmentController as WebInvestmentController,
 };
 
-Route::get('/', [AuthController::class, 'welcome']);
-Route::get('/login', [AuthController::class, 'welcome']);
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login');
-Route::get('/register', [AuthController::class, 'registerView']);
-Route::post('/register', [AuthController::class, 'register'])->name('register');
+Route::middleware('guest')->group(function () {
+    Route::get('/', [AuthController::class, 'welcome']);
+    Route::get('/login', [AuthController::class, 'welcome']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login');
+    Route::get('/register', [AuthController::class, 'registerView']);
+    Route::post('/register', [AuthController::class, 'register'])->name('register');
+});
+
 Route::any('/logout', [AuthController::class, 'destroy'])->name('logout');
 
 Route::middleware(['auth', config('jetstream.auth_session')])->group(function () {

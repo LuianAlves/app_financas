@@ -31,21 +31,16 @@ class AuthController extends Controller
         $request->validated();
 
         $credentials = $request->only('email', 'password');
+        $remember = $request->boolean('remember');
 
-        if (Auth::attempt($credentials)) {
+
+        if (Auth::attempt($credentials, $remember)) {
             $user = Auth::user();
 
-//            dd('teste 1');
             if ($user->canAuthenticate()) {
+                $request->session()->regenerate();
 
-//                dd('teste 2');
-                if ($request->hasSession()) {
-//                    dd('teste 3');
-                    $request->session()->regenerateToken();
-                }
-
-//                dd('teste 4');
-                return redirect()->route('dashboard');
+                return redirect()->intended(route('dashboard'));
             }
 
             Auth::logout();
@@ -75,38 +70,11 @@ class AuthController extends Controller
             'created_at' => Carbon::now()
         ])->assignRole('user');
 
-        $credentials = [
-            'email' => $request->email,
-            'password' => $request->password,
-        ];
+        Auth::login($user, true);
 
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
+        $request->session()->regenerate();
 
-            /** @var \App\Models\User $user */
-            if ($user->canAuthenticate()) {
-
-                if ($request->hasSession()) {
-                    $request->session()->regenerateToken();
-                }
-
-                return redirect()->intended('/dashboard');
-            } else {
-                Auth::logout();
-
-                if ($request->hasSession()) {
-                    $request->session()->invalidate();
-                    $request->session()->regenerateToken();
-                }
-
-                return back()->with('error', 'Acesso negado.');
-            }
-        }
-
-        // Se falhar a autenticação, retorna um erro
-        return back()->withErrors([
-            'email' => 'As credenciais fornecidas estão incorretas.',
-        ]);
+        return redirect()->intended(route('dashboard'));
     }
 
     public function destroy(Request $request): LogoutResponse
@@ -123,6 +91,10 @@ class AuthController extends Controller
 
     public function welcome()
     {
+        if (Auth::check()) {
+            return redirect()->route('dashboard');
+        }
+
         return view('auth.login');
     }
 

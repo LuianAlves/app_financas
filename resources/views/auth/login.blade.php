@@ -20,7 +20,7 @@
                 </div>
 
                 <div class="mb-3 form-check">
-                    <input class="form-check-input" type="checkbox" id="card-checkbox" name="remember" />
+                    <input class="form-check-input" type="checkbox" id="card-checkbox" name="remember" value="1" checked />
                     <label class="form-check-label" for="card-checkbox">Lembrar-me</label>
                 </div>
 

@@ -4,7 +4,7 @@
   'data' => []
 ])
 
-<form action="" method="" id="{{$id}}">
+<form action="" method="" id="{{$id}}" enctype="multipart/form-data">
     @csrf
 
     @include("$path", $data)

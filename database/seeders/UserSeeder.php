@@ -20,8 +20,6 @@ class UserSeeder extends Seeder
             ]
         );
 
-
-
         $user = User::firstOrCreate(
             ['email' => 'luian@teste.com'],
             [
@@ -32,8 +30,6 @@ class UserSeeder extends Seeder
             ]
         );
 
-
-
         $user = User::firstOrCreate(
             ['email' => 'douglas@teste.com'],
             [
@@ -43,7 +39,5 @@ class UserSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
-
-
     }
 }

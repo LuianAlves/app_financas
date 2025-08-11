@@ -40,7 +40,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/', [AuthController::class, 'welcome']);
     Route::get('/login', [AuthController::class, 'welcome']);
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login');
-    Route::get('/register', [AuthController::class, 'registerView']);
+    Route::get('/register', [AuthController::class, 'registerView'])->name('register-view');
     Route::post('/register', [AuthController::class, 'register'])->name('register');
 });
 

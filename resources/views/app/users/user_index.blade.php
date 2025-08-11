@@ -176,7 +176,11 @@
 
         <div class="profile">
             <div class="user-profile-image">
-                <img src="data:image/jpeg;base64,{{auth()->user()->image}}" alt="{{auth()->user()->name}}">
+                @if(auth()->user()->image)
+                    <img src="data:image/jpeg;base64,{{auth()->user()->image }}" alt="{{auth()->user()->name}}">
+                @else
+                    <img src="{{ asset('assets/img/user_profile/profile_example.png')}}" alt="{{auth()->user()->name}}">
+                @endif
                 <a href="#">
                     <i class="fa-solid fa-camera-retro"></i>
                 </a>

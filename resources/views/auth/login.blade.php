@@ -14,7 +14,7 @@
                 <div class="mb-3">
                     <div class="d-flex justify-content-between">
                         <label class="form-label" for="card-password">Senha</label>
-                        <a class="fs-7" href="{{ route('password.request') }}">Esqueceu a senha?</a>
+                        <a class="fs-7" href="{{ route('register-view') }}">Registrar usuário</a>
                     </div>
                     <input class="form-control" id="card-password" type="password" name="password" required />
                 </div>

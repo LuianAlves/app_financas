@@ -1,10 +1,10 @@
 @extends('layouts.templates.app')
 @section('content')
     <x-card-header
-        prevRoute="{{route('dashboard')}}"
+        prevRoute="{{ route('dashboard') }}"
         iconRight="fa-solid fa-circle-question"
         title="Investimentos"
-        description="Cadastre seus ativos e acompanhe posição, PM e P&L.">
+        description="Cadastre investimentos simples e navegue mês a mês no rendimento.">
     </x-card-header>
 
     <div id="investmentList" class="mt-4"></div>
@@ -14,199 +14,296 @@
         <i class="fa fa-plus text-white"></i>
     </button>
 
-    {{-- Atalho para transações/lançamentos de investimentos (opcional) --}}
-    <a href="{{route('transaction-view.index')}}" class="create-btn create-other" title="Transações">
+    {{-- Atalho opcional --}}
+    <a href="{{ route('transaction-view.index') }}" class="create-btn create-other" title="Transações">
         <i class="fas fa-retweet text-white"></i>
     </a>
 
-    {{-- Modal reusável no seu padrão --}}
+    {{-- Modal de cadastro --}}
     <x-modal modalId="modalInvestment" formId="formInvestment" pathForm="app.investments.investment_form"></x-modal>
 
     <script>
-        // ====== Modal open/close (no padrão dos seus x-modal) ======
-        const investmentModal = document.getElementById('modalInvestment');
-        const openInvestmentBtn = document.getElementById('openInvestmentModal');
-        const closeInvestmentBtn = document.getElementById('closeModal'); // vindo do x-modal
+        // ========= Dados vindos do controller =========
+        const INVESTMENTS = @json($investments);
 
-        openInvestmentBtn.addEventListener('click', () => {
-            investmentModal.classList.add('show');
-        });
-        if (closeInvestmentBtn) {
-            closeInvestmentBtn.addEventListener('click', () => {
-                investmentModal.classList.remove('show');
-            });
+        // ========= Rotas Web =========
+        const STORE_URL   = @json(route('investments.store'));
+        const DESTROY_TPL = @json(route('investments.destroy', ['investment' => '__ID__']));
+
+        // ========= Modal =========
+        const investmentModal    = document.getElementById('modalInvestment');
+        const openInvestmentBtn  = document.getElementById('openInvestmentModal');
+        const closeInvestmentBtn = document.getElementById('closeModal');
+        openInvestmentBtn.addEventListener('click', () => investmentModal.classList.add('show'));
+        if (closeInvestmentBtn) closeInvestmentBtn.addEventListener('click', () => investmentModal.classList.remove('show'));
+
+        // ========= Helpers =========
+        const brl = v => (Number(v||0)).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+        const pct = v => `${(Number(v||0)).toFixed(2)}%`;
+
+        function effectiveMonthlyRate(ratePercent, period){
+            const r = Number(ratePercent || 0) / 100;
+            return (period === 'yearly') ? Math.pow(1 + r, 1/12) - 1 : r;
         }
-
-        // ====== Helpers ======
-        function brlPriceRaw(v) {
-            if (v === null || v === undefined) return 'R$ 0,00';
-            if (typeof v === 'string' && v.trim().startsWith('R$')) return v;
-            const n = Number(v) || 0;
-            return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        function monthsSince(startDate){
+            if (!startDate) return 0;
+            const s = new Date(startDate);
+            const n = new Date();
+            let m = (n.getFullYear() - s.getFullYear()) * 12 + (n.getMonth() - s.getMonth());
+            if (n.getDate() < s.getDate()) m = Math.max(0, m - 1);
+            return Math.max(0, m);
         }
-
-        // tenta converter "R$ 1.234,56" -> 1234.56
-        function parseBRL(str) {
-            if (typeof str === 'number') return str;
-            if (typeof str !== 'string') return 0;
-            const onlyNums = str.replace(/[^\d,.-]/g, '').replace(/\./g, '').replace(',', '.');
-            return Number(onlyNums) || 0;
+        function addMonths(dateStr, add){
+            const d = new Date(dateStr);
+            const result = new Date(d.getFullYear(), d.getMonth() + add, d.getDate());
+            if (result.getDate() !== d.getDate()) result.setDate(0); // último dia do mês
+            return result;
         }
-
-        // Cálculo de posição no front (fallback se API não mandar pronto)
-        function computePosition(trades = [], lastPriceRaw = 0) {
-            let qty = 0, pm = 0, invested = 0, realized = 0;
-            trades.forEach(t => {
-                const side = String(t.side || '').toLowerCase().trim();
-                const q = Number(t.quantity || 0);
-                const p = Number(t.price || 0);
-                const f = Number(t.fees || 0);
-                if (side === 'buy') {
-                    const totalCost = pm * qty + (p * q) + f;
-                    qty += q;
-                    pm = qty > 0 ? totalCost / qty : 0;
-                    invested += (p * q) + f;
-                } else if (side === 'sell') {
-                    realized += ((p - pm) * q) - f;
-                    qty -= q;
-                    if (qty <= 0) { qty = 0; pm = 0; }
-                }
-            });
-            const lastPrice = typeof lastPriceRaw === 'string' ? parseBRL(lastPriceRaw) : Number(lastPriceRaw || 0);
-            const current = qty * lastPrice;
-            const unrealized = qty > 0 ? (lastPrice - pm) * qty : 0;
-            return { qty, pm, invested, realized, current, unrealized, lastPrice };
+        function monthLabelFrom(startDate, k){
+            const d = addMonths(startDate, k);
+            return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
         }
-
-        // ====== Submit do formulário (create) ======
-        document.getElementById('formInvestment').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const form = e.target;
-            const data = new FormData(form);
-
-            try {
-                const response = await fetch("{{ route('investments.store') }}", {
-                    method: "POST",
-                    headers: { 'X-CSRF-TOKEN': "{{ csrf_token() }}" },
-                    body: data
-                });
-                if (!response.ok) throw new Error('Erro ao salvar investimento.');
-                const novo = await response.json();
-
-                // Fecha modal e limpa form
-                investmentModal.classList.remove('show');
-                form.reset();
-
-                // Render do novo card
-                renderInvestmentCard(novo, true);
-            } catch (err) {
-                alert(err.message);
-            }
-        });
-
-        // ====== Carregamento inicial via API ======
-        async function carregarInvestimentos() {
-            try {
-                const response = await fetch("{{ route('investments.index') }}");
-                if (!response.ok) throw new Error('Erro ao carregar investimentos.');
-                const list = await response.json();
-
-                const container = document.getElementById('investmentList');
-                container.innerHTML = '';
-
-                (list || []).forEach(inv => renderInvestmentCard(inv, false));
-            } catch (err) {
-                alert(err.message);
-            }
+        function monthsBetween(aStr, bStr){
+            const a = new Date(aStr);
+            const b = new Date(bStr);
+            let m = (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+            if (b.getDate() < a.getDate()) m = Math.max(0, m - 1);
+            return Math.max(0, m);
         }
+        const fvN = (pv, i, n) => Number(pv||0) * Math.pow(1 + i, n);
 
-        // ====== Render de cada card ======
-        function renderInvestmentCard(inv, prepend = false) {
+        // ========= Render geral =========
+        function renderList(items){
             const container = document.getElementById('investmentList');
+            container.innerHTML = '';
+            (items || []).forEach(inv => renderCard(inv));
+        }
 
-            // Se a API já manda pronto (strings BRL), usamos; senão computamos
-            const hasComputed = inv.current_total || inv.invested_total || inv.pl_unrealized || inv.pl_realized;
+        function renderCard(inv, prepend=false){
+            const container   = document.getElementById('investmentList');
 
-            let ticker = (inv.ticker || '').toString().toUpperCase();
-            let name   = (inv.name || '') || '-';
-            let klass  = (inv.class || '-')?.toString().toUpperCase();
+            const name        = (inv.name || '').toString();
+            const pv          = Number(inv.purchase_value || 0);
+            const ratePct     = Number(inv.interest_rate || 0);
+            const ratePeriod  = inv.rate_period || 'monthly';
+            const iEff        = effectiveMonthlyRate(ratePct, ratePeriod);
 
-            let qty, pm, priceNow, current, invested, unrealized, realized;
+            const startRef    = inv.start_date || inv.created_at || null; // início real
+            const createdAt   = inv.created_at ? new Date(inv.created_at).toLocaleDateString('pt-BR') : '—';
+            const passed      = monthsSince(startRef); // meses já decorridos
 
-            if (hasComputed) {
-                // API já formatou
-                current   = inv.current_total;   // string "R$ ..."
-                invested  = inv.invested_total;
-                unrealized= inv.pl_unrealized;
-                realized  = inv.pl_realized;
+            const currentVal  = fvN(pv, iEff, passed);
+            const monthYield  = (passed > 0 ? fvN(pv, iEff, passed - 1) : pv) * iEff; // mês atual
+            const rateLabel   = ratePeriod === 'yearly' ? 'a.a.' : 'a.m.';
 
-                // Se vierem numéricos brutos também:
-                if (!String(current).includes('R$')) current = brlPriceRaw(current);
-                if (!String(invested).includes('R$')) invested = brlPriceRaw(invested);
-                if (!String(unrealized).includes('R$')) unrealized = brlPriceRaw(unrealized);
-                if (!String(realized).includes('R$')) realized = brlPriceRaw(realized);
-            } else {
-                // Calcula no front a partir das trades e do last_price
-                const trades = inv.trades || [];
-                const lastPriceRaw = inv.last_price; // pode vir "R$ ..." ou number
-                const pos = computePosition(trades, lastPriceRaw);
-                qty       = pos.qty;
-                pm        = pos.pm;
-                priceNow  = pos.lastPrice;
+            // Limites: 0 até 2050-12
+            const END_2050 = '2050-12-01';
+            const kMin = 0;
+            const kMax = Math.max(monthsBetween(startRef || inv.created_at || new Date().toISOString(), END_2050), passed);
+            const kCur = Math.min(Math.max(passed, kMin), kMax);
 
-                current   = brlPriceRaw(pos.current);
-                invested  = brlPriceRaw(pos.invested);
-                unrealized= brlPriceRaw(pos.unrealized);
-                realized  = brlPriceRaw(pos.realized);
-            }
-
-            const badgeUnrealClass = parseBRL(unrealized) >= 0 ? 'text-success' : 'text-danger';
-            const badgeRealClass   = parseBRL(realized)  >= 0 ? 'text-success' : 'text-danger';
-
-            const card = `
-                <div class="balance-box">
-                    <span>${ticker} — ${name}</span>
-                    <strong>${current}</strong>
+            const html = `
+                <div class="balance-box" data-card="${inv.id}">
+                    ${name ? `<span>${name}</span>` : ''}
+                    <strong class="js-current">${brl(currentVal)}</strong>
+                    <div class="text-muted" style="font-size:12px">Data do investimento: ${createdAt}</div>
 
                     <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
                         <small>
-                            <b class="text-muted">Investido</b>
+                            <b class="text-muted">Taxa efetiva</b>
                             <div class="d-flex align-items-center">
-                                <span>${invested}</span>
+                                <span>${pct(iEff*100)} a.m.</span>
+                            </div>
+                            <div class="text-muted" style="font-size:12px">
+                                (${pct(ratePct)} ${rateLabel})
                             </div>
                         </small>
 
                         <small>
-                            <b class="text-muted">PL não realizado</b>
+                            <b class="text-muted">Rendimento (mês atual)</b>
                             <div class="d-flex align-items-center">
-                                <span class="${badgeUnrealClass}">${unrealized}</span>
+                                <span class="text-success js-month-yield">${brl(monthYield)}</span>
                             </div>
                         </small>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center mt-2 mb-1">
-                        <small>
-                            <b class="text-muted">PL realizado</b>
-                            <div class="d-flex align-items-center">
-                                <span class="${badgeRealClass}">${realized}</span>
+                    <!-- Navegador de meses: APENAS Anterior / Próximo -->
+                    <div class="p-2" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button class="btn btn-sm btn-light js-prev" ${kCur<=kMin?'disabled':''}>&lsaquo; Anterior</button>
+                            <div class="text-center">
+                                <div style="font-weight:700" class="js-month-label">${monthLabelFrom(startRef || inv.created_at, kCur)}</div>
+                                <small class="text-muted">Mês <span class="js-month-num">${kCur+1}</span></small>
                             </div>
-                        </small>
+                            <button class="btn btn-sm btn-light js-next" ${kCur>=kMax?'disabled':''}>Próximo &rsaquo;</button>
+                        </div>
 
-                        <a href="#" class="text-color fw-bold" style="text-decoration: none; font-size: 13px;">
-                            Ver Extrato
-                        </a>
+                        <div class="row mt-2">
+                            <div class="col-6">
+                                <small><b class="text-muted">Rendimento no mês</b></small>
+                                <div><span class="js-yield-month fw-bold">${brl(fvN(pv, iEff, kCur) * iEff)}</span></div>
+                            </div>
+                            <div class="col-6">
+                                <small><b class="text-muted">Saldo ao final do mês</b></small>
+                                <div><span class="js-end-month fw-bold">${brl(fvN(pv, iEff, kCur+1))}</span></div>
+                            </div>
+                        </div>
                     </div>
+
+                    <div class="mt-3 d-flex justify-content-end">
+                        <button class="btn btn-sm btn-outline-danger js-del" data-del="${inv.id}" style="font-size:12px">
+                            Excluir
+                        </button>
+                    </div>
+
+                    <!-- Estado do navegador (hidden) -->
+                    <input type="hidden" class="js-k" value="${kCur}">
+                    <input type="hidden" class="js-kmin" value="${kMin}">
+                    <input type="hidden" class="js-kmax" value="${kMax}">
+                    <input type="hidden" class="js-start-ref" value="${startRef || ''}">
+                    <input type="hidden" class="js-pv" value="${pv}">
+                    <input type="hidden" class="js-ieff" value="${iEff}">
                 </div>
             `;
 
             if (prepend) {
-                container.insertAdjacentHTML('afterbegin', card);
+                container.insertAdjacentHTML('afterbegin', html);
+                wireCard(container.firstElementChild);
             } else {
-                container.insertAdjacentHTML('beforeend', card);
+                container.insertAdjacentHTML('beforeend', html);
+                wireCard(container.lastElementChild);
             }
         }
 
-        // Carrega ao abrir
-        window.addEventListener('DOMContentLoaded', carregarInvestimentos);
+        // ========= Liga handlers (prev/next/delete) e atualiza campos =========
+        function wireCard(card){
+            // excluir
+            const delBtn = card.querySelector('.js-del');
+            if (delBtn && !delBtn.dataset.bound) {
+                delBtn.dataset.bound = '1';
+                delBtn.onclick = async () => {
+                    if (!confirm('Excluir este investimento?')) return;
+                    const id = delBtn.dataset.del;
+                    const url = DESTROY_TPL.replace('__ID__', id);
+                    const fd = new FormData(); fd.append('_method','DELETE');
+                    try{
+                        const resp = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'X-CSRF-TOKEN': "{{ csrf_token() }}", 'Accept': 'application/json' },
+                            body: fd,
+                            credentials: 'same-origin'
+                        });
+                        if (!(resp.ok || resp.status === 204)) {
+                            const t = await resp.text();
+                            throw new Error(`Falha ao excluir (${resp.status}). ${t}`);
+                        }
+                        card.remove();
+                    }catch(e){ alert(e.message); }
+                };
+            }
+
+            // navegador
+            const btnPrev  = card.querySelector('.js-prev');
+            const btnNext  = card.querySelector('.js-next');
+
+            const kEl     = card.querySelector('.js-k');
+            const kminEl  = card.querySelector('.js-kmin');
+            const kmaxEl  = card.querySelector('.js-kmax');
+            const startEl = card.querySelector('.js-start-ref');
+            const pvEl    = card.querySelector('.js-pv');
+            const iEl     = card.querySelector('.js-ieff');
+
+            const lbl     = card.querySelector('.js-month-label');
+            const lblNum  = card.querySelector('.js-month-num');
+            const yMonth  = card.querySelector('.js-yield-month');
+            const eMonth  = card.querySelector('.js-end-month');
+
+            const currentTop = card.querySelector('.js-current');
+            const monthTop   = card.querySelector('.js-month-yield');
+
+            function updateByK(){
+                const k    = Number(kEl.value);
+                const kmin = Number(kminEl.value);
+                const kmax = Number(kmaxEl.value);
+                const start= startEl.value;
+                const pv   = Number(pvEl.value);
+                const i    = Number(iEl.value);
+
+                // labels de mês
+                lbl.textContent = monthLabelFrom(start || new Date().toISOString(), k);
+                lblNum.textContent = (k + 1);
+
+                // rendimento no mês k e saldo ao final do mês k
+                const baseK  = fvN(pv, i, k);
+                const yieldK = baseK * i;
+                const endK   = fvN(pv, i, k+1);
+
+                yMonth.textContent = brl(yieldK);
+                eMonth.textContent = brl(endK);
+
+                // topo “agora”
+                const passed = monthsSince(start || null);
+                const currentVal = fvN(pv, i, passed);
+                currentTop.textContent = brl(currentVal);
+                monthTop.textContent   = brl((passed > 0 ? fvN(pv, i, passed - 1) : pv) * i);
+
+                // navegação
+                btnPrev.disabled = (k <= kmin);
+                btnNext.disabled = (k >= kmax);
+            }
+
+            if (btnPrev && !btnPrev.dataset.bound) {
+                btnPrev.dataset.bound = '1';
+                btnPrev.onclick = () => { kEl.value = Math.max(Number(kEl.value)-1, Number(kminEl.value)); updateByK(); };
+            }
+            if (btnNext && !btnNext.dataset.bound) {
+                btnNext.dataset.bound = '1';
+                btnNext.onclick = () => { kEl.value = Math.min(Number(kEl.value)+1, Number(kmaxEl.value)); updateByK(); };
+            }
+
+            updateByK();
+        }
+
+        // ========= Criar =========
+        document.getElementById('formInvestment').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const fd   = new FormData(form);
+
+            // normaliza "1.000,00" -> 1000.00 e "1,10" -> 1.10
+            const rawPv   = (fd.get('purchase_value') || '').toString().replace(/\./g,'').replace(',', '.');
+            const rawRate = (fd.get('interest_rate')  || '').toString().replace(',', '.');
+            fd.set('purchase_value', Number(rawPv || 0));
+            fd.set('interest_rate',  Number(rawRate || 0));
+
+            try {
+                const resp = await fetch(STORE_URL, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': "{{ csrf_token() }}", 'Accept':'application/json' },
+                    body: fd,
+                    credentials: 'same-origin'
+                });
+
+                if (resp.status === 422) {
+                    const ejson = await resp.json();
+                    const first = Object.values(ejson.errors || {})[0]?.[0] || 'Dados inválidos.';
+                    throw new Error(first);
+                }
+                if (!resp.ok) throw new Error('Erro ao salvar investimento.');
+
+                const novo = await resp.json();
+                INVESTMENTS.unshift(novo);
+                renderCard(novo, true);
+                investmentModal.classList.remove('show');
+                form.reset();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        // ========= Init =========
+        window.addEventListener('DOMContentLoaded', () => {
+            renderList(INVESTMENTS);
+        });
     </script>
 @endsection

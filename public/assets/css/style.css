@@ -67,6 +67,105 @@
     /* (opcional) garante que nenhum z-index de terceiros passe na frente */
     .create-btn,.create-other,.create-other-2,.create-other-3{ z-index:1040 !important; }
 
+    .swipe-list {
+        list-style: none;
+        margin: 0;
+        padding: 0
+    }
+
+    .swipe-item {
+        position: relative;
+        overflow: hidden;
+        background: #fff;
+        border-bottom: 1px solid #eee;
+        touch-action: pan-y;
+        user-select: none;
+        margin: auto 3px 12px 3px;
+        border-radius: 12px;
+        box-shadow: 1px 1px 5px rgba(103, 103, 103, 0.35) !important;
+    }
+
+    .swipe-content {
+        position: relative;
+        z-index: 2;
+        background: #fff;
+        padding: 14px 16px;
+        transform: translateX(0);
+        transition: transform 750ms ease;
+        /*will-change: transform;*/
+    }
+
+    .swipe-delete-btn, .swipe-edit-btn {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 96px;
+        border: 0;
+        color: #fff;
+        z-index: 5;
+        pointer-events: none;
+        transition: transform 750ms ease;
+    }
+
+    .swipe-delete-btn {
+        right: 0;
+        background: #dc3545;
+        transform: translateX(100%)
+    }
+
+    .swipe-edit-btn {
+        left: 0;
+        background: #3498db;
+        transform: translateX(-100%)
+    }
+
+    .swipe-item.open-left .swipe-delete-btn {
+        transform: translateX(0);
+        pointer-events: auto;
+    }
+
+    .swipe-item.open-right .swipe-edit-btn {
+        transform: translateX(0);
+        pointer-events: auto;
+    }
+
+    .swipe-item.open-left .swipe-content {
+        transform: translateX(-96px)
+    }
+
+    .swipe-item.open-right .swipe-content {
+        transform: translateX(96px)
+    }
+
+    .swipe-item.open-left .swipe-content,
+    .swipe-item.open-right .swipe-content {
+        pointer-events: none;
+    }
+
+    .tx-title {
+        font-size: 14px;
+        letter-spacing: .25px;
+        font-weight: 600;
+    }
+
+    .tx-date {
+        letter-spacing: .75px;
+        color: #b5b5b5;
+        display: block;
+        font-size: 12px;
+    }
+
+    .tx-amount {
+        font-size: 12px;
+        letter-spacing: 1px;
+        font-weight: 600;
+    }
+
+    .tx-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px
+    }
 
     .app-container{
         width: 100%;

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html data-bs-theme="light" lang="pt-BR" dir="ltr">
+<html lang="pt-BR">
 
 <!-- Include:head -->
 @include('layouts.partials.head')

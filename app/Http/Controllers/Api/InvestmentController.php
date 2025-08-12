@@ -1,100 +1,79 @@
 <?php
 
+// app/Http/Controllers/Api/InvestmentController.php
 namespace App\Http\Controllers\Api;
 
-use App\Models\Security;
+use App\Http\Controllers\Controller;
+use App\Models\Investment;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 
 class InvestmentController extends Controller
 {
-    /** @var \App\Models\Security */
-    public $security;
-
-    public function __construct(Security $security)
-    {
-        $this->security = $security;
-    }
-
     // GET /api/investments
     public function index()
     {
-        $securities = $this->security::with('trades')
-            ->where('user_id', Auth::id())
+        $items = Investment::where('user_id', Auth::id())
+            ->orderBy('created_at', 'desc')
             ->get();
 
-        $securities->each(function ($sec) {
-            $sec->ticker      = strtoupper((string) $sec->ticker);
-            $sec->name        = strtoupper((string) ($sec->name ?? ''));
-            $sec->last_price  = brlPrice($sec->last_price);
-        });
-
-        return response()->json($securities);
+        return response()->json($items);
     }
 
     // POST /api/investments
     public function store(Request $request)
     {
         $data = $request->validate([
-            'ticker'     => 'required|string|max:10',
-            'name'       => 'nullable|string|max:255',
-            'class'      => 'nullable|string|max:50',
-            'currency'   => 'nullable|string|max:10',
-            'last_price' => 'required|numeric|min:0',
+            'name'           => 'required|string|max:255',
+            'purchase_value' => 'required|numeric|min:0',
+            'interest_rate'  => 'required|numeric|min:0', // em %
+            'rate_period'    => 'nullable|in:monthly,yearly',
+            'start_date'     => 'nullable|date',
+            'notes'          => 'nullable|string',
         ]);
 
         $data['user_id'] = Auth::id();
+        $data['rate_period'] = $data['rate_period'] ?? 'monthly';
 
-        $security = $this->security->create($data)->load('trades');
+        $inv = Investment::create($data);
 
-        // formata retorno
-        $security->ticker     = strtoupper((string) $security->ticker);
-        $security->name       = strtoupper((string) ($security->name ?? ''));
-        $security->last_price = brlPrice($security->last_price);
-
-        return response()->json($security, 201);
+        return response()->json($inv, 201);
     }
 
-    // GET /api/investments/{security}
-    public function show(Security $security)
+    // GET /api/investments/{investment}
+    public function show(Investment $investment)
     {
-        // garante owner
-        abort_if($security->user_id !== Auth::id(), 403);
-
-        $security->load('trades');
-        return response()->json($security);
+        abort_if($investment->user_id !== Auth::id(), 403);
+        return response()->json($investment);
     }
 
-    // PUT/PATCH /api/investments/{security}
-    public function update(Request $request, Security $security)
+    // PUT/PATCH /api/investments/{investment}
+    public function update(Request $request, Investment $investment)
     {
-        abort_if($security->user_id !== Auth::id(), 403);
+        abort_if($investment->user_id !== Auth::id(), 403);
 
         $data = $request->validate([
-            'ticker'     => 'sometimes|string|max:10',
-            'name'       => 'sometimes|string|max:255',
-            'class'      => 'sometimes|string|max:50',
-            'currency'   => 'sometimes|string|max:10',
-            'last_price' => 'sometimes|numeric|min:0',
+            'name'           => 'sometimes|string|max:255',
+            'purchase_value' => 'sometimes|numeric|min:0',
+            'interest_rate'  => 'sometimes|numeric|min:0', // em %
+            'rate_period'    => 'sometimes|in:monthly,yearly',
+            'start_date'     => 'sometimes|date|nullable',
+            'notes'          => 'sometimes|string|nullable',
         ]);
 
-        $security->update($data);
+        $investment->update($data);
 
-        // pode formatar como no index se preferir:
-        // $security->ticker = strtoupper($security->ticker);
-        // $security->name   = strtoupper((string) $security->name);
-        // $security->last_price = brlPrice($security->last_price);
-
-        return response()->json($security);
+        return response()->json($investment);
     }
 
-    // DELETE /api/investments/{security}
-    public function destroy(Security $security)
+    // DELETE /api/investments/{investment}
+    public function destroy(Investment $investment)
     {
-        abort_if($security->user_id !== Auth::id(), 403);
+        abort_if($investment->user_id !== Auth::id(), 403);
 
-        $security->delete();
+        $investment->delete();
+
         return response()->json(null, 204);
     }
 }
+

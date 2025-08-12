@@ -282,7 +282,7 @@
                 li.querySelector('.swipe-content').style.transition='none';
             }
             function onMove(e){
-                function onMove(e){  if (document.body.classList.contains('modal-open')) return; ... }
+                if (document.body.classList.contains('modal-open')) return;
 
                 if(!swipe.dragging || !swipe.active) return;
                 const x = (e.touches ? e.touches[0].clientX : e.clientX);
@@ -295,7 +295,7 @@
                 else          dragTranslate(swipe.active, Math.min(move,  OPEN_W));
             }
             function onEnd(){
-                function onEnd(e){   if (document.body.classList.contains('modal-open')) return; ... }
+                if (document.body.classList.contains('modal-open')) return;
 
                 if(!swipe.dragging || !swipe.active) return;
                 const content = swipe.active.querySelector('.swipe-content');

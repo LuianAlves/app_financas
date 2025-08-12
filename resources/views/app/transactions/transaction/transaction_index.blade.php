@@ -75,6 +75,10 @@
         .tx-date{letter-spacing:.75px;color:#b5b5b5;display:block}
         .tx-amount{font-weight:700;display:block}
         .tx-line{display:flex;justify-content:space-between;gap:12px}
+
+        #confirmDeleteModal {
+            z-index: 9999 !important;
+        }
     </style>
 
     <script>

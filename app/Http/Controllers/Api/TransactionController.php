@@ -197,41 +197,26 @@ use Illuminate\Support\Facades\Auth;
         return response()->json($transaction);
     }
 
-    public function show(Transaction $transaction)
+    public function show(string $id)
     {
-        $this->authorize('view', $transaction);
+        $tx = Transaction::with(['transactionCategory','card'])->findOrFail($id);
 
-        return response()->json($transaction);
+        return response()->json($tx);
     }
 
-    public function update(Request $request, Transaction $transaction)
+    public function update(Request $req, string $id)
     {
-        $this->authorize('update', $transaction);
+        $tx = Transaction::findOrFail($id);
 
-        $data = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'description' => 'sometimes|string|max:1000',
-            'amount' => 'sometimes|numeric',
-            'date' => 'sometimes|date',
-            'type' => 'sometimes|in:pix,card,money',
-            'type_card' => 'nullable|in:credit,debit',
-            'transaction_category_id' => 'sometimes|uuid|exists:transaction_categories,id',
-            'card_id' => 'nullable|uuid|exists:cards,id',
-            'recurrence_type' => 'nullable|in:unique,monthly,yearly,custom',
-            'recurrence_custom' => 'nullable|integer|min:1',
-            'installments' => 'nullable|integer|min:1',
-        ]);
+        $tx->update($req->all());
 
-        $transaction->update($data);
-
-        return response()->json($transaction);
+        return response()->json($tx->fresh());
     }
 
-    public function destroy(Transaction $transaction)
+    public function destroy(string $id)
     {
-        $this->authorize('delete', $transaction);
-        $transaction->delete();
+        Transaction::findOrFail($id)->delete();
 
-        return response()->json(null, 204);
+        return response()->noContent();
     }
 }

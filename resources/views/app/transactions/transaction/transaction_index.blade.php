@@ -32,21 +32,21 @@
         :data="['cards' => $cards, 'categories' => $categories, 'accounts' => $accounts]"
     />
 
-    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header py-2">
-                    <h5 class="modal-title">Remover</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                </div>
-                <div class="modal-body">Você deseja remover?</div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Excluir</button>
-                </div>
+    <!-- CONFIRM CUSTOM -->
+    <div id="confirmDelete" class="x-confirm" hidden>
+        <div class="x-sheet" role="dialog" aria-modal="true" aria-labelledby="xConfirmTitle">
+            <div class="x-head">
+                <h5 id="xConfirmTitle">Remover</h5>
+                <button type="button" class="x-close" data-action="cancel" aria-label="Fechar">×</button>
+            </div>
+            <div class="x-body">Você deseja remover?</div>
+            <div class="x-actions">
+                <button type="button" class="btn btn-light" data-action="cancel">Cancelar</button>
+                <button type="button" class="btn btn-danger" data-action="confirm">Excluir</button>
             </div>
         </div>
     </div>
+
 
     <style>
         .swipe-list{list-style:none;margin:0;padding:0}
@@ -97,6 +97,29 @@
             let currentMode = 'create'; // create|edit|show
             let currentId   = null;
             let pendingDeleteId = null;
+
+            const xConfirm = document.getElementById('confirmDelete');
+            const xConfirmBtn = xConfirm.querySelector('[data-action="confirm"]');
+            const xCancelBtn  = xConfirm.querySelectorAll('[data-action="cancel"]');
+
+            function openConfirm(){
+                xConfirm.classList.add('show');
+                xConfirm.hidden = false;
+                document.body.classList.add('modal-open');
+            }
+
+            function closeConfirm(){
+                xConfirm.classList.remove('show');
+                xConfirm.hidden = true;
+                document.body.classList.remove('modal-open');
+            }
+
+            xConfirmBtn.addEventListener('click', async ()=>{ await doDelete(); closeConfirm(); });
+            xCancelBtn.forEach(btn=> btn.addEventListener('click', closeConfirm));
+// fecha no backdrop
+            xConfirm.addEventListener('click', (e)=>{ if(e.target === xConfirm) closeConfirm(); });
+// fecha com ESC
+            document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !xConfirm.hidden) closeConfirm(); });
 
             function brl(v){
                 const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[^\d.-]/g,''));
@@ -327,12 +350,7 @@
 
             function handleAskDelete(id){
                 pendingDeleteId = id;
-                const cEl = document.getElementById('confirmDeleteModal');
-                if (window.bootstrap && cEl) {
-                    window.bootstrap.Modal.getOrCreateInstance(cEl).show();
-                } else if (confirm('Você deseja remover?')) {
-                    doDelete();
-                }
+                openConfirm();
             }
 
             // ===== CAPTURE: intercepta botões antes do click borbulhar

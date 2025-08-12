@@ -40,21 +40,33 @@
 
 
     /* Modal sempre no topo (Bootstrap refs: backdrop 1050, modal 1055) */
-    .modal{ z-index:1060 !important; }
-    .modal-backdrop{ z-index:1050 !important; }
+    /* Sheet de confirmação (sempre acima de tudo) */
+    .x-confirm{
+        position:fixed; inset:0; display:none;
+        background:rgba(0,0,0,.45); z-index:99999;
+    }
+    .x-confirm.show{ display:flex; align-items:flex-end; justify-content:center; }
+    .x-sheet{
+        width:min(560px,94vw);
+        margin:0 0 calc(env(safe-area-inset-bottom) + 12px) 0;
+        background:#fff; border-radius:16px; overflow:hidden;
+        box-shadow:0 20px 40px rgba(0,0,0,.2);
+    }
+    .x-head{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #eee; }
+    .x-body{ padding:16px; }
+    .x-actions{ display:flex; gap:8px; justify-content:flex-end; padding:12px 16px; border-top:1px solid #eee; }
+    .x-close{ border:0; background:transparent; font-size:22px; line-height:1; cursor:pointer; }
 
-    /* FABs abaixo do modal e sem clique quando modal aberto */
-    .create-btn,.create-other,.create-other-2,.create-other-3{ z-index:1040 !important; }
+    /* quando qualquer modal estiver aberto, desabilita clique por trás */
+    body.modal-open #transactionList{ pointer-events:none; }
     body.modal-open .create-btn,
     body.modal-open .create-other,
     body.modal-open .create-other-2,
-    body.modal-open .create-other-3{
-        pointer-events:none !important;
-        opacity:.35; /* opcional, só pra indicar bloqueio */
-    }
+    body.modal-open .create-other-3{ pointer-events:none; opacity:.35; }
 
-    /* evita toques na lista por trás do modal */
-    body.modal-open #transactionList{ pointer-events:none; }
+    /* (opcional) garante que nenhum z-index de terceiros passe na frente */
+    .create-btn,.create-other,.create-other-2,.create-other-3{ z-index:1040 !important; }
+
 
     .app-container{
         width: 100%;

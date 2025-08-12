@@ -76,9 +76,6 @@
         .tx-amount{font-weight:700;display:block}
         .tx-line{display:flex;justify-content:space-between;gap:12px}
 
-        #confirmDeleteModal {
-            z-index: 9999 !important;
-        }
     </style>
 
     <script>

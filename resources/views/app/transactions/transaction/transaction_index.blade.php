@@ -76,9 +76,6 @@
         .tx-amount{font-weight:700;display:block}
         .tx-line{display:flex;justify-content:space-between;gap:12px}
 
-        #confirmDeleteModal {
-            z-index: 9999 !important;
-        }
     </style>
 
     <script>
@@ -190,8 +187,14 @@
                 setFormMode(mode);
                 if (tx) fillForm(tx); else clearForm();
                 modalEl.classList.add('show');
+
+                document.body.classList.add('modal-open');   // <- adiciona
             }
-            function closeTxModal(){ modalEl.classList.remove('show'); }
+
+            function closeTxModal(){
+                modalEl.classList.remove('show');
+                document.body.classList.remove('modal-open'); // <- remove
+            }
 
             async function loadTransactions(){
                 const res = await fetch("{{ route('transactions.index') }}",{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});
@@ -270,12 +273,17 @@
                 requestAnimationFrame(()=> content.style.transition = 'transform 160ms ease');
             }
             function onStart(e){
+
+                if (document.body.classList.contains('modal-open')) return;
+
                 const li = e.target.closest('.swipe-item'); if(!li) return;
                 closeAll(); swipe.active=li; swipe.dragging=true;
                 swipe.startX = (e.touches ? e.touches[0].clientX : e.clientX);
                 li.querySelector('.swipe-content').style.transition='none';
             }
             function onMove(e){
+                function onMove(e){  if (document.body.classList.contains('modal-open')) return; ... }
+
                 if(!swipe.dragging || !swipe.active) return;
                 const x = (e.touches ? e.touches[0].clientX : e.clientX);
                 const dx = x - swipe.startX;
@@ -287,6 +295,8 @@
                 else          dragTranslate(swipe.active, Math.min(move,  OPEN_W));
             }
             function onEnd(){
+                function onEnd(e){   if (document.body.classList.contains('modal-open')) return; ... }
+
                 if(!swipe.dragging || !swipe.active) return;
                 const content = swipe.active.querySelector('.swipe-content');
                 restoreTransition(swipe.active);
@@ -327,6 +337,8 @@
 
             // ===== CAPTURE: intercepta botões antes do click borbulhar
             list.addEventListener('pointerdown', (e)=>{
+                if (document.body.classList.contains('modal-open')) return; // <- aqui
+
                 const btn = e.target.closest('.swipe-edit-btn, .swipe-delete-btn');
                 if (!btn) return;
 
@@ -347,6 +359,8 @@
 
             // ===== CAPTURE extra: cancela qualquer click em botões
             list.addEventListener('click', (e)=>{
+                if (document.body.classList.contains('modal-open')) return; // <- aqui
+
                 if (e.target.closest('.swipe-edit-btn, .swipe-delete-btn')) {
                     e.preventDefault();
                     e.stopPropagation();

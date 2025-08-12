@@ -38,6 +38,24 @@
         padding-right: var(--safe-right);
     }
 
+
+    /* Modal sempre no topo (Bootstrap refs: backdrop 1050, modal 1055) */
+    .modal{ z-index:1060 !important; }
+    .modal-backdrop{ z-index:1050 !important; }
+
+    /* FABs abaixo do modal e sem clique quando modal aberto */
+    .create-btn,.create-other,.create-other-2,.create-other-3{ z-index:1040 !important; }
+    body.modal-open .create-btn,
+    body.modal-open .create-other,
+    body.modal-open .create-other-2,
+    body.modal-open .create-other-3{
+        pointer-events:none !important;
+        opacity:.35; /* opcional, só pra indicar bloqueio */
+    }
+
+    /* evita toques na lista por trás do modal */
+    body.modal-open #transactionList{ pointer-events:none; }
+
     .app-container{
         width: 100%;
         max-width: 400px;

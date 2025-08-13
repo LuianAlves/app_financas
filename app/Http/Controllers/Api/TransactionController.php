@@ -391,8 +391,8 @@ class TransactionController extends Controller
         $typeCard     = $isCard ? $request->type_card : null;
         $installments = (int) ($request->installments ?? 1);
 
-        // 📌 1) Parcelamento no crédito
-        if ($isCard && $typeCard === 'credit' && $installments > 1 && $request->recurrence_type === 'unique') {
+
+        if ($isCard && $typeCard === 'credit' && $installments >= 1 && $request->recurrence_type === 'unique') {
             return $this->handleInstallments($request, $txDate, $installments);
         }
 

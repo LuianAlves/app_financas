@@ -14,7 +14,7 @@
     </div>
 
     {{-- Header da fatura selecionada --}}
-    <div class="balance-box" id="invoiceHeader" data-card="{{ $card->id }}">
+    <div class="balance-box m-0 mb-3" id="invoiceHeader" data-card="{{ $card->id }}">
         <span class="fw-bold" id="hdr-month">Fatura de {{ $header['month_label'] }}</span>
         <strong id="hdr-total">{{ $header['total'] }}</strong>
         <span>Limite disponível <b id="hdr-limit">{{ $header['limit'] }}</b></span>
@@ -86,10 +86,8 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
-            margin: 8px 12px
         }
 
-        /* Swipe list (mesmo padrão da 1ª view) */
         .swipe-list {
             list-style: none;
             margin: 8px 0;
@@ -102,7 +100,6 @@
             border-radius: 10px;
             border: 1px solid #eee;
             background: #fff;
-            margin: 8px 12px !important;
         }
 
         .swipe-content {

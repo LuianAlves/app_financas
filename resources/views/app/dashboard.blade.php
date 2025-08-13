@@ -26,7 +26,7 @@
                 <i class="fa fa-eye"></i>
             </div>
 
-            <strong id="kpi-balanco">{{ brlPrice($total) }}</strong>
+            <strong id="kpi-balanco">{{ $total }}</strong>
 
             <div class="d-flex justify-content-between flex-column">
 

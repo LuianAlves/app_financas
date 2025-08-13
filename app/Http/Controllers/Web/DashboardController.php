@@ -385,7 +385,9 @@ class DashboardController extends Controller
             // current_month ('Y-m') -> calcula a data de vencimento usando o due_day do cartão
             $base = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
             $due  = $base->copy()->day(min((int)($r->due_day ?: 1), $base->daysInMonth));
-            $total = (float)$r->total;
+
+            $total = (float) $r->total;
+
             $firstName = explode(' ', trim($r->cardholder_name))[0];
 
             // Só cria evento se há valor (>0) e se o vencimento está dentro da janela

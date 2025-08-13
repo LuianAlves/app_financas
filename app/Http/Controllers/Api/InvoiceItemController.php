@@ -17,7 +17,7 @@ class InvoiceItemController extends Controller
 
     public function index()
     {
-        $invoiceItem = InvoiceItem::all();
+        $invoiceItem = InvoiceItem::with('category')->all();
 
         $invoiceItem->each(function($invoiceItem){
             $invoiceItem->descreption = strtoupper($invoiceItem->descreption);
@@ -26,6 +26,7 @@ class InvoiceItemController extends Controller
             $invoiceItem->current_installment = $invoiceItem->current_installment . 'x';
 
         });
+
         return response()->json($invoiceItem);
     }
 
@@ -51,21 +52,16 @@ class InvoiceItemController extends Controller
 
         });
 
-
-
         return response()->json($invoiceItem, 201);
     }
 
     public function show(InvoiceItem $invoiceItem)
     {
-        $this->authorize('view', $invoiceItem);
         return response()->json($invoiceItem);
     }
 
     public function update(Request $request, InvoiceItem $invoiceItem)
     {
-        $this->authorize('update', $invoiceItem);
-
         $data = $request->validate([
             'description' => 'sometimes|string|max:255',
             'amount' => 'sometimes|numeric',
@@ -82,7 +78,6 @@ class InvoiceItemController extends Controller
 
     public function destroy(InvoiceItem $invoiceItem)
     {
-        $this->authorize('delete', $invoiceItem);
         $invoiceItem->delete();
 
         return response()->json(null, 204);

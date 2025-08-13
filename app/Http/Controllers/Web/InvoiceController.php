@@ -51,9 +51,9 @@ class InvoiceController extends Controller
         return view('app.invoices.invoice.invoice_index', compact('card','invoices','header','items','selectedYm'));
     }
 
-    public function show($cardId, $ym) // AJAX
+    public function show($cardId, $ym)
     {
-        $card = Card::with('invoices.items')->findOrFail($cardId);
+        $card = Card::with('invoices.items.category')->findOrFail($cardId);
 
         [$header, $items] = $this->buildInvoicePayload($card, $ym);
 
@@ -68,10 +68,11 @@ class InvoiceController extends Controller
 
         $inv = $card->invoices->firstWhere('current_month', $ym);
         $items = collect();
+
         $monthTotal = 0;
 
         if ($inv) {
-            $items = $inv->items()->orderBy('date')->get()->map(function (\App\Models\InvoiceItem $it){
+            $items = $inv->items()->with('category')->orderBy('date')->get()->map(function (\App\Models\InvoiceItem $it){
                 return (object)[
                     'id' => $it->id,
                     'title' => $it->title,
@@ -81,55 +82,25 @@ class InvoiceController extends Controller
                     'installments' => (int)$it->installments,
                     'current_installment' => (int)$it->current_installment,
                     'is_projection' => (bool)$it->is_projection,
+                    'icon' => optional($it->category)->icon,
+                    'color' => optional($it->category)->color,
                 ];
             });
+
             $monthTotal = $inv->items->sum('amount');
         }
 
-        // ========== CÁLCULO DO LIMITE PARA O MÊS SELECIONADO ==========
         $selectedYm = $ym;
-
-        // 1) Saldo em aberto de compras reais (considera parcelas pagas até Y-M)
-        $realOpen = \App\Models\Transaction::query()
-            ->where('type', 'card')
-            ->where('type_card', 'credit')
-            ->where('card_id', $card->id)
-            ->get()
-            ->sum(function ($t) use ($selectedYm) {
-                $paidUpTo = \App\Models\InvoiceItem::query()
-                    ->where('transaction_id', $t->id)
-                    ->whereHas('invoice', function ($q) use ($selectedYm) {
-                        $q->where('paid', true)
-                            ->where('current_month', '<=', $selectedYm);
-                    })
-                    ->sum('amount');
-
-                $rest = (float)$t->amount - (float)$paidUpTo;
-                return $rest > 0 ? $rest : 0;
-            });
-
-        // 2) Projeções não pagas até Y-M (não têm transaction_id)
-        $projectedOpen = \App\Models\InvoiceItem::query()
-            ->where('is_projection', true)
-            ->whereNull('transaction_id')
-            ->whereHas('invoice', function ($q) use ($card, $selectedYm) {
-                $q->where('card_id', $card->id)
-                    ->where('paid', false)
-                    ->where('current_month', '<=', $selectedYm);
-            })
-            ->sum('amount');
 
         $blocked = \App\Models\InvoiceItem::query()
             ->whereHas('invoice', function ($q) use ($card, $selectedYm) {
                 $q->where('card_id', $card->id)
                     ->where('current_month', '<=', $selectedYm)
-                    ->where('paid', false); // só bloqueia faturas não pagas
+                    ->where('paid', false);
             })
             ->get()
             ->sum(function ($item) {
-                // Se for parcelado, bloqueia apenas parcelas futuras não pagas
                 if ($item->installments > 1) {
-                    // parcelas restantes
                     $restantes = $item->installments - $item->current_installment + 1;
                     return ($item->amount) * $restantes;
                 }
@@ -137,11 +108,10 @@ class InvoiceController extends Controller
             });
 
         $limitAvail = max(0, $card->credit_limit - $blocked);
-        // ===============================================================
 
         $header = [
             'ym'           => $ym,
-            'month_label'  => strtoupper($dt->locale('pt_BR')->isoFormat('MMM')),
+            'month_label'  => ucfirst($dt->locale('pt_BR')->isoFormat('MMMM')),
             'paid'         => (bool)optional($inv)->paid,
             'total'        => brlPrice($monthTotal),
             'limit'        => brlPrice($limitAvail),

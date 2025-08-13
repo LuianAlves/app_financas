@@ -12,6 +12,7 @@ use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -91,6 +92,11 @@ class DashboardController extends Controller
             ->whereIn('transactions.user_id', $userIds)
             ->where('recurrence_type', 'unique')
             ->whereBetween('transactions.date', [$winStart, $winEnd])
+            ->where(function($q){
+                $q->where('transactions.type', '!=', 'card')
+                    ->orWhereNull('transactions.type_card')
+                    ->orWhere('transactions.type_card', '!=', 'credit');
+            })
             ->get(['transactions.id','transactions.title','transactions.amount','transactions.date','transactions.transaction_category_id']);
 
         foreach ($uniqueTx as $t) {
@@ -352,6 +358,53 @@ class DashboardController extends Controller
                 if (!$occ->betweenIncluded($winStart, $winEnd)) continue;
 
                 $events->push($this->ev($r->id,'c',$t,$cat,$type,$occ,(float)$ci->amount,$ci->custom_occurrence_number));
+            }
+        }
+
+        // 4) FATURAS DE CARTÃO (um evento por invoice, na data de vencimento)
+        $rows = DB::table('invoices as inv')
+            ->join('cards as c', 'c.id', '=', 'inv.card_id')
+            ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
+            ->whereIn('inv.user_id', $userIds)
+            ->groupBy('inv.id','inv.card_id','inv.current_month','inv.paid','c.cardholder_name','c.due_day')
+            ->get([
+                'inv.id',
+                'inv.card_id',
+                'inv.current_month',   // 'Y-m'
+                'inv.paid',
+                'c.cardholder_name',
+                'c.last_four_digits',
+                'c.due_day',
+                DB::raw('COALESCE(SUM(it.amount),0) as total')
+            ]);
+
+        foreach ($rows as $r) {
+            // current_month ('Y-m') -> calcula a data de vencimento usando o due_day do cartão
+            $base = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
+            $due  = $base->copy()->day(min((int)($r->due_day ?: 1), $base->daysInMonth));
+            $total = (float)$r->total;
+            $firstName = explode(' ', trim($r->cardholder_name))[0];
+
+            // Só cria evento se há valor (>0) e se o vencimento está dentro da janela
+            if ($total > 0 && $due->betweenIncluded($winStart, $winEnd)) {
+                $events->push([
+                    'id'    => (string)$r->id, // id da invoice
+                    'title'    => "Fatura {$firstName} {$r->last_four_digits}",
+                    'start' => $due->toDateString(),
+                    // visual do cartão/fatura
+                    'bg'    => '#be123c',                 // cor do “badge” (opcional)
+                    'icon'  => 'fa-solid fa-credit-card', // ícone
+                    'color' => '#ef4444',                 // cor do valor na listinha
+                    'extendedProps' => [
+                        'amount'       => abs($total),                 // sai do saldo → negativo
+                        'amount_brl'   => brlPrice(abs($total)),       // formatado
+                        'category_name'=> 'Fatura Cartão',
+                        'type'         => 'despesa',                    // para teu JS pintar vermelho
+                        'is_invoice'   => true,
+                        'paid'         => (bool)$r->paid,
+                        'card_id'      => (string)$r->card_id,
+                    ],
+                ]);
             }
         }
 

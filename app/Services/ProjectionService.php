@@ -10,6 +10,7 @@ use App\Models\Recurrent;
 use App\Models\CustomItemRecurrents;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ProjectionService
@@ -31,8 +32,10 @@ class ProjectionService
             ->merge($this->expandRecurrentsMonthlyYearly($userIds, $from, $to))
             ->merge($this->expandRecurrentsCustom($userIds, $from, $to));
 
+        $occ = $occ->reject(fn($o) => ($o['type'] ?? null) === 'card' && ($o['type_card'] ?? null) === 'credit');
+
         // 2) Faturas de cartão
-        $bills = $this->cardBillsFromOccurrences($userIds, $from, $to, $occ);
+        $bills = $this->cardBillsFromInvoices($userIds, $from, $to);
 
         // 3) Extrato diário consolidado
         $days = $this->consolidateDays($from, $to, $opening, $occ, $bills);
@@ -44,6 +47,51 @@ class ProjectionService
             'ending_balance'  => round(end($days)['balance'] ?? $opening, 2),
             'days'            => array_values($days),
         ];
+    }
+
+    protected function cardBillsFromInvoices(array $userIds, Carbon $from, Carbon $to): array
+    {
+        // agrega total por invoice
+        $rows = DB::table('invoices as inv')
+            ->join('cards as c', 'c.id', '=', 'inv.card_id')
+            ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
+            ->whereIn('inv.user_id', $userIds)
+            ->groupBy('inv.id','inv.card_id','inv.current_month','inv.paid','c.cardholder_name','c.due_day')
+            ->get([
+                'inv.id',
+                'inv.card_id',
+                'inv.current_month',
+                'inv.paid',
+                'c.cardholder_name',
+                'c.due_day',
+                DB::raw('COALESCE(SUM(it.amount),0) as total')
+            ]);
+
+        $bills = [];
+
+        foreach ($rows as $r) {
+            // current_month = 'Y-m' → calcula due_date com due_day do cartão
+            $base = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
+            $due  = $base->copy()->day(min((int)$r->due_day ?: 1, $base->daysInMonth));
+
+            // considera no período selecionado
+            if ($due->betweenIncluded($from, $to) && $r->total > 0) {
+                $bills[] = [
+                    'id'        => (string)$r->id,
+                    'title'     => 'Fatura '.$r->cardholder_name.' (venc. '.$due->format('d/m').')',
+                    'amount'    => -round((float)$r->total, 2), // sai do saldo
+                    'date'      => $due->toDateString(),
+                    'type'      => 'invoice',
+                    'type_card' => 'credit',
+                    'card_id'   => (string)$r->card_id,
+                    'category'  => 'Fatura Cartão',
+                    'is_invoice'=> true,
+                    'paid'      => (bool)$r->paid,
+                ];
+            }
+        }
+
+        return $bills;
     }
 
     private function resolveOwnerAndAdditionals(string $uid): array

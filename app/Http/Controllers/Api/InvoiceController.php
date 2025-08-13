@@ -17,7 +17,6 @@ class InvoiceController extends Controller
     }
     public function index()
     {
-
         $invoice = $this->invoice::with('account')->get();
 
         $invoice->each(function($invoice){

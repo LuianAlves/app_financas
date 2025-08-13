@@ -2,88 +2,153 @@
 
 namespace App\Http\Controllers\Web;
 
-use App\Models\Card;
-use App\Models\Transaction;
-use Carbon\Carbon;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
+
+use App\Models\Card;
+use App\Models\Invoice;
+
+use Carbon\Carbon;
 
 class InvoiceController extends Controller
 {
     public function index($cardId)
     {
-        /*  Falta:
-         *
-         * Criar tabela de registro de invoices: irá salvar se a fatura foi paga e o valor (assim permite adiantamento/pagamento parcial da fatura)
-         * Resolver problema ao cadastrar item no cartão de crédito: liberar para selecionar recorrência (exemplo: assinatura de streaming),
-         * também deve resolver problema de cadastrar item com 1x parcela e não salvar. (a ideia é cadastrar como gasto 'unico').
-         * */
-
         Carbon::setLocale('pt_BR');
-        setlocale(LC_TIME, 'pt_BR.UTF-8');
-
         $card  = Card::with('invoices.items')->findOrFail($cardId);
+
+        // garante 12 meses a partir de hoje
         $today = Carbon::today();
-
-        $cycle = $today->format('Y-m');
-        [$Y, $M] = explode('-', $cycle);
-        $dtClose = Carbon::create($Y, $M, $card->closing_day);
-        $dtDue   = Carbon::create($Y, $M, $card->due_day);
-        $inv     = $card->invoices->firstWhere('current_month', $cycle);
-
-        if ($today->gte($dtClose)) {
-            if ($inv && $inv->paid) {
-                $cycle = Carbon::create($Y, $M, 1)->addMonth()->format('Y-m');
-                [$Y, $M] = explode('-', $cycle);
-                $dtClose = Carbon::create($Y, $M, $card->closing_day);
-                $dtDue   = Carbon::create($Y, $M, $card->due_day);
-                $inv     = $card->invoices->firstWhere('current_month', $cycle);
-            }
+        $startMonth = Carbon::create($today->year, $today->month, 1);
+        for ($i=0; $i<12; $i++) {
+            $m = $startMonth->copy()->addMonths($i)->format('Y-m');
+            Invoice::firstOrCreate(
+                ['user_id'=>auth()->id(), 'card_id'=>$card->id, 'current_month'=>$m],
+                ['paid'=>false]
+            );
         }
+        $card->load('invoices.items');
 
-        $currentInv  = $card->invoices->firstWhere('current_month', $cycle);
-        $faturaAtual = $currentInv ? $currentInv->items->sum('amount') : 0;
+        // mês selecionado = competência atual
+        $selectedYm = $today->format('Y-m');
 
-        $transactions = Transaction::query()
-            ->where('type', 'card')
-            ->where('type_card', 'credit')
-            ->where('card_id', $card->id)
-            ->orderByDesc('date')
-            ->orderByDesc('created_at')
-            ->get();
+        // header para o mês selecionado
+        [$header, $items] = $this->buildInvoicePayload($card, $selectedYm);
 
-        $totalUnpaid = $card->invoices
-            ->filter(fn($i) => ! $i->paid)
-            ->flatMap->items
-            ->sum('amount');
-        $limiteDisponivel = $card->credit_limit - $totalUnpaid;
-
-        $closeLabel = 'Fecha em <b>' . strtoupper($dtClose->isoFormat('DD MMM')) . '</b>';
-
-        if ($currentInv && ! $currentInv->paid
-            && $today->between($dtClose->copy()->addDay(-1), $dtDue)
-            && $today->diffInDays($dtDue) === 1
-        ) {
-            $dueLabel = 'Sua fatura vence amanhã';
-        } else {
-            $dueLabel = 'Vence em <b>' . strtoupper($dtDue->isoFormat('DD MMM')) . '</b>';
-        }
-
+        // carrossel
         $invoices = $card->invoices
             ->sortBy('current_month')
             ->map(function($inv){
                 $dt = Carbon::createFromFormat('Y-m', $inv->current_month)->locale('pt_BR');
-                $inv->month       = strtoupper($dt->isoFormat('MMM'));
-                $inv->totalAmount = brlPrice($inv->items->sum('amount'));
-                return $inv;
+                return (object)[
+                    'ym' => $inv->current_month,
+                    'month' => strtoupper($dt->isoFormat('MMM')),
+                    'paid' => (bool)$inv->paid,
+                    'total' => brlPrice($inv->items->sum('amount')),
+                ];
+            })->values();
+
+        return view('app.invoices.invoice.invoice_index', compact('card','invoices','header','items','selectedYm'));
+    }
+
+    public function show($cardId, $ym) // AJAX
+    {
+        $card = Card::with('invoices.items')->findOrFail($cardId);
+
+        [$header, $items] = $this->buildInvoicePayload($card, $ym);
+
+        return response()->json(compact('header','items'));
+    }
+
+    private function buildInvoicePayload(Card $card, string $ym): array
+    {
+        $dt   = Carbon::createFromFormat('Y-m', $ym);
+        $close= Carbon::create($dt->year, $dt->month, $card->closing_day);
+        $due  = Carbon::create($dt->year, $dt->month, $card->due_day);
+
+        $inv = $card->invoices->firstWhere('current_month', $ym);
+        $items = collect();
+        $monthTotal = 0;
+
+        if ($inv) {
+            $items = $inv->items()->orderBy('date')->get()->map(function (\App\Models\InvoiceItem $it){
+                return (object)[
+                    'id' => $it->id,
+                    'title' => $it->title,
+                    'date' => \Carbon\Carbon::parse($it->date)->format('d/m/Y'),
+                    'amount_raw' => (float)$it->amount,
+                    'amount' => brlPrice($it->amount),
+                    'installments' => (int)$it->installments,
+                    'current_installment' => (int)$it->current_installment,
+                    'is_projection' => (bool)$it->is_projection,
+                ];
+            });
+            $monthTotal = $inv->items->sum('amount');
+        }
+
+        // ========== CÁLCULO DO LIMITE PARA O MÊS SELECIONADO ==========
+        $selectedYm = $ym;
+
+        // 1) Saldo em aberto de compras reais (considera parcelas pagas até Y-M)
+        $realOpen = \App\Models\Transaction::query()
+            ->where('type', 'card')
+            ->where('type_card', 'credit')
+            ->where('card_id', $card->id)
+            ->get()
+            ->sum(function ($t) use ($selectedYm) {
+                $paidUpTo = \App\Models\InvoiceItem::query()
+                    ->where('transaction_id', $t->id)
+                    ->whereHas('invoice', function ($q) use ($selectedYm) {
+                        $q->where('paid', true)
+                            ->where('current_month', '<=', $selectedYm);
+                    })
+                    ->sum('amount');
+
+                $rest = (float)$t->amount - (float)$paidUpTo;
+                return $rest > 0 ? $rest : 0;
             });
 
-        return view('app.invoices.invoice.invoice_index', [
-            'invoices'         => $invoices,
-            'faturaAtual'      => brlPrice($faturaAtual),
-            'limiteDisponivel' => brlPrice($limiteDisponivel),
-            'closeLabel'       => $closeLabel,
-            'dueLabel'         => $dueLabel,
-            'transactions'     => $transactions,
-        ]);
+        // 2) Projeções não pagas até Y-M (não têm transaction_id)
+        $projectedOpen = \App\Models\InvoiceItem::query()
+            ->where('is_projection', true)
+            ->whereNull('transaction_id')
+            ->whereHas('invoice', function ($q) use ($card, $selectedYm) {
+                $q->where('card_id', $card->id)
+                    ->where('paid', false)
+                    ->where('current_month', '<=', $selectedYm);
+            })
+            ->sum('amount');
+
+        $blocked = \App\Models\InvoiceItem::query()
+            ->whereHas('invoice', function ($q) use ($card, $selectedYm) {
+                $q->where('card_id', $card->id)
+                    ->where('current_month', '<=', $selectedYm)
+                    ->where('paid', false); // só bloqueia faturas não pagas
+            })
+            ->get()
+            ->sum(function ($item) {
+                // Se for parcelado, bloqueia apenas parcelas futuras não pagas
+                if ($item->installments > 1) {
+                    // parcelas restantes
+                    $restantes = $item->installments - $item->current_installment + 1;
+                    return ($item->amount) * $restantes;
+                }
+                return $item->amount;
+            });
+
+        $limitAvail = max(0, $card->credit_limit - $blocked);
+        // ===============================================================
+
+        $header = [
+            'ym'           => $ym,
+            'month_label'  => strtoupper($dt->locale('pt_BR')->isoFormat('MMM')),
+            'paid'         => (bool)optional($inv)->paid,
+            'total'        => brlPrice($monthTotal),
+            'limit'        => brlPrice($limitAvail),
+            'close_label'  => 'Fecha em <b>'.strtoupper($close->isoFormat('DD MMM')).'</b>',
+            'due_label'    => 'Vence em <b>'.strtoupper($due->isoFormat('DD MMM')).'</b>',
+        ];
+
+        return [$header, $items];
     }
 }

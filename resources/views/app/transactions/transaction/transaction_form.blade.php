@@ -1,142 +1,176 @@
+
+
+
+
+<!-- -->
+<!-- -->
+<!-- -->
+
+
+<!-- Name/Category -->
 <div class="row">
-    <x-input col="6" set="" type="text" title="Título" id="title" name="title"
-             placeholder="Ex: Pagamento aluguel"></x-input>
-    <x-select col="6" set="" name="transaction_category_id" id="transaction_category_id" title="Categoria">
+    <x-input col="6" type="text" title="Título" id="title" name="title" placeholder="Ex: Pagamento aluguel"/>
+    <x-select col="6" name="transaction_category_id" id="transaction_category_id" title="Categoria">
         @foreach($categories as $category)
             <option value="{{ $category->id }}">{{ $category->name }}</option>
         @endforeach
     </x-select>
 </div>
 
-{{-- Description --}}
+<!-- Description -->
 <div class="row">
-    <x-input col="12" set="" type="text" title="Descrição" id="description" name="description"
-             placeholder="Detalhes (opcional)"></x-input>
+    <x-input col="12" type="text" title="Descrição" id="description" name="description"
+             placeholder="Detalhes (opcional)"/>
 </div>
 
-{{-- Amount/Date --}}
+<!-- Price/Date -->
 <div class="row">
-    <x-input col="6" set="" type="number" step="0.01" title="Valor" id="amount" name="amount"
-             placeholder="R$ 0,00"></x-input>
-    <x-input col="6" set="" type="date" title="Data" id="date" name="date"></x-input>
+    <x-input col="6" type="number" step="0.01" title="Valor" id="amount" name="amount" placeholder="R$ 0,00"/>
+    <x-input col="6" type="date" title="Data (início)" id="date" name="date"/>
 </div>
 
-{{-- Type --}}
-<label for="type">Forma de pagamento</label>
+<!-- Payment Type -->
+<label class="mt-2">Forma de pagamento</label>
 <div class="row d-flex justify-content-around">
-    <x-input-check col="4" set="" id="pix" value="pix" name="type" title="Pix" checked="1" disabled=""></x-input-check>
-    <x-input-check col="4" set="" id="card" value="card" name="type" title="Cartão" disabled=""></x-input-check>
-    <x-input-check col="4" set="" id="money" value="money" name="type" title="Dinheiro" disabled=""></x-input-check>
+    <x-input-check col="4" id="pix" value="pix" name="type" title="Pix" checked="1"/>
+    <x-input-check col="4" id="card" value="card" name="type" title="Cartão"/>
+    <x-input-check col="4" id="money" value="money" name="type" title="Dinheiro"/>
 </div>
 
-{{-- Account --}}
-<div class="row mt-2 d-none" id="pixAccountContainer">
-    <x-select col="6" set="" name="account_id" id="account_id" title="Conta (Pix)">
+<!-- Card Type -->
+<div class="row d-flex justify-content-around d-none" id="typeCardContainer">
+    <label class="mb-1">Tipo de cartão</label>
+    <x-input-check col="6" id="credit" value="credit" name="type_card" title="Crédito"/>
+    <x-input-check col="6" id="debit" value="debit" name="type_card" title="Débito"/>
+</div>
+
+<!-- Alternância -->
+<div class="row mt-2 d-none" id="alternateCardsRow">
+    <label class="mb-1">Alternar entre cartões?</label>
+    <div class="col-12 d-flex align-items-center gap-2">
+        <input type="checkbox" id="alternate_cards" name="alternate_cards" value="1">
+        <span>Sim</span>
+    </div>
+</div>
+<div class="row mt-2 d-none" id="alternateCardsSelect">
+    <label class="mb-1">Selecione os cartões para alternar</label>
+    @foreach($cards as $card)
+        <div class="col-6">
+            <label class="d-flex align-items-center gap-2">
+                <input type="checkbox" name="alternate_card_ids[]" value="{{ $card->id }}">
+                <span>{{ "{$card->account->bank_name} {$card->last_four_digits}" }}</span>
+            </label>
+        </div>
+    @endforeach
+</div>
+
+<!-- Select account -->
+<div class="row mt-2" id="pixAccountContainer">
+    <x-select col="12" name="account_id" id="account_id" title="Conta (Pix/Dinheiro)">
         @foreach($accounts as $account)
             <option value="{{ $account->id }}">{{ $account->bank_name }}</option>
         @endforeach
     </x-select>
 </div>
 
-{{-- Card --}}
+<!-- Select Card -->
 <div class="row d-none" id="cardSelectContainer">
-    <x-select col="12" set="" name="card_id" id="card_id" title="Cartão vinculado">
+    <x-select col="12" name="card_id" id="card_id" title="Cartão vinculado">
         <option value="">Selecione um cartão</option>
         @foreach($cards as $card)
-            <option value="{{ $card->id }}">
-                {{ "{$card->account->bank_name} {$card->last_four_digits} "}}
-            </option>
+            <option value="{{ $card->id }}">{{ "{$card->account->bank_name} {$card->last_four_digits}" }}</option>
         @endforeach
     </x-select>
 </div>
 
-{{-- CardType --}}
-<div class="row d-flex justify-content-around d-none" id="typeCardContainer">
-<label for="type_card">Tipo de cartão</label>
-    <x-input-check col="6" set="" id="credit" value="credit" name="type_card" title="Crédito"
-                   disabled=""></x-input-check>
-    <x-input-check col="6" set="" id="debit" value="debit" name="type_card" title="Débito" disabled=""></x-input-check>
+<!-- Recorrência -->
+<div class="row mt-2" id="recurrenceRow">
+    <label class="mb-1">Recorrência</label>
+    <x-input-check col="3" id="unique" value="unique" name="recurrence_type" title="Única" checked="1"/>
+    <x-input-check col="3" id="monthly" value="monthly" name="recurrence_type" title="Mensal"/>
+    <x-input-check col="3" id="yearly" value="yearly" name="recurrence_type" title="Anual"/>
+    <x-input-check col="3" id="custom" value="custom" name="recurrence_type" title="A cada X dias"/>
 </div>
 
-<div class="row mt-2 d-flex justify-content-between">
-    <label for="recurrence_type">Recorrência</label>
-    <x-input-check col="4" set="" id="unique" value="unique" name="recurrence_type" title="Única" checked="1" disabled=""></x-input-check>
-    <x-input-check col="4" set="" id="monthly" value="monthly" name="recurrence_type" title="Mensal" disabled=""></x-input-check>
-    <x-input-check col="4" set="" id="yearly" value="yearly" name="recurrence_type" title="Anual" disabled=""></x-input-check>
-    <x-input-check col="4" set="" id="custom" value="custom" name="recurrence_type" title="Personalizada" disabled=""></x-input-check>
-</div>
-
+<!--  Custom (dias) -->
 <div class="row mt-2 d-none" id="customRecurrenceContainer">
-    <x-input col="12" set="" type="number" title="Repetições personalizadas" id="custom_occurrences"
-             name="custom_occurrences" placeholder="Ex: 6 vezes" value=""></x-input>
+    <x-select col="6" name="interval_value" id="interval_value" title="Intervalo (dias)">
+        @foreach([7,15,30,45,90] as $d)
+            <option value="{{ $d }}">{{ $d }} dias</option>
+        @endforeach
+    </x-select>
+    <div class="col-6">
+        <label class="mb-1 d-block">Contar fim de semana?</label>
+        <label class="me-3"><input type="checkbox" name="include_sat" id="include_sat" value="1" checked> Sábado</label>
+        <label><input type="checkbox" name="include_sun" id="include_sun" value="1" checked> Domingo</label>
+    </div>
 </div>
 
+<!--  Parcelas (somente crédito + unique) -->
 <div class="row mt-2 d-none" id="installmentsContainer">
-    <x-input col="12" set="" type="number" title="Parcelas" id="installments" name="installments" placeholder="Ex: 3 parcelas" value=""></x-input>
+    <x-input col="12" type="number" min="1" title="Parcelas" id="installments" name="installments"
+             placeholder="Ex: 3 parcelas"/>
 </div>
 
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // radios de pagamento
-            const payIds     = ['pix','card','money'];
-            const payRadios  = payIds.map(id => document.getElementById(id));
-            const pixCon     = document.getElementById('pixAccountContainer');
-            const cardSelCon = document.getElementById('cardSelectContainer');
-            const cardType   = document.getElementById('typeCardContainer');
-            const creditRad  = document.getElementById('credit');
+            const $ = id => document.getElementById(id);
 
-            // radios de recorrência
-            const recIds     = ['unique','monthly','yearly','custom'];
-            const recRadios  = recIds.map(id => document.getElementById(id));
-            const recRow     = recRadios[0].closest('.row');
-            const customCon  = document.getElementById('customRecurrenceContainer');
-            const instCon    = document.getElementById('installmentsContainer');
+            const pay = ['pix', 'card', 'money'];
+            const rec = ['unique', 'monthly', 'yearly', 'custom'];
 
-            function togglePayment() {
-                const sel = payRadios.find(r => r.checked).value;
-                pixCon    .classList.toggle('d-none', sel!=='pix');
-                cardSelCon.classList.toggle('d-none', sel!=='card');
-                cardType  .classList.toggle('d-none', sel!=='card');
-                if (sel==='card') {
-                    recRow.classList.add('d-none');
-                    customCon.classList.add('d-none');
-                    instCon.classList.add('d-none');
-                } else {
-                    recRow.classList.remove('d-none');
-                    toggleRecurrence();
+            const pixCon = $('pixAccountContainer'),
+                cardSelCon = $('cardSelectContainer'),
+                typeCardCon = $('typeCardContainer'),
+                recRow = $('recurrenceRow'),
+                customCon = $('customRecurrenceContainer'),
+                instCon = $('installmentsContainer'),
+                altRow = $('alternateCardsRow'),
+                altSel = $('alternateCardsSelect'),
+                altChk = $('alternate_cards'),
+                credit = $('credit'), debit = $('debit');
+
+            function current(ids) {
+                for (const id of ids) {
+                    const el = $(id);
+                    if (el?.checked) return el.value;
                 }
+                return null;
             }
 
-            function toggleRecurrence() {
-                const sel = recRadios.find(r => r.checked).value;
-                if (payRadios.find(r => r.checked).value==='card') {
-                    customCon.classList.add('d-none');
-                    instCon  .classList.add('d-none');
-                    return;
-                }
-                customCon.classList.toggle('d-none', sel!=='custom');
-                instCon  .classList.add('d-none');
+            function toggleAll() {
+                const p = current(pay), r = current(rec);
+                const isCard = p === 'card';
+                const isCred = credit.checked;
+                const isRec = r !== 'unique';
+
+                pixCon.classList.toggle('d-none', !(p === 'pix' || p === 'money'));
+                cardSelCon.classList.toggle('d-none', !isCard);
+                typeCardCon.classList.toggle('d-none', !isCard);
+
+                recRow.classList.remove('d-none');
+                customCon.classList.toggle('d-none', r !== 'custom');
+
+                // parcelas: só crédito + unique
+                instCon.classList.toggle('d-none', !(isCard && isCred && !isRec));
+
+                // alternância: só crédito + recorrente
+                const showAlt = isCard && isCred && isRec;
+                altRow.classList.toggle('d-none', !showAlt);
+                altSel.classList.toggle('d-none', !(showAlt && altChk.checked));
+
+                // se alterna, esconder select de um cartão fixo
+                cardSelCon.classList.toggle('d-none', showAlt && altChk.checked);
             }
 
-            function toggleInstallments() {
-                const pay  = payRadios.find(r => r.checked).value;
-                const cred = creditRad.checked;
-                if (pay==='card' && cred) instCon.classList.remove('d-none');
-                else instCon.classList.add('d-none');
-            }
+            [...pay.map(id => $(id))].forEach(el => el.addEventListener('change', toggleAll));
+            [...rec.map(id => $(id))].forEach(el => el.addEventListener('change', toggleAll));
+            credit.addEventListener('change', toggleAll);
+            debit.addEventListener('change', toggleAll);
+            $('alternate_cards').addEventListener('change', toggleAll);
 
-            payRadios.forEach(r => r.addEventListener('change', () => {
-                togglePayment();
-                toggleInstallments();
-            }));
-            recRadios.forEach(r => r.addEventListener('change', toggleRecurrence));
-            creditRad.addEventListener('change', toggleInstallments);
-            document.getElementById('debit').addEventListener('change', toggleInstallments);
-
-            togglePayment();
-            toggleRecurrence();
-            toggleInstallments();
+            toggleAll();
         });
     </script>
 @endpush

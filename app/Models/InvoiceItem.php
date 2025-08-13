@@ -7,13 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class InvoiceItem extends BaseModel
 {
     protected $fillable = [
-        'invoice_id',
-        'transaction_category_id',
-        'title',
-        'amount',
-        'date',
-        'installments',
-        'current_installment'
+        'invoice_id','transaction_id','transaction_category_id',
+        'title','amount','date','installments','current_installment'
     ];
 
     public function card(): BelongsTo

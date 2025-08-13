@@ -11,11 +11,12 @@ class Recurrent extends BaseModel
     use BelongsToUser;
 
     protected $fillable = [
-        'user_id',
-        'transaction_id',
-        'payment_day',
-        'amount'
+        'user_id','transaction_id','payment_day','amount',
+        'start_date','interval_unit','interval_value',
+        'include_sat','include_sun','next_run_date','active', 'alternate_cards'
     ];
+
+    protected $casts = ['alternate_cards' => 'boolean'];
 
     public function user(): BelongsTo
     {

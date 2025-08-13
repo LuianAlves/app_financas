@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Account;
 use App\Models\Card;
+use App\Models\Invoice;
+use App\Models\InvoiceItem;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -77,10 +80,12 @@ class CardController extends Controller
         return response()->json($card);
     }
 
-    public function destroy(Card $card)
+    public function destroy($id)
     {
+        $card = $this->card->where('id', $id)->first();
+
         $card->delete();
 
-        return response()->json(null, 204);
+        return response()->noContent();
     }
 }

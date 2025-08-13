@@ -27,7 +27,8 @@ class InvoiceController extends Controller
                 ['paid'=>false]
             );
         }
-        $card->load('invoices.items');
+
+        $card->load('invoices.items.category');
 
         // mês selecionado = competência atual
         $selectedYm = $today->format('Y-m');

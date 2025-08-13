@@ -290,13 +290,16 @@
                 const date = it.date ?? '';
                 const amount = it.amount;
 
+                const iconCls = it.icon && it.icon.trim() ? it.icon : 'fa-solid fa-tag';
+                const bg = it.color || '#999';
+
                 return `
                           <li class="swipe-item" data-id="${id}">
                                 <button class="swipe-edit-btn" type="button">Editar</button>
                                 <div class="swipe-content">
                                       <div class="tx-line d-flex justify-content-between">
                                            <div class="d-flex align-items-center">
-                                                <i class="fas ${it.icon} text-white" style="font-size: 12px; background: ${it.color}; padding: 7.5px; border-radius: 50%;"></i>
+        <i class="${iconCls} text-white" style="font-size:12px;background:${bg};padding:7.5px;border-radius:50%;"></i>
                                                 <div class="title-date mx-3">
                                                     <span class="tx-title">${it.title ?? 'Sem título'}</span>
                                                     <small class="tx-date">${date}</small>
@@ -569,7 +572,9 @@
                         amount: "{{ $it->amount }}",
                         installments: {{ (int)($it->installments ?? 0) }},
                         current_installment: {{ (int)($it->current_installment ?? 0) }},
-                        is_projection: {{ $it->is_projection ? 'true':'false' }}
+                        is_projection: {{ $it->is_projection ? 'true':'false' }},
+                        icon: "{{ $it->icon ?? '' }}",
+                        color: "{{ $it->color ?? '#999' }}"
                     },
                     @endforeach
                 ];

@@ -366,16 +366,19 @@ class DashboardController extends Controller
             ->join('cards as c', 'c.id', '=', 'inv.card_id')
             ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
             ->whereIn('inv.user_id', $userIds)
-            ->groupBy('inv.id','inv.card_id','inv.current_month','inv.paid','c.cardholder_name','c.due_day')
+            ->groupBy(
+                'inv.id','inv.card_id','inv.current_month','inv.paid',
+                'c.cardholder_name','c.last_four_digits','c.due_day'
+            )
             ->get([
                 'inv.id',
                 'inv.card_id',
-                'inv.current_month',   // 'Y-m'
+                'inv.current_month',
                 'inv.paid',
                 'c.cardholder_name',
-                'c.last_four_digits',
+                'c.last_four_digits',          // <— vamos usar no título
                 'c.due_day',
-                DB::raw('COALESCE(SUM(it.amount),0) as total')
+                DB::raw('COALESCE(SUM(it.amount),0) as total'),
             ]);
 
         foreach ($rows as $r) {

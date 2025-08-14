@@ -44,7 +44,7 @@ class InvoiceController extends Controller
                 return (object)[
                     'ym' => $inv->current_month,
                     'month' => strtoupper($dt->isoFormat('MMM')),
-                    'paid' => (bool)$inv->paid,
+                    'paid' => (bool) $inv->paid,
                     'total' => brlPrice($inv->items->sum('amount')),
                 ];
             })->values();
@@ -59,6 +59,19 @@ class InvoiceController extends Controller
         [$header, $items] = $this->buildInvoicePayload($card, $ym);
 
         return response()->json(compact('header','items'));
+    }
+
+    public function update($cardId, $ym)
+    {
+        $card = Card::with('invoices.items.category')->findOrFail($cardId);
+
+        $invoice = $card->invoices()->where('current_month', $ym)->first();
+
+        if($invoice) {
+            $invoice->update(['paid' => true]);
+        }
+
+        return redirect()->back();
     }
 
     private function buildInvoicePayload(Card $card, string $ym): array

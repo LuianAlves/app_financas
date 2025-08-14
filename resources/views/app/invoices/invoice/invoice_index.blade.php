@@ -15,7 +15,12 @@
 
     {{-- Header da fatura selecionada --}}
     <div class="balance-box m-0 mb-3" id="invoiceHeader" data-card="{{ $card->id }}">
-        <span class="fw-bold" id="hdr-month">Fatura de {{ $header['month_label'] }}</span>
+        <div class="d-flex align-items-center justify-content-between">
+            <span class="fw-bold" id="hdr-month">Fatura de {{ $header['month_label'] }}</span>
+            <a href="{{route('invoice-payment.update', [$card->id, $header['ym']])}}">
+                <i class="fa-solid fa-check-to-slot text-success fs-5"></i>
+            </a>
+        </div>
         <strong id="hdr-total">{{ $header['total'] }}</strong>
         <span>Limite disponível <b id="hdr-limit">{{ $header['limit'] }}</b></span>
         <span class="closing-date" id="hdr-close">{!! $header['close_label'] !!}</span>

@@ -5,5 +5,8 @@
             <input type="{{ $type }}" class="form-control form-control-sm" name="{{ $name }}" id="{{ $id }}"
                    value="{{ $value }}" placeholder="{{ $placeholder }}" {{ $disabled ? ' disabled' : '' }} step="{{$step}}" max="{{$max}}" min="{{$min}}">
         </div>
+        @error('message')
+            <small class="text-danger" id="alert-error">{{$message}}</small>
+        @enderror
     </div>
 </div>

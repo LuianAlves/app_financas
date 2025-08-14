@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Account;
 use App\Models\Saving;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -48,11 +49,25 @@ class SavingController extends Controller
         ]);
 
         $data['user_id'] = Auth::id();
+        $account = Account::find($data['account_id']);
 
-        $saving = $this->saving->create($data);
+        if($account && $account->current_balance >= $data['current_amount']) {
+            $saving = $this->saving->create($data);
+
+            if($saving) {
+                $account->current_balance = $account->current_balance - $data['current_amount'];
+                $account->save();
+            }
+        } elseif (!$account) {
+            return response()->json(['message' => 'Conta bancária não entrada.'], 404);
+        } else if($account->current_balance < $data['current_amount']) {
+            return response()->json(['message' => 'O valor inserido é maior do que o saldo da conta.'], 404);
+        }
+
         $saving->load('account');
 
         $saving->name = strtoupper($saving->name);
+
         if ($saving->account) {
             $saving->account->bank_name = strtoupper($saving->account->bank_name);
         }

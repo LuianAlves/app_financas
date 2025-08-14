@@ -275,16 +275,27 @@
                 }
 
                 async function atualizarKpisDoMes(ymStr) {
+
                     await loadWindow(ymStr, 2);
                     const [y, m] = ymStr.split('-').map(Number);
+
                     let aReceber = 0, aPagar = 0, balanco = 0;
+
                     for (const dia of diasDoMes(y, m)) {
                         for (const ev of eventosDoDia(dia)) {
-                            if (ev.tipo === 'entrada') aReceber += Math.abs(ev.valor);
-                            else if (ev.tipo === 'despesa') aPagar += Math.abs(ev.valor);
-                            balanco += ev.valor;
+                            if (ev.tipo === 'entrada') {
+                                aReceber += +Math.abs(ev.valor);
+                            }
+                            else if (ev.tipo === 'despesa') {
+                                aPagar += -Math.abs(ev.valor);
+                            }
+
+                            // balanco += ev.valor;
+
+                            balanco = Math.abs(aReceber) - Math.abs(aPagar);
                         }
                     }
+
                     document.getElementById('kpi-receber').textContent = brl(aReceber);
                     document.getElementById('kpi-pagar').textContent = brl(aPagar);
                     document.getElementById('kpi-balanco').textContent = brl(balanco);

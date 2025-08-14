@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Account extends BaseModel
 {
     use BelongsToUser;
+
     protected $fillable = [
         'user_id',
         'bank_name',

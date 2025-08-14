@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Saving extends BaseModel
 {
     use BelongsToUser;
+
     protected $fillable = [
         'user_id',
         'name',

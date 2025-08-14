@@ -15,7 +15,7 @@
 </div>
 
 <div class="row">
-    <x-input col="12" set="" type="number" step="0.01" min="0" title="Valor" id="current_amount" name="current_amount" value="{{ old('current_amount', $saving->current_amount ?? '0.00') }}" placeholder="0,00"></x-input>
+    <x-input col="12" set="" type="number" step="0.01" min="0" title="Valor" id="current_amount" name="current_amount" value="{{ old('current_amount', $saving->current_amount ?? '') }}" placeholder="0,00"></x-input>
 </div>
 
 @push('styles')

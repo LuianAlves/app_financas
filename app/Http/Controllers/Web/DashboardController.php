@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Helpers\CardCycle;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\AdditionalUser;
+use App\Models\Card;
 use App\Models\CustomItemRecurrents;
 use App\Models\Recurrent;
 use App\Models\Saving;
@@ -105,12 +107,14 @@ class DashboardController extends Controller
         $incomeMoM  = $this->percentChange($totalIncome,  $prevIncome);
         $expenseMoM = $this->percentChange($totalExpense, $prevExpense);
 
+        [$currentInvoices, $cardTip] = $this->buildInvoicesWidget($userIds, $today);
+
         return view('app.dashboard', compact(
             'accountsBalance', 'savingsBalance', 'total', 'categorySums',
             'totalIncome', 'balance',
             'recentTransactions', 'upcomingPayments', 'calendarEvents',
             'startOfMonth', 'endOfMonth',
-            'incomeMoM', 'expenseMoM'
+            'incomeMoM', 'expenseMoM', 'currentInvoices', 'cardTip'
         ));
     }
 
@@ -369,5 +373,117 @@ class DashboardController extends Controller
     {
         $t = mb_strtolower(trim((string)$title));
         return in_array($t, ['total fatura','fatura total','total da fatura'], true);
+    }
+
+    private function buildInvoicesWidget(Collection $userIds, Carbon $today): array
+    {
+        // Carrega cartões do “grupo”
+        $cards = Card::withoutGlobalScopes()
+            ->whereIn('cards.user_id', $userIds)
+            ->get(['id','cardholder_name','last_four_digits','closing_day','due_day','credit_limit','color_card']); // troque o nome se necessário
+
+        $result = [];
+        foreach ($cards as $card) {
+            // ciclo do mês corrente
+            $cycleMonth = CardCycle::cycleMonthFor($today, (int)$card->closing_day);
+
+            $row = $this->invoiceRow($userIds, $card->id, $cycleMonth);
+
+            // se está pago ou não existe → pega o próximo ciclo
+            if (!$row || $row->paid) {
+                $nextMonth = Carbon::createFromFormat('Y-m', $cycleMonth)->addMonth()->format('Y-m');
+                $row = $this->invoiceRow($userIds, $card->id, $nextMonth);
+                $cycleMonth = $nextMonth;
+            }
+
+            if (!$row) {
+                // sem fatura e sem itens → ainda assim mostramos “zerada” para UX
+                $due = Carbon::createFromFormat('Y-m', $cycleMonth)->startOfMonth()
+                    ->day(min((int)($card->due_day ?: 1), Carbon::createFromFormat('Y-m', $cycleMonth)->daysInMonth));
+                $result[] = [
+                    'card_id'         => (string)$card->id,
+                    'title'           => trim($card->cardholder_name).' '.$card->last_four_digits,
+                    'total'           => 0.00,
+                    'total_brl'       => function_exists('brlPrice') ? brlPrice(0) : 'R$ 0,00',
+                    'due_date'        => $due->toDateString(),
+                    'due_label'       => $due->locale('pt_BR')->isoFormat('DD/MMM'),
+                    'paid'            => false,
+                    'current_month'   => $cycleMonth,
+                    'color_card'      => $card->color_card,
+                    'available_limit' => $this->availableLimit($card, 0),
+                ];
+                continue;
+            }
+
+            $base = Carbon::createFromFormat('Y-m', $cycleMonth)->startOfMonth();
+            $due  = $base->copy()->day(min((int)($card->due_day ?: 1), $base->daysInMonth));
+            $total = (float)$row->total;
+
+            $result[] = [
+                'card_id'         => (string)$card->id,
+                'title'           => trim($card->cardholder_name).' '.$card->last_four_digits,
+                'total'           => round($total, 2),
+                'total_brl'       => function_exists('brlPrice') ? brlPrice($total) : number_format($total, 2, ',', '.'),
+                'due_date'        => $due->toDateString(),
+                'due_label'       => $due->locale('pt_BR')->isoFormat('DD/MMM'),
+                'paid'            => (bool)$row->paid,
+                'current_month'   => $cycleMonth,
+                'color_card'      => $card->color_card,
+                'available_limit' => $this->availableLimit($card, $total),
+            ];
+        }
+
+        // sugestão de qual cartão usar:
+        $tip = $this->suggestCardToUse($cards, $today);
+
+        return [$result, $tip];
+    }
+
+    private function invoiceRow(Collection $userIds, string $cardId, string $cycleMonth): ?object
+    {
+        return DB::table('invoices as inv')
+            ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
+            ->whereIn('inv.user_id', $userIds)
+            ->where('inv.card_id', $cardId)
+            ->where('inv.current_month', $cycleMonth)
+            ->groupBy('inv.id','inv.paid')
+            ->select('inv.id','inv.paid', DB::raw('COALESCE(SUM(it.amount),0) as total'))
+            ->first();
+    }
+
+    private function availableLimit(Card $card, float $openTotal): ?float
+    {
+        // ajuste o campo se necessário (ex.: $card->limit_total)
+        if (!isset($card->credit_limit)) return null;
+        return round((float)$card->credit_limit - max(0,$openTotal), 2);
+    }
+
+    private function suggestCardToUse(Collection $cards, Carbon $today): ?array
+    {
+        if ($cards->isEmpty()) return null;
+
+        // escolhe o cartão cujo "último fechamento" foi o mais recente (<= hoje)
+        $choice = $cards->map(function($c) use ($today){
+            $lastClose = CardCycle::lastClose($today, (int)$c->closing_day); // Carbon
+            $nextClose = $lastClose->copy()->addMonthNoOverflow();
+            return [
+                'card'      => $c,
+                'lastClose' => $lastClose,
+                'nextClose' => $nextClose,
+            ];
+        })
+            ->sortByDesc(fn($x) => $x['lastClose']->timestamp)
+            ->first();
+
+        if (!$choice) return null;
+
+        $c = $choice['card'];
+        $unt = $choice['nextClose']->locale('pt_BR')->isoFormat('DD/MMM');;
+        $until = strtoupper($unt);
+
+        return [
+            'label' => "Utilize o cartão ".($c->last_four_digits)." até {$until}",
+            'color' => $c->color_card,
+        ];
     }
 }

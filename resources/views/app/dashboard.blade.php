@@ -90,7 +90,7 @@
         </div>
         <div class="icon-button">
             <a href="{{ route('transaction-view.index') }}" class="nav-link-atalho">
-                <i class="fas fa-retweet"></i>
+                <i class="fa-solid fa-cart-plus"></i>
                 <span>Transações</span>
             </a>
         </div>
@@ -189,35 +189,37 @@
         @endforelse
     </div>
 
-    <div class="card-invoice mb-4">
-        <h2>Faturas atuais</h2>
-
-        <div class="balance-box">
+    <h2 class="card-invoice-title">Faturas atuais</h2>
+    <div class="balance-box">
+        @if($cardTip)
             <div class="d-flex">
-                <i class="fa-solid fa-credit-card"></i>
-                <small class="mx-3 text-dark">Utilize o cartão <b style="letter-spacing: 1.5px;">0377</b> até
-                    13/AGO.</small>
+                <i class="fa-solid fa-credit-card" style="color: {{ $cardTip['color'] ?? '#000' }}"></i>
+                <small class="mx-3 text-dark">
+                    {{ $cardTip['label'] }}
+                </small>
             </div>
-        </div>
-
-        <div class="balance-box mt-2">
-
-            <div class="d-flex justify-content-between">
-                <span>Nubank 0766</span>
-            </div>
-            <strong style="font-size: 18px;">{{ brlPrice($total) }}</strong>
-
-            <div class="d-flex justify-content-between">
-                <span>Limite disponível <b>R$ 1.000,00</b></span>
-            </div>
-
-
-            <div class="d-flex justify-content-between">
-                <span>Vence em <b>18/Ago.</b></span>
-            </div>
-        </div>
+        @endif
     </div>
 
+
+    @foreach($currentInvoices as $inv)
+        <div class="balance-box mt-2">
+            <div class="d-flex justify-content-between">
+                <span>{{ $inv['title'] }}</span>
+            </div>
+            <strong style="font-size: 18px;">{{ $inv['total_brl'] }}</strong>
+
+            @if(!is_null($inv['available_limit']))
+                <div class="d-flex justify-content-between">
+                    <span>Limite disponível <b>{{ brlPrice($inv['available_limit']) }}</b></span>
+                </div>
+            @endif
+
+            <div class="d-flex justify-content-between">
+                <span>Vence em <b>{{ $inv['due_label'] }}.</b></span>
+            </div>
+        </div>
+    @endforeach
     @push('scripts')
         <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
         <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>

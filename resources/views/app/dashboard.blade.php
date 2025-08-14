@@ -5,6 +5,7 @@
             <h1 class="m-0 mb-3">Tela inicial</h1>
         </div>
 
+        <!-- Input no topo -->
         <form id="monthForm" class="d-flex align-items-center justify-content-between w-100 mb-3">
             <button type="button" class="btn btn-light rounded-circle shadow-sm px-3" onclick="changeMonth(-1)">
                 <i class="fa fa-chevron-left"></i>
@@ -20,6 +21,7 @@
             </button>
         </form>
 
+        <!-- Saldo das contas -->
         <div class="balance-box mt-2">
             <div class="d-flex justify-content-between">
                 <span>Saldo do mês</span>
@@ -88,7 +90,7 @@
         </div>
         <div class="icon-button">
             <a href="{{ route('transaction-view.index') }}" class="nav-link-atalho">
-                <i class="fas fa-retweet"></i>
+                <i class="fa-solid fa-cart-plus"></i>
                 <span>Transações</span>
             </a>
         </div>
@@ -105,18 +107,9 @@
         </div>
 
         <div class="icon-button">
-            <a href="{{ route('test.push') }}" class="nav-link-atalho">
-                <i class="fas fa-building"></i><span>Loans</span>
-            </a>
-        </div>
-        <div class="icon-button">
             <a href="{{ route('saving-view.index') }}" class="nav-link-atalho">
                 <i class="fas fa-piggy-bank"></i><span>Cofrinhos</span></a>
         </div>
-        <div class="icon-button"><i class="fas fa-wallet"></i><span>Carteira</span></div>
-        <div class="icon-button"><i class="fas fa-exchange-alt"></i><span>Exchange</span></div>
-        <div class="icon-button"><i class="fas fa-gift"></i><span>Cashbacks</span></div>
-        <div class="icon-button"><i class="fas fa-cog"></i><span>Configurações</span></div>
 
         <div class="icon-button">
             <a href="{{route('projection-view.index')}}" class="nav-link-atalho">
@@ -125,46 +118,14 @@
             </a>
         </div>
     </div>
-
     <div class="">
         <div id="calendar"></div>
     </div>
 
     <div class="py-3" id="calendar-results"></div>
 
-    <div class="recent-transactions">
-        <h2>Transações recentes</h2>
-        @forelse($recentTransactions as $transaction)
-            @php
-                $categoryType = optional($transaction->transactionCategory)->type;
-                $categoryName = optional($transaction->transactionCategory)->name;
-            @endphp
-
-            <div class="transaction-card">
-                <div class="transaction-info">
-                    <div class="icon" style="background: {{$transaction->transactionCategory->color}}">
-                        <i class="{{$transaction->transactionCategory->icon}}"></i>
-                    </div>
-
-                    <div class="details">
-                        <p class="m-0 p-0">{{ $transaction->title ?? $categoryName }}</p>
-                        @if($transaction->date)
-                            <span class="text-muted mt-2"
-                                  style="font-size: 12px;">{{ \Carbon\Carbon::parse($transaction->date)->format('d/m/Y') }}</span>
-                        @endif
-                    </div>
-                </div>
-                <div class="transaction-amount price-default">
-                    {{ $categoryType === 'despesa' ? '-' : '+' }}
-                    {{ brlPrice($transaction->amount) }}
-                </div>
-            </div>
-        @empty
-            <p class="text-muted">Nenhuma transação encontrada</p>
-        @endforelse
-    </div>
-
-    <div class="next-payments mt-4">
+    <!-- Next Payment -->
+    <div class="next-payments mb-4">
         <h2>Próximos pagamentos</h2>
         @forelse($upcomingPayments as $payment)
             <div class="transaction-card">
@@ -183,39 +144,82 @@
                 </div>
             </div>
         @empty
-            <p class="text-muted">Nenhum pagamento futuro</p>
+            <div class="transaction-card">
+                <div class="transaction-info">
+                    <div class="icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+                    <div class="details">Nenhum pagamento.</div>
+                </div>
+            </div>
         @endforelse
     </div>
 
-    <div class="card-invoice mt-4">
-        <h2>Faturas atuais</h2>
+    <!-- Recent Transactions -->
+    <div class="recent-transactions mb-4">
+        <h2>Transações recentes</h2>
+        @forelse($recentTransactions as $transaction)
+            @php
+                $categoryType = optional($transaction->transactionCategory)->type;
+                $categoryName = optional($transaction->transactionCategory)->name;
+            @endphp
 
-        <div class="balance-box">
-            <div class="d-flex">
-                <i class="fa-solid fa-credit-card"></i>
-                <small class="mx-3 text-dark">Utilize o cartão <b style="letter-spacing: 1.5px;">0377</b> até
-                    13/AGO.</small>
+            <div class="transaction-card">
+                <div class="transaction-info">
+                    <div class="icon" style="background: {{$transaction->transactionCategory->color}}">
+                        <i class="{{$transaction->transactionCategory->icon}}"></i>
+                    </div>
+
+                    <div class="details">
+                        <p class="tx-title m-0 p-0">{{ ucwords($transaction->title) ?? ucwords($categoryName) }}</p>
+                        @if($transaction->type == 'card')
+                            <small class="text-muted" style="font-size: 10.5px;">No cartão</small>
+                        @endif
+                        @if($transaction->date)
+                            <span
+                                class="tx-date mt-2">{{ \Carbon\Carbon::parse($transaction->date)->format('d/m/Y') }}</span>
+                        @endif
+                    </div>
+                </div>
+                <div class="transaction-amount price-default">
+                    {{ $categoryType === 'despesa' ? '-' : '+' }}
+                    {{ brlPrice($transaction->amount) }}
+                </div>
             </div>
-        </div>
-
-        <div class="balance-box mt-2">
-
-            <div class="d-flex justify-content-between">
-                <span>Nubank 0766</span>
-            </div>
-            <strong style="font-size: 18px;">{{ brlPrice($total) }}</strong>
-
-            <div class="d-flex justify-content-between">
-                <span>Limite disponível <b>R$ 1.000,00</b></span>
-            </div>
-
-
-            <div class="d-flex justify-content-between">
-                <span>Vence em <b>18/Ago.</b></span>
-            </div>
-        </div>
+        @empty
+            <p class="text-muted">Nenhuma transação encontrada</p>
+        @endforelse
     </div>
 
+    <h2 class="card-invoice-title">Faturas atuais</h2>
+    <div class="balance-box">
+        @if($cardTip)
+            <div class="d-flex">
+                <i class="fa-solid fa-credit-card" style="color: {{ $cardTip['color'] ?? '#000' }}"></i>
+                <small class="mx-3 text-dark">
+                    {{ $cardTip['label'] }}
+                </small>
+            </div>
+        @endif
+    </div>
+
+
+    @foreach($currentInvoices as $inv)
+        <div class="balance-box mt-2">
+            <div class="d-flex justify-content-between">
+                <span>{{ $inv['title'] }}</span>
+            </div>
+            <strong style="font-size: 18px;">{{ $inv['total_brl'] }}</strong>
+
+            @if(!is_null($inv['available_limit']))
+                <div class="d-flex justify-content-between">
+                    <span>Limite disponível <b>{{ brlPrice($inv['available_limit']) }}</b></span>
+                </div>
+            @endif
+
+            <div class="d-flex justify-content-between">
+                <span>Vence em <b>{{ $inv['due_label'] }}.</b></span>
+            </div>
+        </div>
+    @endforeach
     @push('scripts')
         <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
         <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
@@ -285,8 +289,7 @@
                         for (const ev of eventosDoDia(dia)) {
                             if (ev.tipo === 'entrada') {
                                 aReceber += +Math.abs(ev.valor);
-                            }
-                            else if (ev.tipo === 'despesa') {
+                            } else if (ev.tipo === 'despesa') {
                                 aPagar += -Math.abs(ev.valor);
                             }
 

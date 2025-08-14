@@ -462,28 +462,70 @@ class DashboardController extends Controller
     {
         if ($cards->isEmpty()) return null;
 
-        // escolhe o cartão cujo "último fechamento" foi o mais recente (<= hoje)
-        $choice = $cards->map(function($c) use ($today){
-            $lastClose = CardCycle::lastClose($today, (int)$c->closing_day); // Carbon
-            $nextClose = $lastClose->copy()->addMonthNoOverflow();
+        // === utilidades de ciclo ===
+        $lastClose = function (Carbon $ref, int $closingDay): Carbon {
+            $ref = $ref->copy()->startOfDay();
+            $cm = Carbon::create($ref->year, $ref->month, 1);
+            $closeThisMonth = $cm->copy()->day(min($closingDay, $cm->daysInMonth));
+            if ($ref->gte($closeThisMonth)) {
+                return $closeThisMonth;
+            }
+            $pm = $cm->copy()->subMonth();
+            return $pm->copy()->day(min($closingDay, $pm->daysInMonth));
+        };
+
+        $nextClose = function (Carbon $ref, int $closingDay): Carbon {
+            $ref = $ref->copy()->startOfDay();
+            $cm = Carbon::create($ref->year, $ref->month, 1);
+            $closeThisMonth = $cm->copy()->day(min($closingDay, $cm->daysInMonth));
+            if ($ref->lt($closeThisMonth)) {
+                return $closeThisMonth;
+            }
+            $nm = $cm->copy()->addMonth();
+            return $nm->copy()->day(min($closingDay, $nm->daysInMonth));
+        };
+
+        // Monta dados necessários por cartão
+        $cardsData = $cards->map(function ($c) use ($today, $lastClose, $nextClose) {
+            $lc = $lastClose($today, (int)$c->closing_day);
+            $nc = $nextClose($today, (int)$c->closing_day);
             return [
-                'card'      => $c,
-                'lastClose' => $lastClose,
-                'nextClose' => $nextClose,
+                'id'             => (string)$c->id,
+                'holder'         => trim($c->cardholder_name),
+                'last4'          => $c->last_four_digits,
+                'color_card'     => $c->color_card,
+                'last_close'     => $lc,
+                'next_close'     => $nc,
+                'last_close_ts'  => $lc->timestamp,
+                'next_close_ts'  => $nc->timestamp,
             ];
-        })
-            ->sortByDesc(fn($x) => $x['lastClose']->timestamp)
-            ->first();
+        })->values();
 
-        if (!$choice) return null;
+        // 1) Melhor cartão = o que teve o fechamento mais recente (<= hoje)
+        $best = $cardsData->sortByDesc('last_close_ts')->first();
+        if (!$best) return null;
 
-        $c = $choice['card'];
-        $unt = $choice['nextClose']->locale('pt_BR')->isoFormat('DD/MMM');;
-        $until = strtoupper($unt);
+        // 2) "Usar até" = o próximo fechamento mais cedo ENTRE OS OUTROS cartões.
+        $earliestOtherNextClose = $cardsData
+            ->where('id', '!=', $best['id'])
+            ->min('next_close_ts');
+
+        // Se só existe um cartão, usar o próximo fechamento dele mesmo
+        $useUntilTs = $earliestOtherNextClose ?? $best['next_close_ts'];
+        $useUntil   = Carbon::createFromTimestamp($useUntilTs);
 
         return [
-            'label' => "Utilize o cartão ".($c->last_four_digits)." até {$until}",
-            'color' => $c->color_card,
+            'card_id'   => $best['id'],
+            'label'     => sprintf(
+                'Utilize o cartão %s até %s.',
+                $best['last4'],
+                strtoupper($useUntil->locale('pt_BR')->isoFormat('DD/MMM'))
+            ),
+            'color'     => $best['color_card'] ?? '#000', // use na view para colorir o ícone
+            // campos extras se quiser usar na view/debug
+            'use_until' => $useUntil->toDateString(),
+            'next_close'=> $best['next_close']->toDateString(),
+            'last_close'=> $best['last_close']->toDateString(),
         ];
     }
 }

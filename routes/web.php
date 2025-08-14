@@ -79,6 +79,7 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     //Invoices
     Route::get('/invoice/{cardId}', [WebInvoiceController::class, 'index'])->name('invoice-view.index');
     Route::get('/invoice/{cardId}/{ym}', [WebInvoiceController::class,'show'])->name('invoice-view.show'); // ym = 'Y-m'
+    Route::any('/invoice/payment/{cardId}/{ym}', [WebInvoiceController::class,'update'])->name('invoice-payment.update'); // ym = 'Y-m'
 
     Route::resource('invoices', ApiInvoiceController::class)->scoped(['invoice' => 'uuid']);
 

@@ -17,17 +17,21 @@
 
         @auth
             <div class="bottom-nav">
-                <a href="{{route('dashboard')}}">
+                <a href="{{route('dashboard')}}" class="bottom-nav-link">
                     <i class="fas fa-home"></i>
+                    <span>Home</span>
                 </a>
-                <a href="{{ route('transaction-view.index') }}">
-                    <i class="fas fa-retweet"></i>
+                <a href="{{ route('transaction-view.index') }}" class="bottom-nav-link">
+                    <i class="fa-solid fa-cart-plus"></i>
+                    <span>Transações</span>
                 </a>
-                <a href="{{ route('transaction-view.index') }}">
-                    <i class="fas fa-chart-line"></i>
+                <a href="{{ route('transaction-view.index') }}" class="bottom-nav-link">
+                    <i class="fa-solid fa-arrow-up-right-dots"></i>
+                    <span>Projeções</span>
                 </a>
-                <a href="{{route('user-view.index')}}">
+                <a href="{{route('user-view.index')}}" class="bottom-nav-link">
                     <i class="fas fa-user"></i>
+                    <span>Perfil</span>
                 </a>
             </div>
         @endauth

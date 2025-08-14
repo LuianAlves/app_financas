@@ -86,7 +86,6 @@ class TransactionController extends Controller
             'interval_value' => 'nullable|integer|min:1',
             'installments' => 'nullable|integer|min:1',
             'account_id' => 'nullable|uuid|exists:accounts,id',
-            'card_id' => 'required_unless:alternate_cards,1|nullable|uuid|exists:cards,id',
             'alternate_cards' => ['nullable','boolean'],
             'alternate_card_ids' => ['required_if:alternate_cards,1','array'],
             'alternate_card_ids.*' => ['uuid','exists:cards,id'],
@@ -420,8 +419,7 @@ class TransactionController extends Controller
             'recurrent_id'  => $recurrent->id,
         ]);
     }
-
-
+    
     protected function createInvoiceItemIfNotExists($invoiceId, $transactionId, $recurrentId, Request $request, Carbon $date)
     {
         $exists = InvoiceItem::where('invoice_id', $invoiceId)

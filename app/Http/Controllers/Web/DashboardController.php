@@ -54,19 +54,20 @@ class DashboardController extends Controller
         $total        = $balance;
 
         // ===== listas (últimas / próximas) =====
-        $recentTransactions = Transaction::with(['transactionCategory:id,name,type,color,icon'])
+        $recentTransactions = Transaction::with(['transactionCategory:id,name,type,color,icon', 'card'])
             ->whereIn('transactions.user_id', $userIds)
             ->orderByDesc('transactions.date')
             ->limit(5)
-            ->get(['transactions.id','transactions.title','transactions.amount','transactions.date','transactions.transaction_category_id']);
+            ->get(['transactions.id','transactions.type','transactions.title','transactions.amount','transactions.date','transactions.transaction_category_id']);
 
         $upcomingPayments = Transaction::with(['transactionCategory:id,name,type,color,icon'])
             ->whereIn('transactions.user_id', $userIds)
             ->whereHas('transactionCategory', fn($q) => $q->where('type', 'despesa'))
             ->whereNotNull('transactions.date')
             ->whereDate('transactions.date', '>=', $today)
+            ->where('type', '!=', 'card')
             ->orderBy('transactions.date')
-            ->limit(10)
+            ->limit(5)
             ->get(['transactions.id','transactions.title','transactions.amount','transactions.date','transactions.transaction_category_id']);
 
         $upcomingIncomes = Transaction::with(['transactionCategory:id,name,type,color,icon'])

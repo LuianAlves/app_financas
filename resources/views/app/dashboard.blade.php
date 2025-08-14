@@ -192,11 +192,9 @@
     <h2 class="card-invoice-title">Faturas atuais</h2>
     <div class="balance-box">
         @if($cardTip)
-            <div class="d-flex">
-                <i class="fa-solid fa-credit-card" style="color: {{ $cardTip['color'] ?? '#000' }}"></i>
-                <small class="mx-3 text-dark">
-                    {{ $cardTip['label'] }}
-                </small>
+            <div class="d-flex align-items-center">
+                <i class="fa-solid fa-credit-card" style="color: {{ $cardTip['color'] }}"></i>
+                <small class="mx-3 text-dark">{{ $cardTip['label'] }}</small>
             </div>
         @endif
     </div>

@@ -462,28 +462,67 @@ class DashboardController extends Controller
     {
         if ($cards->isEmpty()) return null;
 
-        // escolhe o cartão cujo "último fechamento" foi o mais recente (<= hoje)
-        $choice = $cards->map(function($c) use ($today){
-            $lastClose = CardCycle::lastClose($today, (int)$c->closing_day); // Carbon
-            $nextClose = $lastClose->copy()->addMonthNoOverflow();
+        // Calcula último e próximo fechamento para cada cartão
+        $data = $cards->map(function ($c) use ($today) {
+            // Se tiver helpers CardCycle::lastClose/nextClose use-os; senão a lógica abaixo funciona igual
+            $cm  = Carbon::create($today->year, $today->month, 1);
+            $closeThisMonth = $cm->copy()->day(min((int)$c->closing_day, $cm->daysInMonth));
+
+            $lastClose = $today->gte($closeThisMonth)
+                ? $closeThisMonth
+                : $cm->copy()->subMonth()->day(min((int)$c->closing_day, $cm->copy()->subMonth()->daysInMonth));
+
+            $nextClose = $today->lt($closeThisMonth)
+                ? $closeThisMonth
+                : $cm->copy()->addMonth()->day(min((int)$c->closing_day, $cm->copy()->addMonth()->daysInMonth));
+
             return [
-                'card'      => $c,
-                'lastClose' => $lastClose,
-                'nextClose' => $nextClose,
+                'card'        => $c,
+                'id'          => (string)$c->id,
+                'last4'       => $c->last_four_digits,
+                'color_card'  => $c->color_card,
+                'last_close'  => $lastClose,
+                'next_close'  => $nextClose,
+                'last_ts'     => $lastClose->timestamp,
+                'next_ts'     => $nextClose->timestamp,
             ];
-        })
-            ->sortByDesc(fn($x) => $x['lastClose']->timestamp)
-            ->first();
+        });
 
-        if (!$choice) return null;
+        // Cartão atual = o que teve o último fechamento mais recente (<= hoje)
+        $current = $data->sortByDesc('last_ts')->first();
+        if (!$current) return null;
 
-        $c = $choice['card'];
-        $unt = $choice['nextClose']->locale('pt_BR')->isoFormat('DD/MMM');;
-        $until = strtoupper($unt);
+        // Entre os OUTROS cartões, qual tem o próximo fechamento mais cedo?
+        $others = $data->filter(fn ($x) => $x['id'] !== $current['id']);
+        $switch = $others->sortBy('next_ts')->first(); // pode ser null se só existir 1 cartão
+
+        // "Usar até" = próximo fechamento mais cedo entre os OUTROS; se não houver outros, usa o do próprio
+        $useUntil = $switch['next_close'] ?? $current['next_close'];
+
+        $useUntilLabel = strtoupper($useUntil->locale('pt_BR')->isoFormat('DD/MMM'));
+
+        // Monta label: “Use o 2068 até 02/SET. Em seguida, use o 6277.”
+        $label = "Utilize o cartão {$current['last4']} até {$useUntilLabel}.";
+        if ($switch) {
+            $label .= " Em seguida, use o {$switch['last4']}.";
+        }
 
         return [
-            'label' => "Utilize o cartão ".($c->last_four_digits)." até {$until}",
-            'color' => $c->color_card,
+            'label'       => $label,
+            'color'       => $current['color_card'] ?? '#000', // para colorir o ícone na view
+            // extras úteis se quiser exibir/depurar
+            'current' => [
+                'id'         => $current['id'],
+                'last4'      => $current['last4'],
+                'last_close' => $current['last_close']->toDateString(),
+                'next_close' => $current['next_close']->toDateString(),
+                'use_until'  => $useUntil->toDateString(),
+            ],
+            'next' => $switch ? [
+                'id'         => $switch['id'],
+                'last4'      => $switch['last4'],
+                'next_close' => $switch['next_close']->toDateString(),
+            ] : null,
         ];
     }
 }

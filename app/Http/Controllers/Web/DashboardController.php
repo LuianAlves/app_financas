@@ -462,70 +462,67 @@ class DashboardController extends Controller
     {
         if ($cards->isEmpty()) return null;
 
-        // === utilidades de ciclo ===
-        $lastClose = function (Carbon $ref, int $closingDay): Carbon {
-            $ref = $ref->copy()->startOfDay();
-            $cm = Carbon::create($ref->year, $ref->month, 1);
-            $closeThisMonth = $cm->copy()->day(min($closingDay, $cm->daysInMonth));
-            if ($ref->gte($closeThisMonth)) {
-                return $closeThisMonth;
-            }
-            $pm = $cm->copy()->subMonth();
-            return $pm->copy()->day(min($closingDay, $pm->daysInMonth));
-        };
+        // Calcula último e próximo fechamento para cada cartão
+        $data = $cards->map(function ($c) use ($today) {
+            // Se tiver helpers CardCycle::lastClose/nextClose use-os; senão a lógica abaixo funciona igual
+            $cm  = Carbon::create($today->year, $today->month, 1);
+            $closeThisMonth = $cm->copy()->day(min((int)$c->closing_day, $cm->daysInMonth));
 
-        $nextClose = function (Carbon $ref, int $closingDay): Carbon {
-            $ref = $ref->copy()->startOfDay();
-            $cm = Carbon::create($ref->year, $ref->month, 1);
-            $closeThisMonth = $cm->copy()->day(min($closingDay, $cm->daysInMonth));
-            if ($ref->lt($closeThisMonth)) {
-                return $closeThisMonth;
-            }
-            $nm = $cm->copy()->addMonth();
-            return $nm->copy()->day(min($closingDay, $nm->daysInMonth));
-        };
+            $lastClose = $today->gte($closeThisMonth)
+                ? $closeThisMonth
+                : $cm->copy()->subMonth()->day(min((int)$c->closing_day, $cm->copy()->subMonth()->daysInMonth));
 
-        // Monta dados necessários por cartão
-        $cardsData = $cards->map(function ($c) use ($today, $lastClose, $nextClose) {
-            $lc = $lastClose($today, (int)$c->closing_day);
-            $nc = $nextClose($today, (int)$c->closing_day);
+            $nextClose = $today->lt($closeThisMonth)
+                ? $closeThisMonth
+                : $cm->copy()->addMonth()->day(min((int)$c->closing_day, $cm->copy()->addMonth()->daysInMonth));
+
             return [
-                'id'             => (string)$c->id,
-                'holder'         => trim($c->cardholder_name),
-                'last4'          => $c->last_four_digits,
-                'color_card'     => $c->color_card,
-                'last_close'     => $lc,
-                'next_close'     => $nc,
-                'last_close_ts'  => $lc->timestamp,
-                'next_close_ts'  => $nc->timestamp,
+                'card'        => $c,
+                'id'          => (string)$c->id,
+                'last4'       => $c->last_four_digits,
+                'color_card'  => $c->color_card,
+                'last_close'  => $lastClose,
+                'next_close'  => $nextClose,
+                'last_ts'     => $lastClose->timestamp,
+                'next_ts'     => $nextClose->timestamp,
             ];
-        })->values();
+        });
 
-        // 1) Melhor cartão = o que teve o fechamento mais recente (<= hoje)
-        $best = $cardsData->sortByDesc('last_close_ts')->first();
-        if (!$best) return null;
+        // Cartão atual = o que teve o último fechamento mais recente (<= hoje)
+        $current = $data->sortByDesc('last_ts')->first();
+        if (!$current) return null;
 
-        // 2) "Usar até" = o próximo fechamento mais cedo ENTRE OS OUTROS cartões.
-        $earliestOtherNextClose = $cardsData
-            ->where('id', '!=', $best['id'])
-            ->min('next_close_ts');
+        // Entre os OUTROS cartões, qual tem o próximo fechamento mais cedo?
+        $others = $data->filter(fn ($x) => $x['id'] !== $current['id']);
+        $switch = $others->sortBy('next_ts')->first(); // pode ser null se só existir 1 cartão
 
-        // Se só existe um cartão, usar o próximo fechamento dele mesmo
-        $useUntilTs = $earliestOtherNextClose ?? $best['next_close_ts'];
-        $useUntil   = Carbon::createFromTimestamp($useUntilTs);
+        // "Usar até" = próximo fechamento mais cedo entre os OUTROS; se não houver outros, usa o do próprio
+        $useUntil = $switch['next_close'] ?? $current['next_close'];
+
+        $useUntilLabel = strtoupper($useUntil->locale('pt_BR')->isoFormat('DD/MMM'));
+
+        // Monta label: “Use o 2068 até 02/SET. Em seguida, use o 6277.”
+        $label = "Utilize o cartão {$current['last4']} até {$useUntilLabel}.";
+        if ($switch) {
+            $label .= " Em seguida, use o {$switch['last4']}.";
+        }
 
         return [
-            'card_id'   => $best['id'],
-            'label'     => sprintf(
-                'Utilize o cartão %s até %s.',
-                $best['last4'],
-                strtoupper($useUntil->locale('pt_BR')->isoFormat('DD/MMM'))
-            ),
-            'color'     => $best['color_card'] ?? '#000', // use na view para colorir o ícone
-            // campos extras se quiser usar na view/debug
-            'use_until' => $useUntil->toDateString(),
-            'next_close'=> $best['next_close']->toDateString(),
-            'last_close'=> $best['last_close']->toDateString(),
+            'label'       => $label,
+            'color'       => $current['color_card'] ?? '#000', // para colorir o ícone na view
+            // extras úteis se quiser exibir/depurar
+            'current' => [
+                'id'         => $current['id'],
+                'last4'      => $current['last4'],
+                'last_close' => $current['last_close']->toDateString(),
+                'next_close' => $current['next_close']->toDateString(),
+                'use_until'  => $useUntil->toDateString(),
+            ],
+            'next' => $switch ? [
+                'id'         => $switch['id'],
+                'last4'      => $switch['last4'],
+                'next_close' => $switch['next_close']->toDateString(),
+            ] : null,
         ];
     }
 }

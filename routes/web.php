@@ -34,6 +34,7 @@ use App\Http\Controllers\Web\{
     InvoiceController as WebInvoiceController,
     InvoiceItemController as WebInvoiceItemController,
     InvestmentController as WebInvestmentController,
+    PaymentController as WebPaymentController,
 };
 
 Route::middleware('guest')->group(function () {
@@ -69,6 +70,9 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     // Transactions
     Route::get('/transaction', [WebTransactionController::class, 'index'])->name('transaction-view.index');
     Route::resource('transactions', ApiTransactionController::class)->scoped(['transaction' => 'uuid']);
+
+    // Payment
+    Route::post('/transactions/{transaction}/payment', [WebPaymentController::class, 'paymentTransaction'])->name('transaction-payment');
 
     //Savings
     Route::get('/saving', [WebSavingController::class, 'index'])->name('saving-view.index');

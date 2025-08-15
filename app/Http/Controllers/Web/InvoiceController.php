@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Models\InvoicePayment;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 
@@ -69,6 +70,19 @@ class InvoiceController extends Controller
 
         if($invoice) {
             $invoice->update(['paid' => true]);
+
+            if ($invoice->wasChanged('paid') && $invoice->paid) {
+                InvoicePayment::create([
+                    'invoice_id' => $invoice->id,
+                    'user_id'    => auth()->id(),
+                    'amount'     => DB::table('invoice_items')->where('invoice_id',$invoice->id)->sum('amount'),
+                    'paid_at'    => now(),
+                    'method'     => 'manual',
+                    'reference'  => $ym,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
 
         return redirect()->back();

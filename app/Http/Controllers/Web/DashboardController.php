@@ -8,6 +8,8 @@ use App\Models\Account;
 use App\Models\AdditionalUser;
 use App\Models\Card;
 use App\Models\CustomItemRecurrents;
+use App\Models\InvoicePayment;
+use App\Models\PaymentTransaction;
 use App\Models\Recurrent;
 use App\Models\Saving;
 use App\Models\Transaction;
@@ -72,6 +74,46 @@ class DashboardController extends Controller
             ->limit(5)
             ->get(['transactions.id','transactions.title','transactions.amount','transactions.date','transactions.transaction_category_id']);
 
+        $upcomingInvoiceCards = $this->buildUpcomingInvoicesForList($userIds, $today, 50); // já tem no controller anterior
+
+        $tx = $upcomingPayments->map(function ($t) {
+            return [
+                'kind'           => 'tx',
+                'id'             => (string) $t->id,
+                'date'           => (string) $t->date,
+                'title'          => $t->title ?? optional($t->transactionCategory)->name,
+                'amount'         => (float) $t->amount,
+                'color'          => optional($t->transactionCategory)->color,
+                'icon'           => optional($t->transactionCategory)->icon,
+                // campos do botão do modal
+                'modal_id'       => (string) $t->id,
+                'modal_amount'   => (float) $t->amount,
+                'modal_date'     => (string) $t->date,
+            ];
+        });
+
+        $invs = collect($upcomingInvoiceCards)
+            ->filter(fn ($r) => \Carbon\Carbon::parse($r['due_date'])->gte($today)) // só futuros/hoje
+            ->map(function ($r) {
+                return [
+                    'kind'           => 'inv',
+                    'id'             => (string) $r['invoice_id'] ?? ($r['card_id'].'-'.$r['current_month']),
+                    'date'           => (string) $r['due_date'],
+                    'title'          => (string) $r['title'],
+                    'amount'         => (float)  $r['total'],
+                    'color'          => '#be123c',
+                    'icon'           => 'fa-solid fa-credit-card',
+                    // campos do botão de pagar fatura
+                    'card_id'        => (string) $r['card_id'],
+                    'current_month'  => (string) $r['current_month'],
+                ];
+            });
+
+        $upcomingAny = $tx->merge($invs)
+            ->sortBy('date')       // asc
+            ->take(5)              // limite total = 5
+            ->values();
+
         $upcomingIncomes = Transaction::with(['transactionCategory:id,name,type,color,icon'])
             ->whereIn('transactions.user_id', $userIds)
             ->whereHas('transactionCategory', fn($q) => $q->where('type', 'entrada'))
@@ -107,14 +149,19 @@ class DashboardController extends Controller
         $incomeMoM  = $this->percentChange($totalIncome,  $prevIncome);
         $expenseMoM = $this->percentChange($totalExpense, $prevExpense);
 
+        // DashboardController@dashboard(...)
         [$currentInvoices, $cardTip] = $this->buildInvoicesWidget($userIds, $today);
 
+// NOVO: lista para “Próximos pagamentos”
+        $upcomingInvoiceCards = $this->buildUpcomingInvoicesForList($userIds, $today, 5);
+
         return view('app.dashboard', compact(
-            'accountsBalance', 'savingsBalance', 'total', 'categorySums',
-            'totalIncome', 'balance',
-            'recentTransactions', 'upcomingPayments', 'calendarEvents',
-            'startOfMonth', 'endOfMonth',
-            'incomeMoM', 'expenseMoM', 'currentInvoices', 'cardTip'
+            'accountsBalance','savingsBalance','total','categorySums',
+            'totalIncome','balance',
+            'recentTransactions','calendarEvents',
+            'startOfMonth','endOfMonth',
+            'incomeMoM','expenseMoM','currentInvoices','cardTip',
+            'upcomingAny' // <- add
         ));
     }
 
@@ -151,6 +198,68 @@ class DashboardController extends Controller
     private function buildWindowEvents(Collection $userIds, Carbon $winStart, Carbon $winEnd): Collection
     {
         $events = collect();
+
+        $paidRows = PaymentTransaction::query()
+            ->join('transactions as t', 't.id', '=', 'payment_transactions.transaction_id')
+            ->whereIn('t.user_id', $userIds)
+            ->whereBetween('payment_transactions.payment_date', [$winStart, $winEnd])
+            ->get([
+                'payment_transactions.id',
+                'payment_transactions.title',
+                'payment_transactions.amount',
+                'payment_transactions.payment_date',
+            ]);
+
+        foreach ($paidRows as $p) {
+            $events->push([
+                'id'    => "pay_{$p->id}",
+                'title' => $p->title ?: 'Pagamento',
+                'start' => Carbon::parse($p->payment_date)->toDateString(),
+                'bg'    => '#0ea5e9',
+                'icon'  => 'fa-regular fa-circle-check',
+                'color' => '#0ea5e9',
+                'extendedProps' => [
+                    'amount' => (float)$p->amount,
+                    'amount_brl' => brlPrice($p->amount),
+                    'category_name' => 'Pagamento',
+                    'type' => 'payment',
+                ],
+            ]);
+        }
+
+        $ipRows = DB::table('invoice_payments as ip')
+            ->join('invoices as inv', 'inv.id', '=', 'ip.invoice_id')
+            ->join('cards as c', 'c.id', '=', 'inv.card_id')
+            ->whereIn('inv.user_id', $userIds)
+            ->whereBetween('ip.paid_at', [$winStart, $winEnd])
+            ->get([
+                'ip.id','ip.amount','ip.paid_at',
+                'inv.card_id','inv.current_month',
+                'c.cardholder_name','c.last_four_digits'
+            ]);
+
+        foreach ($ipRows as $p) {
+            $firstName = explode(' ', trim((string)$p->cardholder_name))[0];
+
+            $events->push([
+                'id'    => "invpay_{$p->id}",
+                'title' => "Fatura {$firstName} {$p->last_four_digits}", // mantém o nome da fatura
+                'start' => Carbon::parse($p->paid_at)->toDateString(),
+                'bg'    => '#0ea5e9',
+                'icon'  => 'fa-regular fa-circle-check',
+                'color' => '#0ea5e9',
+                'extendedProps' => [
+                    'amount'        => abs((float)$p->amount), // positivo
+                    'amount_brl'    => function_exists('brlPrice') ? brlPrice(abs((float)$p->amount)) : number_format(abs((float)$p->amount), 2, ',', '.'),
+                    'category_name' => 'Pagamento fatura',
+                    'type'          => 'payment',
+                    'is_invoice'    => true,
+                    'paid'          => true,
+                    'card_id'       => (string)$p->card_id,
+                    'current_month' => $p->current_month,
+                ],
+            ]);
+        }
 
         // ===== 1) Únicas (SEM cartão de crédito) e SEM "total fatura"
         $uniqueTx = Transaction::withoutGlobalScopes()
@@ -190,11 +299,11 @@ class DashboardController extends Controller
                 'icon'  => $cat?->icon,
                 'color' => $type === 'despesa' ? '#ef4444' : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
                 'extendedProps' => [
-                    // mantém sinal natural do tipo via front-end (usa 'type' p/ + / -)
-                    'amount'        => (float) $t->amount,
-                    'amount_brl'    => function_exists('brlPrice') ? brlPrice($t->amount) : number_format((float)$t->amount, 2, ',', '.'),
+                    'amount' => (float)$t->amount,
+                    'amount_brl' => brlPrice($t->amount),
                     'category_name' => $cat?->name,
-                    'type'          => $type,
+                    'type' => $type,
+                    'transaction_id' => (string)$t->id, // <- importante
                 ],
             ]);
         }
@@ -317,12 +426,13 @@ class DashboardController extends Controller
             ]);
 
         foreach ($rows as $r) {
-            // current_month ('Y-m') -> data de vencimento com due_day do cartão
             $base = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
             $due  = $base->copy()->day(min((int)($r->due_day ?: 1), $base->daysInMonth));
             $total = (float) $r->total;
 
-            // Apenas primeiro nome do titular
+            // pula faturas pagas: não aparecem no calendário
+            if ((bool)$r->paid) continue;
+
             $firstName = explode(' ', trim((string)$r->cardholder_name))[0];
 
             if ($total > 0 && $due->betweenIncluded($winStart, $winEnd)) {
@@ -334,14 +444,14 @@ class DashboardController extends Controller
                     'icon'  => 'fa-solid fa-credit-card',
                     'color' => '#ef4444',
                     'extendedProps' => [
-                        // para teu JS: 'despesa' → balanco recebe valor negativo
-                        'amount'       => -abs($total),
-                        'amount_brl'   => function_exists('brlPrice') ? brlPrice(abs($total)) : number_format(abs($total), 2, ',', '.'),
-                        'category_name'=> 'Fatura Cartão',
-                        'type'         => 'despesa',
-                        'is_invoice'   => true,
-                        'paid'         => (bool)$r->paid,
-                        'card_id'      => (string)$r->card_id,
+                        'amount'        => -abs($total), // despesa (negativo)
+                        'amount_brl'    => function_exists('brlPrice') ? brlPrice(abs($total)) : number_format(abs($total), 2, ',', '.'),
+                        'category_name' => 'Fatura Cartão',
+                        'type'          => 'despesa',
+                        'is_invoice'    => true,
+                        'paid'          => false,
+                        'card_id'       => (string)$r->card_id,
+                        'current_month' => $r->current_month,
                     ],
                 ]);
             }
@@ -360,10 +470,11 @@ class DashboardController extends Controller
             'icon'  => $cat?->icon,
             'color' => $type === 'despesa' ? '#ef4444' : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
             'extendedProps' => [
-                'amount'        => $type === 'entrada' ? abs($amount) : -abs($amount),
-                'amount_brl'    => function_exists('brlPrice') ? brlPrice($amount) : number_format($amount, 2, ',', '.'),
+                'amount' => $type === 'entrada' ? abs($amount) : -abs($amount),
+                'amount_brl' => brlPrice($amount),
                 'category_name' => $cat?->name,
-                'type'          => $type,
+                'type' => $type,
+                'transaction_id' => (string)$t->id, // <- importante
             ],
         ];
     }
@@ -524,5 +635,50 @@ class DashboardController extends Controller
                 'next_close' => $switch['next_close']->toDateString(),
             ] : null,
         ];
+    }
+
+    private function buildUpcomingInvoicesForList(Collection $userIds, Carbon $today, int $limit = 5): \Illuminate\Support\Collection
+    {
+        $rows = DB::table('invoices as inv')
+            ->join('cards as c', 'c.id', '=', 'inv.card_id')
+            ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
+            ->whereIn('inv.user_id', $userIds)
+            ->where('inv.paid', false)
+            ->groupBy('inv.id','inv.card_id','inv.current_month','c.cardholder_name','c.last_four_digits','c.due_day')
+            ->select(
+                'inv.id','inv.card_id','inv.current_month',
+                'c.cardholder_name','c.last_four_digits','c.due_day',
+                DB::raw('COALESCE(SUM(it.amount),0) as total')
+            )
+            ->get();
+
+        $list = collect();
+        foreach ($rows as $r) {
+            $base   = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
+            $dueDay = (int) ($r->due_day ?: 1);
+            $due    = $base->copy()->day(min($dueDay, $base->daysInMonth));
+            $total  = (float) $r->total;
+            if ($total <= 0) continue; // ignora zeradas
+
+            $list->push([
+                'invoice_id'    => (string)$r->id,
+                'card_id'       => (string)$r->card_id,
+                'current_month' => $r->current_month,
+                'title'         => 'Fatura '.trim($r->cardholder_name).' '.$r->last_four_digits,
+                'due_date'      => $due->toDateString(),
+                'total'         => round($total, 2),
+                'total_brl'     => function_exists('brlPrice') ? brlPrice($total) : number_format($total, 2, ',', '.'),
+                'overdue'       => $due->lt($today),
+            ]);
+        }
+
+        // Ordena: vencidas primeiro (mais urgentes), depois próximas por data
+        return $list
+            ->sortBy([
+                ['overdue', 'desc'],
+                ['due_date', 'asc'],
+            ])
+            ->take($limit)
+            ->values();
     }
 }

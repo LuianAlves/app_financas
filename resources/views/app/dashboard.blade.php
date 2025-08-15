@@ -153,7 +153,8 @@
                                 data-open-payment
                                 data-id="{{ $item['modal_id'] }}"
                                 data-amount="{{ $item['modal_amount'] }}"
-                                data-date="{{ \Carbon\Carbon::parse($item['modal_date'])->format('Y-m-d') }}">
+                                data-date="{{ \Carbon\Carbon::parse($item['modal_date'])->format('Y-m-d') }}"
+                                data-title="{{ e($item['title']) }}">
                             <i class="fa-solid fa-check-to-slot text-success"></i>
                         </button>
                     @else
@@ -164,7 +165,7 @@
                                 data-card="{{ $item['card_id'] }}"
                                 data-month="{{ $item['current_month'] }}"
                                 data-amount="{{ $item['amount'] }}"
-                                data-title="{{ $item['title'] }}">
+                                data-title="{{ e($item['title']) }}">
                             <i class="fa-solid fa-check text-success"></i>
                         </button>
                     @endif
@@ -256,32 +257,46 @@
 
     <script>
         // === Pagar TRANSAÇÃO (abre modal) ===
-        const PAY_TPL = @json(route('transaction-payment', ['transaction' => '__ID__']));
+        const PAY_TPL      = @json(route('transaction-payment', ['transaction' => '__ID__']));
         const paymentModal = document.getElementById('paymentModal');
-        const paymentForm = document.getElementById('paymentForm');
-        const inAmount = document.getElementById('payment_amount');
-        const inDate = document.getElementById('payment_date');
+        const paymentForm  = document.getElementById('paymentForm');
+        const inAmount     = document.getElementById('payment_amount');
+        const inDate       = document.getElementById('payment_date');
 
         let CURRENT_TX_CARD = null;
 
-        function showPaymentModal() {
-            paymentModal.classList.add('show');
-        }
+        function showPaymentModal(){ paymentModal.classList.add('show'); }
+        function hidePaymentModal(){ paymentModal.classList.remove('show'); }
 
-        function hidePaymentModal() {
-            paymentModal.classList.remove('show');
+        // parser BR/EN robusto
+        function parseMoneyBR(input){
+            if (typeof input === 'number') return input;
+            let s = String(input || '').trim();
+            s = s.replace(/[^\d.,-]/g, '');
+            const lastComma = s.lastIndexOf(','), lastDot = s.lastIndexOf('.');
+            if (lastComma > -1 && lastDot > -1){
+                if (lastComma > lastDot) s = s.replace(/\./g,'').replace(',', '.'); // 1.234,56
+                else s = s.replace(/,/g,'');                                        // 1,234.56
+            } else if (lastComma > -1){
+                s = s.replace(',', '.');                                            // 123,45
+            }
+            return Number(s || 0);
         }
+        const formatBRL = v => Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 
         // abre modal com defaults da transação
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-open-payment]');
             if (!btn) return;
 
-            window.CURRENT_ID = btn.dataset.id;
-            CURRENT_TX_CARD = btn.closest('.transaction-card') || null;
-            paymentForm.action = PAY_TPL.replace('__ID__', btn.dataset.id);
-            inAmount.value = btn.dataset.amount || '0';
-            inDate.value = (btn.dataset.date || '').slice(0, 10);
+            window.CURRENT_ID       = btn.dataset.id;                       // id da transação
+            window.CURRENT_TITLE    = btn.dataset.title || 'Pagamento';     // título real
+            window.CURRENT_DUE_DATE = (btn.dataset.date || '').slice(0,10); // <-- guardamos o DIA DO VENCIMENTO
+            CURRENT_TX_CARD         = btn.closest('.transaction-card') || null;
+
+            paymentForm.action = PAY_TPL.replace('__ID__', window.CURRENT_ID);
+            inAmount.value     = btn.dataset.amount || '0';                 // aceita 69,99 ou 69.99
+            inDate.value       = window.CURRENT_DUE_DATE;                    // preenche com o vencimento (usuário pode trocar)
 
             showPaymentModal();
         });
@@ -305,33 +320,48 @@
                 }
                 if (!resp.ok) throw new Error(await resp.text());
 
-                const payDate   = (inDate.value || '').slice(0,10);
-                const payAmount = Number((inAmount.value || '0').toString().replace(/\./g,'').replace(',', '.'));
+                // datas
+                const payDate = (inDate.value || '').slice(0,10);                   // dia escolhido para pagar (pode ser hoje)
+                const dueDate = (window.CURRENT_DUE_DATE || payDate);               // dia original do vencimento
+                const payAmount = parseMoneyBR(inAmount.value);                     // CORRIGIDO: 69,99 => 69.99
 
+                // fecha modal e remove card (lista diária ou "Próximos pagamentos")
                 hidePaymentModal();
-                if (CURRENT_TX_CARD) {
-                    CURRENT_TX_CARD.remove();
-                    CURRENT_TX_CARD = null;
-                }
+                if (CURRENT_TX_CARD) { CURRENT_TX_CARD.remove(); CURRENT_TX_CARD = null; }
                 paymentForm.reset();
 
+                // atualiza calendário em memória
                 const cal = window.__cal;
                 if (cal && cal.eventosCache) {
-                    const map = cal.eventosCache[payDate] ?? (cal.eventosCache[payDate] = new Map());
-
-                    for (const [k, ev] of map.entries()) {
-                        if (ev.tx_id === window.CURRENT_ID && ev.tipo === 'despesa') map.delete(k);
+                    // 1) remove a DESPESA do DIA DO VENCIMENTO (bolinha vermelha)
+                    const mapDue = cal.eventosCache[dueDate];
+                    if (mapDue) {
+                        for (const [k, ev] of mapDue.entries()) {
+                            if (ev.tx_id === window.CURRENT_ID && ev.tipo === 'despesa') mapDue.delete(k);
+                        }
                     }
 
+                    // (defensivo) se por algum motivo a despesa já estivesse no dia do pagamento, limpa também
+                    if (payDate !== dueDate) {
+                        const mapPayRed = cal.eventosCache[payDate];
+                        if (mapPayRed) {
+                            for (const [k, ev] of mapPayRed.entries()) {
+                                if (ev.tx_id === window.CURRENT_ID && ev.tipo === 'despesa') mapPayRed.delete(k);
+                            }
+                        }
+                    }
+
+                    // 2) adiciona o evento AZUL no DIA DO PAGAMENTO
+                    const mapPay = cal.eventosCache[payDate] ?? (cal.eventosCache[payDate] = new Map());
                     const pid = `localpay_${window.CURRENT_ID}_${payDate}`;
-                    map.set(pid, {
+                    mapPay.set(pid, {
                         id: pid,
                         tipo: 'payment',
                         color: '#0ea5e9',
                         icon: 'fa-regular fa-circle-check',
-                        descricao: 'Pagamento',
+                        descricao: (window.CURRENT_TITLE || 'Pagamento'),
                         valor: Math.abs(payAmount),
-                        valor_brl: Math.abs(payAmount).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}),
+                        valor_brl: formatBRL(Math.abs(payAmount)),
                         is_invoice: false,
                         paid: true,
                         card_id: null,
@@ -340,14 +370,16 @@
                         tx_id: window.CURRENT_ID
                     });
 
+                    // 3) redesenha pontos e a lista do dia atualmente selecionado
                     cal.fp.redraw();
-                    cal.exibirEventos(payDate);
+                    const sel = cal.fp.selectedDates?.[0] ? cal.iso(cal.fp.selectedDates[0]) : payDate;
+                    cal.exibirEventos(sel);
                 }
 
                 // limpa estado
                 window.CURRENT_ID = null;
-                window.CURRENT_TX_CARD = null;
-                paymentForm.reset();
+                window.CURRENT_TITLE = null;
+                window.CURRENT_DUE_DATE = null;
             } catch (err) {
                 alert(err.message || 'Erro ao registrar pagamento.');
             }
@@ -383,26 +415,26 @@
                 });
                 if (!resp.ok) throw new Error(await resp.text());
 
-                // remove o card da lista "Próximos pagamentos"
+                // remove da lista "Próximos pagamentos"
                 if (cardEl) cardEl.remove();
 
-                // === Atualiza o CALENDÁRIO (sem recarregar) ===
-                const cal = window.__cal; // criado no onReady
+                // === Atualiza o CALENDÁRIO dinâmico ===
+                const cal = window.__cal;
                 if (cal) {
-                    // 1) apaga do cache os eventos de fatura (vencimento) desse cartão/mês (removendo o ponto vermelho do dia do vencimento)
+                    // 1) remove eventos de fatura em aberto (ponto vermelho) do dia do vencimento
                     Object.keys(cal.eventosCache).forEach(day => {
                         const map = cal.eventosCache[day];
                         if (!map) return;
-                        const deletar = [];
+                        const toDel = [];
                         map.forEach((ev, key) => {
                             if (ev.is_invoice && !ev.paid && ev.card_id == cardId && ev.current_month == ym) {
-                                deletar.push(key);
+                                toDel.push(key);
                             }
                         });
-                        deletar.forEach(k => map.delete(k));
+                        toDel.forEach(k => map.delete(k));
                     });
 
-                    // 2) cria evento azul no DIA DO PAGAMENTO (hoje)
+                    // 2) adiciona lançamento azul no DIA DO PAGAMENTO (hoje)
                     const todayIso = cal.iso(new Date());
                     const mapToday = cal.eventosCache[todayIso] ?? (cal.eventosCache[todayIso] = new Map());
                     const id = `invpay_local_${cardId}_${ym}_${Date.now()}`;
@@ -411,16 +443,15 @@
                         tipo: 'payment',
                         color: '#0ea5e9',
                         icon: 'fa-regular fa-circle-check',
-                        descricao: title,                 // mantém "Fatura Fulano 6277"
+                        descricao: title,
                         valor: Math.abs(amt),
-                        valor_brl: Math.abs(amt).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}),
+                        valor_brl: Number(Math.abs(amt)).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}),
                         is_invoice: true,
                         paid: true,
                         card_id: cardId,
                         current_month: ym
                     });
 
-                    // 3) redesenha (pontos do calendário + lista do dia selecionado)
                     cal.fp.redraw();
                     const sel = cal.fp.selectedDates?.[0] ? cal.iso(cal.fp.selectedDates[0]) : todayIso;
                     cal.exibirEventos(sel);
@@ -444,6 +475,9 @@
                 const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
                 const br  = s => { const [y,m,d] = String(s).slice(0,10).split('-'); return `${d}/${m}/${y}`; };
                 const brl = n => Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                const escAttr = s => String(s ?? '')
+                    .replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+                    .replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
                 const eventosCache   = {};
                 const loadedWindows  = new Set();
@@ -503,8 +537,6 @@
                             if (ev.tipo === 'entrada'){
                                 aReceber += +Math.abs(ev.valor);
                             } else if (ev.tipo === 'despesa'){
-                                // para fatura paga, ainda é tipo 'despesa', mas já quitada.
-                                // KPI considera a obrigação antes do pagamento:
                                 aPagar += -Math.abs(ev.valor);
                             }
                             balanco = Math.abs(aReceber) - Math.abs(aPagar);
@@ -528,13 +560,10 @@
                     }
 
                     for (const ev of eventos) {
-                        // título/ícone/cor para fatura paga
                         const isPaidInv = ev.is_invoice && ev.paid === true;
+                        const iconCls   = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
+                        const bgColor   = isPaidInv ? '#0ea5e9' : (ev.color || '#999');
 
-                        const iconCls = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
-                        const bgColor = isPaidInv ? '#0ea5e9' : (ev.color || '#999');
-
-                        // valor: fatura paga aparece POSITIVO (sem sinal)
                         let amountHtml = ev.valor_brl;
                         let sinal = '';
                         if (!isPaidInv) {
@@ -543,18 +572,16 @@
                             amountHtml = brl(Math.abs(ev.valor || 0));
                         }
 
-                        // ação: fatura em aberto -> botão de pagar; despesa normal -> abre modal; pagos/entradas -> sem botão
                         let action = '';
                         if (ev.is_invoice && ev.card_id && ev.current_month && !ev.paid) {
-                            // passa título e valor para o handler criar o evento azul
                             action = `<button type="button" class="bg-transparent border-0"
            data-pay-invoice data-card="${ev.card_id}" data-month="${ev.current_month}"
-           data-amount="${Math.abs(ev.valor || 0)}" data-title="${(ev.descricao || '').replace(/"/g,'&quot;')}">
+           data-amount="${Math.abs(ev.valor || 0)}" data-title="${escAttr(ev.descricao)}">
            <i class="fa-solid fa-check text-success"></i></button>`;
                         } else if (ev.tipo === 'despesa' && ev.tx_id) {
                             action = `<button type="button" class="bg-transparent border-0"
            data-open-payment data-id="${ev.tx_id}"
-           data-amount="${Math.abs(ev.valor)}" data-date="${dateStr}">
+           data-amount="${Math.abs(ev.valor)}" data-date="${dateStr}" data-title="${escAttr(ev.descricao)}">
            <i class="fa-solid fa-check-to-slot text-success"></i></button>`;
                         }
 
@@ -588,10 +615,8 @@
                             const evs = eventosDoDia(d);
                             if (!evs.length) return;
 
-                            // bolinhas:
-                            // verde: entradas
-                            // vermelha: despesas (inclui fatura em aberto)
-                            // azul: investimentos, pagamentos registrados, e fatura PAGA
+                            // verde: entradas | vermelho: despesas em aberto (inclui faturas não pagas)
+                            // azul: investimentos/pagamentos/faturas pagas
                             const hasGreen = evs.some(e => e.tipo === 'entrada');
                             const hasRed   = evs.some(e => (e.tipo === 'despesa' && !e.is_invoice) || (e.is_invoice && !e.paid));
                             const hasBlue  = evs.some(e => e.tipo === 'investimento' || e.tipo === 'payment' || (e.is_invoice && e.paid));
@@ -647,7 +672,7 @@
                         await window.syncMonthUI(e.target.value);
                     });
 
-                    // expõe para outros scripts (submit de pagamento, marcar fatura paga, etc.)
+                    // expõe para outros scripts
                     window.__cal = { fp, eventosCache, exibirEventos, iso };
                 });
 

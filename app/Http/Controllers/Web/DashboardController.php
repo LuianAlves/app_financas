@@ -109,9 +109,12 @@ class DashboardController extends Controller
                 ];
             });
 
-        $upcomingAny = $tx->merge($invs)
-            ->sortBy('date')       // asc
-            ->take(5)              // limite total = 5
+        $upcomingAny = $tx
+            ->toBase()
+            ->concat($invs)
+            ->filter(fn ($x) => !empty($x['date']))
+            ->sortBy('date')
+            ->take(5)
             ->values();
 
         $upcomingIncomes = Transaction::with(['transactionCategory:id,name,type,color,icon'])

@@ -1,4 +1,4 @@
-import { generateCRUD } from "../common/generateCrud.js";
+import { generateCRUD } from "../common/swipeCrud.js";
 
 const brandMap = {
     1: 'Visa', 2: 'Mastercard', 3: 'American Express',

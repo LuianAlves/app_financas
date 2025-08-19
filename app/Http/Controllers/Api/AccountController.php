@@ -60,30 +60,32 @@ class AccountController extends Controller
         ]);
     }
 
-    public function show(Account $account)
+    public function show($id)
     {
-        $this->authorize('view', $account);
+        $account = $this->account->with('savings')->find($id);
+
         return response()->json($account);
     }
 
-    public function update(Request $request, Account $account)
+    public function update(Request $request, $id)
     {
-        $this->authorize('update', $account);
-
         $data = $request->validate([
             'bank_name' => 'sometimes|string|max:255',
             'current_balance' => 'sometimes|numeric',
-            'type' => 'sometimes|string|in:checking,savings,other'
+            'type' => 'sometimes|string'
         ]);
+
+        $account = $this->account->find($id);
 
         $account->update($data);
 
         return response()->json($account);
     }
 
-    public function destroy(Account $account)
+    public function destroy($id)
     {
-        $this->authorize('delete', $account);
+        $account = $this->account->with('savings')->find($id);
+
         $account->delete();
 
         return response()->json(null, 204);

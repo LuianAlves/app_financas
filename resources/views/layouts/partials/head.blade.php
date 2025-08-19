@@ -20,6 +20,8 @@
 
     @php
         $styleCssPath = public_path('assets/css/style.css');
+        $crudCssPath = public_path('assets/css/crud_style.css');
     @endphp
     <link href="{{ asset('assets/css/style.css') }}?v={{ file_exists($styleCssPath) ? filemtime($styleCssPath) : time() }}" rel="stylesheet">
+    <link href="{{ asset('assets/css/crud_style.css') }}?v={{ file_exists($crudCssPath) ? filemtime($crudCssPath) : time() }}" rel="stylesheet">
 </head>

@@ -185,7 +185,7 @@
                 <div class="card-details">
                   <div class="detail-row mb-3">
                     <div class="detail-left">${card.cardholder_name || ''}</div>
-                    <div class="detail-right">${card.account?.bank_name || ''}</div>
+                    <div class="detail-right">${card.account?.bank_name ?? ''}</div>
                   </div>
                   <div class="detail-row flex-column" style="font-size:12px;letter-spacing:1px;">
                     <div>Fatura: ${card.invoice_total ? brl(card.invoice_total) : '—'}</div>

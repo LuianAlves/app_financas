@@ -8,12 +8,25 @@ use Illuminate\View\Component;
 
 class InputPrice extends Component
 {
-    /**
-     * Create a new component instance.
-     */
-    public function __construct()
+    public $col;
+    public $set;
+    public $title;
+    public $id;
+    public $name;
+    public $placeholder;
+    public $value;
+    public $disabled;
+
+    public function __construct($col, $title, $name, $id, $set = null, $placeholder = null, $value = null, bool $disabled = false)
     {
-        //
+        $this->col = $col;
+        $this->title = $title;
+        $this->name = $name;
+        $this->id = $id;
+        $this->set = $set;
+        $this->placeholder = $placeholder;
+        $this->value = $value;
+        $this->disabled = $disabled;
     }
 
     /**

@@ -44,18 +44,18 @@ class DashboardController extends Controller
         $savingsBalance  = Saving::whereIn('savings.user_id', $userIds)->sum('current_amount');
 
         // ===== totais por tipo (mês atual) =====
-        $categorySums = Transaction::query()
-            ->join('transaction_categories as tc', 'tc.id', '=', 'transactions.transaction_category_id')
-            ->whereIn('transactions.user_id', $userIds)
-            ->whereBetween('transactions.date', [$startOfMonth, $endOfMonth])
-            ->selectRaw('LOWER(TRIM(tc.type)) as category_type, SUM(transactions.amount) as total')
-            ->groupBy('tc.type')
-            ->pluck('total', 'category_type');
+//        $categorySums = Transaction::query()
+//            ->join('transaction_categories as tc', 'tc.id', '=', 'transactions.transaction_category_id')
+//            ->whereIn('transactions.user_id', $userIds)
+//            ->whereBetween('transactions.date', [$startOfMonth, $endOfMonth])
+//            ->selectRaw('LOWER(TRIM(tc.type)) as category_type, SUM(transactions.amount) as total')
+//            ->groupBy('tc.type')
+//            ->pluck('total', 'category_type');
 
-        $totalIncome  = (float) ($categorySums['entrada'] ?? 0);
-        $totalExpense = (float) ($categorySums['despesa'] ?? 0);
-        $balance      = $totalIncome - $totalExpense;
-        $total        = $balance;
+//        $totalIncome  = (float) ($categorySums['entrada'] ?? 0);
+//        $totalExpense = (float) ($categorySums['despesa'] ?? 0);
+//        $balance      = $totalIncome - $totalExpense;
+//        $total        = $balance;
 
         // ===== listas (últimas / próximas) =====
         $recentTransactions = Transaction::with(['transactionCategory:id,name,type,color,icon', 'card'])
@@ -149,8 +149,8 @@ class DashboardController extends Controller
         $prevIncome  = (float) ($prevSums['entrada'] ?? 0);
         $prevExpense = (float) ($prevSums['despesa'] ?? 0);
 
-        $incomeMoM  = $this->percentChange($totalIncome,  $prevIncome);
-        $expenseMoM = $this->percentChange($totalExpense, $prevExpense);
+//        $incomeMoM  = $this->percentChange($totalIncome,  $prevIncome);
+//        $expenseMoM = $this->percentChange($totalExpense, $prevExpense);
 
         // DashboardController@dashboard(...)
         [$currentInvoices, $cardTip] = $this->buildInvoicesWidget($userIds, $today);
@@ -158,12 +158,17 @@ class DashboardController extends Controller
 // NOVO: lista para “Próximos pagamentos”
         $upcomingInvoiceCards = $this->buildUpcomingInvoicesForList($userIds, $today, 5);
 
+        $kpis = $this->kpisForMonth($userIds, $startOfMonth, $endOfMonth);
+        $accountsBalance = $kpis['accountsBalance'];
+        $savingsBalance  = Saving::whereIn('savings.user_id', $userIds)->sum('current_amount');
+        $total           = $kpis['saldoMes']; // “Saldo do mês” que a view mostra
+
+
         return view('app.dashboard', compact(
-            'accountsBalance','savingsBalance','total','categorySums',
-            'totalIncome','balance',
+            'accountsBalance','savingsBalance','total',
             'recentTransactions','calendarEvents',
             'startOfMonth','endOfMonth',
-            'incomeMoM','expenseMoM','currentInvoices','cardTip',
+            'currentInvoices','cardTip',
             'upcomingAny' // <- add
         ));
     }
@@ -683,5 +688,98 @@ class DashboardController extends Controller
             ])
             ->take($limit)
             ->values();
+    }
+
+    private function kpisForMonth(Collection $userIds, Carbon $startOfMonth, Carbon $endOfMonth): array
+    {
+        // saldo em contas (já reflete check se você atualiza Account.current_balance ao pagar/receber)
+        $accountsBalance = (float) Account::whereIn('accounts.user_id', $userIds)->sum('current_balance');
+
+        // --- A RECEBER (entradas do mês que AINDA não foram recebidas)
+        $receivable = (float) Transaction::query()
+            ->join('transaction_categories as tc', 'tc.id', '=', 'transactions.transaction_category_id')
+            ->leftJoin('payment_transactions as pt', function ($j) {
+                $j->on('pt.transaction_id', '=', 'transactions.id');
+            })
+            ->whereIn('transactions.user_id', $userIds)
+            ->whereBetween('transactions.date', [$startOfMonth, $endOfMonth])
+            ->whereRaw('LOWER(TRIM(tc.type)) = ?', ['entrada'])
+            // sem pagamento registrado (idempotente; se houver parcial, adapte para SUM(pt.amount))
+            ->whereNull('pt.id')
+            ->sum('transactions.amount');
+
+        // --- A PAGAR (despesas do mês que AINDA não foram pagas) - exceto cartão
+        $payableTx = (float) Transaction::query()
+            ->join('transaction_categories as tc', 'tc.id', '=', 'transactions.transaction_category_id')
+            ->leftJoin('payment_transactions as pt', function ($j) {
+                $j->on('pt.transaction_id', '=', 'transactions.id');
+            })
+            ->whereIn('transactions.user_id', $userIds)
+            ->whereBetween('transactions.date', [$startOfMonth, $endOfMonth])
+            ->whereRaw('LOWER(TRIM(tc.type)) = ?', ['despesa'])
+            ->where(function ($q) {
+                $q->where('transactions.type', '!=', 'card')
+                    ->orWhereNull('transactions.type')
+                    ->orWhere(function ($qq) {
+                        $qq->where('transactions.type', 'card')
+                            ->where('transactions.type_card', '!=', 'credit');
+                    });
+            })
+            ->whereNull('pt.id')
+            ->sum('transactions.amount');
+
+        // --- FATURAS em aberto (com vencimento no mês)
+        $openInvoices = (float) DB::table('invoices as inv')
+            ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
+            ->join('cards as c', 'c.id', '=', 'inv.card_id')
+            ->whereIn('inv.user_id', $userIds)
+            ->where('inv.paid', false)
+            ->select('inv.current_month', 'c.due_day', DB::raw('COALESCE(SUM(it.amount),0) as total'))
+            ->groupBy('inv.id','inv.current_month','c.due_day')
+            ->get()
+            ->reduce(function ($sum, $row) use ($startOfMonth, $endOfMonth) {
+                $base = Carbon::createFromFormat('Y-m', $row->current_month)->startOfMonth();
+                $due  = $base->copy()->day(min((int)($row->due_day ?: 1), $base->daysInMonth));
+                if ($due->betweenIncluded($startOfMonth, $endOfMonth)) {
+                    $sum += (float) $row->total;
+                }
+                return $sum;
+            }, 0.0);
+
+        // A pagar final (despesas abertas + faturas abertas)
+        $aPagar = abs($payableTx) + abs($openInvoices);
+
+        // Saldo do mês
+        $saldoMes = $accountsBalance + $receivable - $aPagar;
+
+        return [
+            'accountsBalance' => round($accountsBalance, 2),
+            'aReceber'        => round($receivable, 2),
+            'aPagar'          => round($aPagar, 2),
+            'saldoMes'        => round($saldoMes, 2),
+        ];
+    }
+
+    public function kpis(Request $request)
+    {
+        $ownerId = AdditionalUser::ownerIdFor();
+        $userIds = AdditionalUser::where('user_id', $ownerId)
+            ->pluck('linked_user_id')->push($ownerId)->unique()->values();
+
+        $monthParam   = $request->query('month', now()->format('Y-m'));
+        $startOfMonth = Carbon::createFromFormat('Y-m', $monthParam)->startOfMonth();
+        $endOfMonth   = (clone $startOfMonth)->endOfMonth();
+
+        $kpis = $this->kpisForMonth($userIds, $startOfMonth, $endOfMonth);
+
+        return response()->json([
+            'accountsBalance' => $kpis['accountsBalance'],
+            'aReceber'        => $kpis['aReceber'],
+            'aPagar'          => $kpis['aPagar'],
+            'saldoMes'        => $kpis['saldoMes'],
+            'aReceber_brl'    => brlPrice($kpis['aReceber']),
+            'aPagar_brl'      => brlPrice($kpis['aPagar']),
+            'saldoMes_brl'    => brlPrice($kpis['saldoMes']),
+        ]);
     }
 }

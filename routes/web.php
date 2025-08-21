@@ -50,6 +50,7 @@ Route::any('/logout', [AuthController::class, 'destroy'])->name('logout');
 Route::middleware(['auth', config('jetstream.auth_session')])->group(function () {
     // Dashboard
     Route::get('/dashboard', [WebDashboardController::class, 'dashboard'])->name('dashboard');
+    Route::get('/dashboard/kpis', [WebDashboardController::class, 'kpis'])->name('dashboard.kpis');
 
     // Users
     Route::get('/user', [WebUserController::class, 'index'])->name('user-view.index');

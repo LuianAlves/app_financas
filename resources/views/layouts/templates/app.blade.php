@@ -40,6 +40,7 @@
 
 <!-- Include:scripts -->
 @include('layouts.partials.scripts')
+
 @stack('scripts')
 
 </body>

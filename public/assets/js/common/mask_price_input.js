@@ -31,7 +31,7 @@
         const digits = (txt || '').replace(/\D/g, '');
         if (!digits) return 0;
         return parseInt(digits.slice(0, 15), 10);
-    }w
+    }
 
     function setMasked(input, hidden, cents) {
         const valor = cents / 100;

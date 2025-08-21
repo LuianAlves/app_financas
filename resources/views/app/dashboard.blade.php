@@ -1,5 +1,78 @@
 @extends('layouts.templates.app')
 @section('content')
+    @push('styles')
+        <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+
+        <style>
+            .value-line {
+                position: relative;
+                display: grid;
+                grid-template-areas:"stack";
+                align-items: center;
+                min-height: 25px
+            }
+
+            .value-line > * {
+                grid-area: stack
+            }
+
+            .preloader-values-sm {
+                width: 75px;
+                height: 22px;
+                margin: 5px 0;
+            }
+
+            .preloader-values-lg {
+                width: 100%;
+                height: 32px;
+                margin: 10px 0px 5px 0px;
+            }
+
+            .preloader-values {
+                border-radius: 25px;
+                background: rgba(143, 143, 143, 0.55);
+                overflow: hidden;
+                position: relative
+            }
+
+            .preloader-values::after {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(90deg, rgba(229, 229, 229, .38), rgba(255, 255, 255, .75), rgba(229, 229, 229, .38));
+                background-size: 200% 100%;
+                animation: shimmer 1.2s linear infinite
+            }
+
+            @keyframes shimmer {
+                0% {
+                    background-position: 200% 0
+                }
+                100% {
+                    background-position: -200% 0
+                }
+            }
+
+            .value-line.is-loading .value-real {
+                opacity: 0
+            }
+
+            .value-line.is-loading .preloader-values {
+                opacity: 1
+            }
+
+            .value-line.loaded .value-real {
+                opacity: 1;
+                transition: opacity .18s
+            }
+
+            .value-line.loaded .preloader-values {
+                opacity: 0;
+                pointer-events: none
+            }
+        </style>
+    @endpush
+
     <div class="header">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <h1 class="m-0 mb-3">Tela inicial</h1>
@@ -28,7 +101,12 @@
                 <i class="fa fa-eye"></i>
             </div>
 
-            <strong id="kpi-balanco">{{ $total }}</strong>
+            {{-- Saldo do mês --}}
+            <div class="value-line is-loading">
+                <strong class="value-real" id="kpi-balanco"></strong>
+                <div class="preloader-values preloader-values-lg"></div>
+            </div>
+
 
             <div class="d-flex justify-content-between flex-column">
 
@@ -48,25 +126,31 @@
                     </div>
                 </div>
 
-                <!-- Entradas -->
+                {{-- A receber --}}
                 <div class="d-flex justify-content-between">
                     <b class="text-muted dash-amounts">A receber</b>
                     <div class="d-flex align-items-center">
                         <a href="{{ route('transactionCategory-view.index') }}">
-                            <i class="fa fa-arrow-right text-color mx-2" style="font-size: 12px;"></i>
+                            <i class="fa fa-arrow-right text-color mx-2" style="font-size:12px;"></i>
                         </a>
-                        <span class="price-default" id="kpi-receber">R$ 0,00</span>
+                        <div class="value-line is-loading">
+                            <span class="price-default value-real" id="kpi-receber"></span>
+                            <div class="preloader-values preloader-values-sm"></div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- A pagar -->
+                {{-- A pagar --}}
                 <div class="d-flex justify-content-between">
                     <b class="text-muted dash-amounts">A pagar</b>
                     <div class="d-flex align-items-center">
                         <a href="{{ route('transactionCategory-view.index') }}">
-                            <i class="fa fa-arrow-right text-danger mx-2" style="font-size: 12px;"></i>
+                            <i class="fa fa-arrow-right text-danger mx-2" style="font-size:12px;"></i>
                         </a>
-                        <span class="price-default" id="kpi-pagar">R$ 0,00</span>
+                        <div class="value-line is-loading">
+                            <span class="price-default value-real" id="kpi-pagar"></span>
+                            <div class="preloader-values preloader-values-sm"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -257,46 +341,72 @@
 
     <script>
         // === Pagar TRANSAÇÃO (abre modal) ===
-        const PAY_TPL      = @json(route('transaction-payment', ['transaction' => '__ID__']));
+        const PAY_TPL = @json(route('transaction-payment', ['transaction' => '__ID__']));
         const paymentModal = document.getElementById('paymentModal');
-        const paymentForm  = document.getElementById('paymentForm');
-        const inAmount     = document.getElementById('payment_amount');
-        const inDate       = document.getElementById('payment_date');
+        const paymentForm = document.getElementById('paymentForm');
+        const inAmount = document.getElementById('payment_amount');
+        const inDate = document.getElementById('payment_date');
 
         let CURRENT_TX_CARD = null;
 
-        function showPaymentModal(){ paymentModal.classList.add('show'); }
-        function hidePaymentModal(){ paymentModal.classList.remove('show'); }
+        function showPaymentModal() {
+            paymentModal.classList.add('show');
+        }
+
+        function hidePaymentModal() {
+            paymentModal.classList.remove('show');
+        }
+
+        function startLoading(...ids) {
+            ids.forEach(id => {
+                const box = document.getElementById(id)?.closest('.value-line');
+                if (box) {
+                    box.classList.add('is-loading');
+                    box.classList.remove('loaded');
+                }
+            });
+        }
+
+        function finishLoading(...ids) {
+            ids.forEach(id => {
+                const box = document.getElementById(id)?.closest('.value-line');
+                if (box) {
+                    box.classList.remove('is-loading');
+                    box.classList.add('loaded');
+                }
+            });
+        }
 
         // parser BR/EN robusto
-        function parseMoneyBR(input){
+        function parseMoneyBR(input) {
             if (typeof input === 'number') return input;
             let s = String(input || '').trim();
             s = s.replace(/[^\d.,-]/g, '');
             const lastComma = s.lastIndexOf(','), lastDot = s.lastIndexOf('.');
-            if (lastComma > -1 && lastDot > -1){
-                if (lastComma > lastDot) s = s.replace(/\./g,'').replace(',', '.'); // 1.234,56
-                else s = s.replace(/,/g,'');                                        // 1,234.56
-            } else if (lastComma > -1){
+            if (lastComma > -1 && lastDot > -1) {
+                if (lastComma > lastDot) s = s.replace(/\./g, '').replace(',', '.'); // 1.234,56
+                else s = s.replace(/,/g, '');                                        // 1,234.56
+            } else if (lastComma > -1) {
                 s = s.replace(',', '.');                                            // 123,45
             }
             return Number(s || 0);
         }
-        const formatBRL = v => Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+
+        const formatBRL = v => Number(v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 
         // abre modal com defaults da transação
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-open-payment]');
             if (!btn) return;
 
-            window.CURRENT_ID       = btn.dataset.id;                       // id da transação
-            window.CURRENT_TITLE    = btn.dataset.title || 'Pagamento';     // título real
-            window.CURRENT_DUE_DATE = (btn.dataset.date || '').slice(0,10); // <-- guardamos o DIA DO VENCIMENTO
-            CURRENT_TX_CARD         = btn.closest('.transaction-card') || null;
+            window.CURRENT_ID = btn.dataset.id;                       // id da transação
+            window.CURRENT_TITLE = btn.dataset.title || 'Pagamento';     // título real
+            window.CURRENT_DUE_DATE = (btn.dataset.date || '').slice(0, 10); // <-- guardamos o DIA DO VENCIMENTO
+            CURRENT_TX_CARD = btn.closest('.transaction-card') || null;
 
             paymentForm.action = PAY_TPL.replace('__ID__', window.CURRENT_ID);
-            inAmount.value     = btn.dataset.amount || '0';                 // aceita 69,99 ou 69.99
-            inDate.value       = window.CURRENT_DUE_DATE;                    // preenche com o vencimento (usuário pode trocar)
+            inAmount.value = btn.dataset.amount || '0';                 // aceita 69,99 ou 69.99
+            inDate.value = window.CURRENT_DUE_DATE;                    // preenche com o vencimento (usuário pode trocar)
 
             showPaymentModal();
         });
@@ -309,7 +419,7 @@
             try {
                 const resp = await fetch(paymentForm.action, {
                     method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': "{{ csrf_token() }}", 'Accept': 'application/json' },
+                    headers: {'X-CSRF-TOKEN': "{{ csrf_token() }}", 'Accept': 'application/json'},
                     body: fd,
                     credentials: 'same-origin'
                 });
@@ -321,13 +431,16 @@
                 if (!resp.ok) throw new Error(await resp.text());
 
                 // datas
-                const payDate = (inDate.value || '').slice(0,10);                   // dia escolhido para pagar (pode ser hoje)
+                const payDate = (inDate.value || '').slice(0, 10);                   // dia escolhido para pagar (pode ser hoje)
                 const dueDate = (window.CURRENT_DUE_DATE || payDate);               // dia original do vencimento
                 const payAmount = parseMoneyBR(inAmount.value);                     // CORRIGIDO: 69,99 => 69.99
 
                 // fecha modal e remove card (lista diária ou "Próximos pagamentos")
                 hidePaymentModal();
-                if (CURRENT_TX_CARD) { CURRENT_TX_CARD.remove(); CURRENT_TX_CARD = null; }
+                if (CURRENT_TX_CARD) {
+                    CURRENT_TX_CARD.remove();
+                    CURRENT_TX_CARD = null;
+                }
                 paymentForm.reset();
 
                 // atualiza calendário em memória
@@ -400,9 +513,9 @@
 
             const cardEl = btn.closest('.transaction-card');
             const cardId = btn.dataset.card;
-            const ym     = btn.dataset.month;
-            const amt    = Number(btn.dataset.amount || 0);
-            const title  = btn.dataset.title || 'Fatura paga';
+            const ym = btn.dataset.month;
+            const amt = Number(btn.dataset.amount || 0);
+            const title = btn.dataset.title || 'Fatura paga';
 
             const url = INVOICE_PAY_TPL.replace('__CARD__', cardId).replace('__YM__', ym);
 
@@ -445,7 +558,7 @@
                         icon: 'fa-regular fa-circle-check',
                         descricao: title,
                         valor: Math.abs(amt),
-                        valor_brl: Number(Math.abs(amt)).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}),
+                        valor_brl: Number(Math.abs(amt)).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'}),
                         is_invoice: true,
                         paid: true,
                         card_id: cardId,
@@ -471,21 +584,24 @@
             (() => {
                 const routeUrl = "{{ route('calendar.events') }}";
 
-                const ym  = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
-                const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-                const br  = s => { const [y,m,d] = String(s).slice(0,10).split('-'); return `${d}/${m}/${y}`; };
-                const brl = n => Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                const ym = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                const br = s => {
+                    const [y, m, d] = String(s).slice(0, 10).split('-');
+                    return `${d}/${m}/${y}`;
+                };
+                const brl = n => Number(n || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
                 const escAttr = s => String(s ?? '')
-                    .replace(/&/g,'&amp;').replace(/"/g,'&quot;')
-                    .replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+                    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-                const eventosCache   = {};
-                const loadedWindows  = new Set();
+                const eventosCache = {};
+                const loadedWindows = new Set();
 
-                function addEventToCache(ev){
-                    const day = String(ev.start).slice(0,10);
-                    const id  = ev.id ?? `${ev.title}-${ev.start}`;
-                    const xp  = ev.extendedProps || {};
+                function addEventToCache(ev) {
+                    const day = String(ev.start).slice(0, 10);
+                    const id = ev.id ?? `${ev.title}-${ev.start}`;
+                    const xp = ev.extendedProps || {};
                     const item = {
                         id,
                         tipo: (xp.type || '').toLowerCase().trim(),
@@ -506,10 +622,10 @@
                     if (!map.has(id)) map.set(id, item);
                 }
 
-                async function loadWindow(ymStr, months = 2){
+                async function loadWindow(ymStr, months = 2) {
                     const key = `${ymStr}:${months}`;
                     if (loadedWindows.has(key)) return;
-                    const resp = await fetch(`${routeUrl}?start=${ymStr}&months=${months}`, { headers: { 'Accept':'application/json' } });
+                    const resp = await fetch(`${routeUrl}?start=${ymStr}&months=${months}`, {headers: {'Accept': 'application/json'}});
                     if (!resp.ok) return;
                     (await resp.json()).forEach(addEventToCache);
                     loadedWindows.add(key);
@@ -520,40 +636,50 @@
                     return map ? Array.from(map.values()) : [];
                 };
 
-                function diasDoMes(y, m){
-                    const out = [], d = new Date(y, m-1, 1);
-                    while (d.getMonth() === m-1){ out.push(iso(d)); d.setDate(d.getDate()+1); }
+                function diasDoMes(y, m) {
+                    const out = [], d = new Date(y, m - 1, 1);
+                    while (d.getMonth() === m - 1) {
+                        out.push(iso(d));
+                        d.setDate(d.getDate() + 1);
+                    }
                     return out;
                 }
 
-                async function atualizarKpisDoMes(ymStr){
+                async function atualizarKpisDoMes(ymStr) {
+                    startLoading('kpi-receber', 'kpi-pagar', 'kpi-balanco');
+
                     await loadWindow(ymStr, 2);
-                    const [y,m] = ymStr.split('-').map(Number);
+                    const [y, m] = ymStr.split('-').map(Number);
 
                     let aReceber = 0, aPagar = 0, balanco = 0;
 
-                    for (const dia of diasDoMes(y,m)){
-                        for (const ev of eventosDoDia(dia)){
-                            if (ev.tipo === 'entrada'){
+                    for (const dia of diasDoMes(y, m)) {
+                        for (const ev of eventosDoDia(dia)) {
+                            if (ev.tipo === 'entrada') {
                                 aReceber += +Math.abs(ev.valor);
-                            } else if (ev.tipo === 'despesa'){
+                            } else if (ev.tipo === 'despesa') {
                                 aPagar += -Math.abs(ev.valor);
                             }
+
                             balanco = Math.abs(aReceber) - Math.abs(aPagar);
                         }
                     }
+                    const ymStr = document.getElementById('monthPicker').value;
+                    const r = await fetch(`{{ route('dashboard.kpis') }}?month=${ymStr}`, {headers:{'Accept':'application/json'}});
+                    const k = await r.json();
+                    document.getElementById('kpi-receber').textContent = k.aReceber_brl;
+                    document.getElementById('kpi-pagar').textContent   = k.aPagar_brl;
+                    document.getElementById('kpi-balanco').textContent = k.saldoMes_brl;
 
-                    document.getElementById('kpi-receber').textContent = brl(aReceber);
-                    document.getElementById('kpi-pagar').textContent   = brl(aPagar);
-                    document.getElementById('kpi-balanco').textContent = brl(balanco);
+                    finishLoading('kpi-receber', 'kpi-pagar', 'kpi-balanco');
                 }
 
-                function exibirEventos(dateStr){
+                function exibirEventos(dateStr) {
                     const c = document.getElementById('calendar-results');
                     const eventos = eventosDoDia(dateStr);
 
                     let html = `<h2 class="mt-3">Lançamentos do dia ${br(dateStr)}</h2>`;
-                    if (!eventos.length){
+                    if (!eventos.length) {
                         html += `<div class="transaction-card"><div class="transaction-info"><div class="icon"><i class="fa-solid fa-sack-dollar"></i></div><div class="details">Nenhum lançamento.</div></div></div>`;
                         c.innerHTML = html;
                         return;
@@ -561,8 +687,8 @@
 
                     for (const ev of eventos) {
                         const isPaidInv = ev.is_invoice && ev.paid === true;
-                        const iconCls   = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
-                        const bgColor   = isPaidInv ? '#0ea5e9' : (ev.color || '#999');
+                        const iconCls = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
+                        const bgColor = isPaidInv ? '#0ea5e9' : (ev.color || '#999');
 
                         let amountHtml = ev.valor_brl;
                         let sinal = '';
@@ -611,23 +737,27 @@
                         disableMobile: true,
 
                         onDayCreate: (_, _2, _3, dayElem) => {
-                            const d   = iso(dayElem.dateObj);
+                            const d = iso(dayElem.dateObj);
                             const evs = eventosDoDia(d);
                             if (!evs.length) return;
 
                             // verde: entradas | vermelho: despesas em aberto (inclui faturas não pagas)
                             // azul: investimentos/pagamentos/faturas pagas
                             const hasGreen = evs.some(e => e.tipo === 'entrada');
-                            const hasRed   = evs.some(e => (e.tipo === 'despesa' && !e.is_invoice) || (e.is_invoice && !e.paid));
-                            const hasBlue  = evs.some(e => e.tipo === 'investimento' || e.tipo === 'payment' || (e.is_invoice && e.paid));
+                            const hasRed = evs.some(e => (e.tipo === 'despesa' && !e.is_invoice) || (e.is_invoice && !e.paid));
+                            const hasBlue = evs.some(e => e.tipo === 'investimento' || e.tipo === 'payment' || (e.is_invoice && e.paid));
 
                             const wrap = document.createElement('div');
                             wrap.style.cssText = 'display:flex;justify-content:center;gap:2px;margin-top:-10px';
-                            const dot = c => { const s=document.createElement('span'); s.style.cssText=`width:6px;height:6px;background:${c};border-radius:50%`; wrap.appendChild(s); };
+                            const dot = c => {
+                                const s = document.createElement('span');
+                                s.style.cssText = `width:6px;height:6px;background:${c};border-radius:50%`;
+                                wrap.appendChild(s);
+                            };
 
                             if (hasGreen) dot('green');
-                            if (hasRed)   dot('red');
-                            if (hasBlue)  dot('#0ea5e9');
+                            if (hasRed) dot('red');
+                            if (hasBlue) dot('#0ea5e9');
 
                             if (wrap.childElementCount) dayElem.appendChild(wrap);
                         },
@@ -673,12 +803,12 @@
                     });
 
                     // expõe para outros scripts
-                    window.__cal = { fp, eventosCache, exibirEventos, iso };
+                    window.__cal = {fp, eventosCache, exibirEventos, iso};
                 });
 
-                async function syncMonthUI(ymStr){
-                    const [y,m] = ymStr.split('-').map(Number);
-                    const first = new Date(y, m-1, 1);
+                async function syncMonthUI(ymStr) {
+                    const [y, m] = ymStr.split('-').map(Number);
+                    const first = new Date(y, m - 1, 1);
 
                     await loadWindow(ymStr, 2);
 
@@ -692,10 +822,10 @@
 
                 window.syncMonthUI = syncMonthUI;
 
-                async function changeMonth(delta){
+                async function changeMonth(delta) {
                     const input = document.getElementById('monthPicker');
-                    const [y,m] = input.value.split('-').map(Number);
-                    const next  = new Date(y, m-1+delta, 1);
+                    const [y, m] = input.value.split('-').map(Number);
+                    const next = new Date(y, m - 1 + delta, 1);
                     const ymStr = ym(next);
                     input.value = ymStr;
                     await syncMonthUI(ymStr);

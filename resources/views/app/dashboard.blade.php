@@ -41,7 +41,7 @@
                 inset: 0;
                 background: linear-gradient(90deg, rgba(229, 229, 229, .38), rgba(255, 255, 255, .75), rgba(229, 229, 229, .38));
                 background-size: 200% 100%;
-                animation: shimmer 1.2s linear infinite
+                animation: shimmer 2s linear infinite
             }
 
             @keyframes shimmer {

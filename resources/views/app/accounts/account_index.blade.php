@@ -144,6 +144,9 @@
     </style>
 
     <script>
+        let suppressShowUntil = 0;
+        const suppressShow = (ms = 800) => { suppressShowUntil = Date.now() + ms; };
+
         (()=>{
 
             // ===== Elements =====

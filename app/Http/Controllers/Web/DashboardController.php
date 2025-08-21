@@ -877,6 +877,11 @@ class DashboardController extends Controller
         return $idx;
     }
 
+    private function normType(?string $t): string
+    {
+        return trim(mb_strtolower((string) $t));
+    }
+
     private function sumProjectedEntriesAndExpenses(Collection $userIds, Carbon $start, Carbon $end): array
     {
         $paid = $this->paymentsIndex($userIds);
@@ -884,12 +889,15 @@ class DashboardController extends Controller
         $sumReceber = 0.0;
         $sumPagar   = 0.0;
 
-        // ===== ÚNICAS
+        // ✅ Trabalhe no mês selecionado (1º dia até fim do mês)
+        $monthStart = $end->copy()->startOfMonth();
+
+        // ===== ÚNICAS (no mês selecionado)
         $uniqueTx = Transaction::withoutGlobalScopes()
             ->with(['transactionCategory:id,type'])
             ->whereIn('transactions.user_id', $userIds)
             ->where('recurrence_type', 'unique')
-            ->whereBetween('transactions.date', [$start, $end])
+            ->whereBetween('transactions.date', [$monthStart, $end])   // << aqui
             ->where(function ($q) {
                 $q->where('transactions.type', '!=', 'card')
                     ->orWhereNull('transactions.type')
@@ -909,14 +917,13 @@ class DashboardController extends Controller
         foreach ($uniqueTx as $t) {
             $type = strtolower($t->transactionCategory?->type ?? '');
             $ym   = Carbon::parse($t->date)->format('Y-m');
-            $isPaid = !empty($paid[$t->id][$ym]);
-            if ($isPaid) continue;
+            if (!empty($paid[$t->id][$ym])) continue; // já liquidada
 
-            if ($type === 'entrada')  $sumReceber += abs((float)$t->amount);
+            if ($type === 'entrada')     $sumReceber += abs((float)$t->amount);
             elseif ($type === 'despesa') $sumPagar   += abs((float)$t->amount);
         }
 
-        // ===== RECORRENTES MONTHLY / YEARLY
+        // ===== RECORRENTES MONTHLY / YEARLY (ocorrências do mês selecionado)
         $recMY = Recurrent::withoutGlobalScopes()
             ->with(['transaction.transactionCategory:id,type'])
             ->whereIn('recurrents.user_id', $userIds)
@@ -940,32 +947,32 @@ class DashboardController extends Controller
             ->get(['id','transaction_id','payment_day','amount']);
 
         foreach ($recMY as $r) {
-            $t    = $r->transaction; if (!$t) continue;
-            $type = strtolower($t->transactionCategory?->type ?? '');
+            $t      = $r->transaction; if (!$t) continue;
+            $type   = strtolower($t->transactionCategory?->type ?? '');
             $amount = (float)$r->amount;
 
             if ($t->recurrence_type === 'monthly') {
-                $m = $start->copy()->startOfMonth();
-                while ($m->lte($end)) {
-                    $occ = $m->copy()->day(min((int)$r->payment_day, $m->daysInMonth));
-                    if ($occ->gte(Carbon::parse($t->date))) {
-                        $ym = $occ->format('Y-m');
-                        if (empty($paid[$t->id][$ym])) {
-                            if ($type === 'entrada')  $sumReceber += abs($amount);
-                            elseif ($type === 'despesa') $sumPagar   += abs($amount);
-                        }
+                // Só o mês-alvo
+                $occ = $monthStart->copy()->day(min((int)$r->payment_day, $monthStart->daysInMonth));
+
+                if ($occ->betweenIncluded($monthStart, $end) && $occ->gte(Carbon::parse($t->date))) {
+                    $ym = $occ->format('Y-m');
+                    if (empty($paid[$t->id][$ym])) {
+                        if ($type === 'entrada')     $sumReceber += abs($amount);
+                        elseif ($type === 'despesa') $sumPagar   += abs($amount);
                     }
-                    $m->addMonth();
                 }
             } else { // yearly
                 $anchorMonth = (int) Carbon::parse($t->date)->month;
-                for ($y = $start->year; $y <= $end->year; $y++) {
-                    $daysIn = Carbon::create($y, $anchorMonth, 1)->daysInMonth;
-                    $occ = Carbon::create($y, $anchorMonth, min((int)$r->payment_day, $daysIn));
-                    if ($occ->betweenIncluded($start, $end) && $occ->gte(Carbon::parse($t->date))) {
+                // A ocorrência anual deste mês-alvo
+                if ($monthStart->month === $anchorMonth) {
+                    $daysIn = $monthStart->daysInMonth;
+                    $occ = Carbon::create($monthStart->year, $anchorMonth, min((int)$r->payment_day, $daysIn));
+
+                    if ($occ->betweenIncluded($monthStart, $end) && $occ->gte(Carbon::parse($t->date))) {
                         $ym = $occ->format('Y-m');
                         if (empty($paid[$t->id][$ym])) {
-                            if ($type === 'entrada')  $sumReceber += abs($amount);
+                            if ($type === 'entrada')     $sumReceber += abs($amount);
                             elseif ($type === 'despesa') $sumPagar   += abs($amount);
                         }
                     }
@@ -998,7 +1005,7 @@ class DashboardController extends Controller
 
         foreach ($recC as $r) {
             $t    = $r->transaction; if (!$t) continue;
-            $type = strtolower($t->transactionCategory?->type ?? '');
+            $type = $this->normType($t->transactionCategory?->type ?? '');
 
             $items = CustomItemRecurrents::where('recurrent_id', $r->id)
                 ->get(['payment_day','reference_month','reference_year','amount']);

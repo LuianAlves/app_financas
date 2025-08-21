@@ -305,18 +305,18 @@ class TransactionController extends Controller
             ]);
         }
 
-        if (!$isRecurring && (in_array($request->type, ['pix', 'money']) || ($isCard && $typeCard === 'debit'))) {
-            if ($request->account_id) {
-                // se categoria é 'entrada' credita, se 'despesa'/'investimento' debita
-                if ($catType === 'entrada') {
-                    \App\Models\Account::where('id', $request->account_id)
-                        ->increment('current_balance', $transaction->amount);
-                } else {
-                    \App\Models\Account::where('id', $request->account_id)
-                        ->decrement('current_balance', $transaction->amount);
-                }
-            }
-        }
+//        if (!$isRecurring && (in_array($request->type, ['pix', 'money']) || ($isCard && $typeCard === 'debit'))) {
+//            if ($request->account_id) {
+//                // se categoria é 'entrada' credita, se 'despesa'/'investimento' debita
+//                if ($catType === 'entrada') {
+//                    \App\Models\Account::where('id', $request->account_id)
+//                        ->increment('current_balance', $transaction->amount);
+//                } else {
+//                    \App\Models\Account::where('id', $request->account_id)
+//                        ->decrement('current_balance', $transaction->amount);
+//                }
+//            }
+//        }
 
         return response()->json([
             'message'     => 'Transação registrada com sucesso',
@@ -419,7 +419,7 @@ class TransactionController extends Controller
             'recurrent_id'  => $recurrent->id,
         ]);
     }
-    
+
     protected function createInvoiceItemIfNotExists($invoiceId, $transactionId, $recurrentId, Request $request, Carbon $date)
     {
         $exists = InvoiceItem::where('invoice_id', $invoiceId)

@@ -435,6 +435,7 @@
                 }
                 if (!resp.ok) throw new Error(await resp.text());
 
+
                 // datas
                 const payDate   = (inDate.value || '').slice(0, 10);
                 const dueDate   = (window.CURRENT_DUE_DATE || payDate);
@@ -457,13 +458,28 @@
 
                 // Atualiza o calendário em memória (remove ponto vermelho do vencimento e cria azul no dia do pagamento)
                 const cal = window.__cal;
-                if (cal && cal.eventosCache){
+                if (cal && cal.eventosCache) {
                     const mapDue = cal.eventosCache[dueDate];
-                    if (mapDue){
-                        for (const [k, ev] of mapDue.entries()){
-                            if (ev.tx_id === window.CURRENT_ID && (ev.tipo === 'despesa' || ev.tipo === 'entrada')) mapDue.delete(k);
+                    if (mapDue) {
+                        for (const [k, ev] of mapDue.entries()) {
+                            if (ev.tx_id === window.CURRENT_ID && (ev.tipo === 'despesa' || ev.tipo === 'entrada')) {
+                                mapDue.delete(k);
+                            }
                         }
                     }
+
+                    if (payDate !== dueDate) {
+                        const mapPayRed = cal.eventosCache[payDate];
+                        if (mapPayRed) {
+                            for (const [k, ev] of mapPayRed.entries()) {
+                                if (ev.tx_id === window.CURRENT_ID && (ev.tipo === 'despesa' || ev.tipo === 'entrada')) {
+                                    mapPayRed.delete(k);
+                                }
+                            }
+                        }
+                    }
+
+                    // adiciona o evento azul no dia do pagamento (mantém como está)
                     const mapPay = cal.eventosCache[payDate] ?? (cal.eventosCache[payDate] = new Map());
                     const pid = `localpay_${window.CURRENT_ID}_${payDate}`;
                     mapPay.set(pid, {

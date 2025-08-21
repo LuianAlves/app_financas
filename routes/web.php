@@ -51,6 +51,7 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     // Dashboard
     Route::get('/dashboard', [WebDashboardController::class, 'dashboard'])->name('dashboard');
     Route::get('/dashboard/kpis', [WebDashboardController::class, 'kpis'])->name('dashboard.kpis');
+    Route::post('/transactions/{transaction}/payment', [WebDashboardController::class, 'paymentTransaction'])->name('transaction-payment');
 
     // Users
     Route::get('/user', [WebUserController::class, 'index'])->name('user-view.index');
@@ -72,8 +73,6 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     Route::get('/transaction', [WebTransactionController::class, 'index'])->name('transaction-view.index');
     Route::resource('transactions', ApiTransactionController::class)->scoped(['transaction' => 'uuid']);
 
-    // Payment
-    Route::post('/transactions/{transaction}/payment', [WebPaymentController::class, 'paymentTransaction'])->name('transaction-payment');
 
     //Savings
     Route::get('/saving', [WebSavingController::class, 'index'])->name('saving-view.index');

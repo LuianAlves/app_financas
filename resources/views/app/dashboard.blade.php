@@ -110,19 +110,25 @@
 
             <div class="d-flex justify-content-between flex-column">
 
-                <!-- Saldo em contas -->
+                <!-- Saldo contas -->
                 <div class="d-flex justify-content-between">
                     <b class="text-muted dash-amounts">Saldo contas</b>
                     <div class="d-flex align-items-center">
-                        <span class="price-default">{{ brlPrice($accountsBalance) }}</span>
+                        <div class="value-line is-loading">
+                            <span class="price-default value-real" id="kpi-contas">{{ brlPrice($accountsBalance) }}</span>
+                            <div class="preloader-values preloader-values-sm"></div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Cofrinhos -->
                 <div class="d-flex justify-content-between mb-2">
                     <b class="text-muted dash-amounts">Cofrinhos</b>
-                    <div>
-                        <span class="price-default">{{ brlPrice($savingsBalance) }}</span>
+                    <div class="d-flex align-items-center">
+                        <div class="value-line is-loading">
+                            <span class="price-default value-real" id="kpi-cofrinhos">{{ brlPrice($savingsBalance) }}</span>
+                            <div class="preloader-values preloader-values-sm"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -341,80 +347,79 @@
 
     <script>
         // === Pagar TRANSAÇÃO (abre modal) ===
-        const PAY_TPL = @json(route('transaction-payment', ['transaction' => '__ID__']));
+        const PAY_TPL      = @json(route('transaction-payment', ['transaction' => '__ID__']));
         const paymentModal = document.getElementById('paymentModal');
-        const paymentForm = document.getElementById('paymentForm');
-        const inAmount = document.getElementById('payment_amount');
-        const inDate = document.getElementById('payment_date');
+        const paymentForm  = document.getElementById('paymentForm');
+        const inAmount     = document.getElementById('payment_amount');
+        const inDate       = document.getElementById('payment_date');
 
         let CURRENT_TX_CARD = null;
 
-        function showPaymentModal() {
-            paymentModal.classList.add('show');
-        }
+        function showPaymentModal(){ paymentModal.classList.add('show'); }
+        function hidePaymentModal(){ paymentModal.classList.remove('show'); }
 
-        function hidePaymentModal() {
-            paymentModal.classList.remove('show');
-        }
-
-        function startLoading(...ids) {
+        function startLoading(...ids){
             ids.forEach(id => {
                 const box = document.getElementById(id)?.closest('.value-line');
-                if (box) {
-                    box.classList.add('is-loading');
-                    box.classList.remove('loaded');
-                }
+                if (box){ box.classList.add('is-loading'); box.classList.remove('loaded'); }
             });
         }
-
-        function finishLoading(...ids) {
+        function finishLoading(...ids){
             ids.forEach(id => {
                 const box = document.getElementById(id)?.closest('.value-line');
-                if (box) {
-                    box.classList.remove('is-loading');
-                    box.classList.add('loaded');
-                }
+                if (box){ box.classList.remove('is-loading'); box.classList.add('loaded'); }
             });
         }
 
         // parser BR/EN robusto
-        function parseMoneyBR(input) {
+        function parseMoneyBR(input){
             if (typeof input === 'number') return input;
             let s = String(input || '').trim();
             s = s.replace(/[^\d.,-]/g, '');
             const lastComma = s.lastIndexOf(','), lastDot = s.lastIndexOf('.');
-            if (lastComma > -1 && lastDot > -1) {
-                if (lastComma > lastDot) s = s.replace(/\./g, '').replace(',', '.'); // 1.234,56
-                else s = s.replace(/,/g, '');                                        // 1,234.56
-            } else if (lastComma > -1) {
-                s = s.replace(',', '.');                                            // 123,45
-            }
+            if (lastComma > -1 && lastDot > -1){
+                if (lastComma > lastDot) s = s.replace(/\./g,'').replace(',', '.'); // 1.234,56
+                else s = s.replace(/,/g, '');                                       // 1,234.56
+            } else if (lastComma > -1){ s = s.replace(',', '.'); }
             return Number(s || 0);
         }
+        const formatBRL = v => Number(v || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 
-        const formatBRL = v => Number(v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-
-        // abre modal com defaults da transação
+        // abrir modal com defaults
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-open-payment]');
             if (!btn) return;
 
-            window.CURRENT_ID = btn.dataset.id;                       // id da transação
-            window.CURRENT_TITLE = btn.dataset.title || 'Pagamento';     // título real
-            window.CURRENT_DUE_DATE = (btn.dataset.date || '').slice(0, 10); // <-- guardamos o DIA DO VENCIMENTO
-            CURRENT_TX_CARD = btn.closest('.transaction-card') || null;
+            window.CURRENT_ID       = btn.dataset.id;
+            window.CURRENT_TITLE    = btn.dataset.title || 'Pagamento';
+            window.CURRENT_DUE_DATE = (btn.dataset.date || '').slice(0, 10);
+            CURRENT_TX_CARD         = btn.closest('.transaction-card') || null;
 
             paymentForm.action = PAY_TPL.replace('__ID__', window.CURRENT_ID);
-            inAmount.value = btn.dataset.amount || '0';                 // aceita 69,99 ou 69.99
-            inDate.value = window.CURRENT_DUE_DATE;                    // preenche com o vencimento (usuário pode trocar)
+            inAmount.value     = btn.dataset.amount || '0';
+            inDate.value       = window.CURRENT_DUE_DATE;
 
             showPaymentModal();
         });
 
+        // aplica os KPIs na UI
+        function applyKpis(k){
+            const $ = id => document.getElementById(id);
+            if (k.accountsBalance_brl) $('kpi-contas').textContent    = k.accountsBalance_brl;
+            if (k.savingsBalance_brl)  $('kpi-cofrinhos').textContent = k.savingsBalance_brl;
+            if (k.aReceber_brl)        $('kpi-receber').textContent   = k.aReceber_brl;
+            if (k.aPagar_brl)          $('kpi-pagar').textContent     = k.aPagar_brl;
+            $('kpi-balanco').textContent = (k.saldoPrevisto_brl || k.saldoMes_brl || k.saldoReal_brl || '');
+        }
+
         // submit do modal
         paymentForm?.addEventListener('submit', async (e) => {
             e.preventDefault();
+
             const fd = new FormData(paymentForm);
+            // envia o mês visível na UI para o controller recalcular os KPIs do mesmo período
+            const currentMonth = document.getElementById('monthPicker')?.value || '';
+            if (currentMonth) fd.set('month', currentMonth);
 
             try {
                 const resp = await fetch(paymentForm.action, {
@@ -424,47 +429,41 @@
                     credentials: 'same-origin'
                 });
 
-                if (resp.status === 422) {
+                if (resp.status === 422){
                     const j = await resp.json();
                     throw new Error(Object.values(j.errors || {})[0]?.[0] || 'Dados inválidos.');
                 }
                 if (!resp.ok) throw new Error(await resp.text());
 
                 // datas
-                const payDate = (inDate.value || '').slice(0, 10);                   // dia escolhido para pagar (pode ser hoje)
-                const dueDate = (window.CURRENT_DUE_DATE || payDate);               // dia original do vencimento
-                const payAmount = parseMoneyBR(inAmount.value);                     // CORRIGIDO: 69,99 => 69.99
+                const payDate   = (inDate.value || '').slice(0, 10);
+                const dueDate   = (window.CURRENT_DUE_DATE || payDate);
+                const payAmount = parseMoneyBR(inAmount.value);
 
-                // fecha modal e remove card (lista diária ou "Próximos pagamentos")
-                hidePaymentModal();
-                if (CURRENT_TX_CARD) {
-                    CURRENT_TX_CARD.remove();
-                    CURRENT_TX_CARD = null;
+                // tenta aplicar KPIs vindos do controller; se não vier JSON, busca do endpoint
+                let data = null; try { data = await resp.json(); } catch(_){}
+                if (data && data.ok){
+                    applyKpis(data);
+                } else if (currentMonth) {
+                    const r = await fetch(`{{ route('dashboard.kpis') }}?month=${currentMonth}`, { headers:{Accept:'application/json'} });
+                    if (r.ok) applyKpis(await r.json());
                 }
+
+                hidePaymentModal();
+
+                // remove card "Próximos pagamentos"
+                if (CURRENT_TX_CARD){ CURRENT_TX_CARD.remove(); CURRENT_TX_CARD = null; }
                 paymentForm.reset();
 
-                // atualiza calendário em memória
+                // Atualiza o calendário em memória (remove ponto vermelho do vencimento e cria azul no dia do pagamento)
                 const cal = window.__cal;
-                if (cal && cal.eventosCache) {
-                    // 1) remove a DESPESA do DIA DO VENCIMENTO (bolinha vermelha)
+                if (cal && cal.eventosCache){
                     const mapDue = cal.eventosCache[dueDate];
-                    if (mapDue) {
-                        for (const [k, ev] of mapDue.entries()) {
-                            if (ev.tx_id === window.CURRENT_ID && ev.tipo === 'despesa') mapDue.delete(k);
+                    if (mapDue){
+                        for (const [k, ev] of mapDue.entries()){
+                            if (ev.tx_id === window.CURRENT_ID && (ev.tipo === 'despesa' || ev.tipo === 'entrada')) mapDue.delete(k);
                         }
                     }
-
-                    // (defensivo) se por algum motivo a despesa já estivesse no dia do pagamento, limpa também
-                    if (payDate !== dueDate) {
-                        const mapPayRed = cal.eventosCache[payDate];
-                        if (mapPayRed) {
-                            for (const [k, ev] of mapPayRed.entries()) {
-                                if (ev.tx_id === window.CURRENT_ID && ev.tipo === 'despesa') mapPayRed.delete(k);
-                            }
-                        }
-                    }
-
-                    // 2) adiciona o evento AZUL no DIA DO PAGAMENTO
                     const mapPay = cal.eventosCache[payDate] ?? (cal.eventosCache[payDate] = new Map());
                     const pid = `localpay_${window.CURRENT_ID}_${payDate}`;
                     mapPay.set(pid, {
@@ -483,7 +482,6 @@
                         tx_id: window.CURRENT_ID
                     });
 
-                    // 3) redesenha pontos e a lista do dia atualmente selecionado
                     cal.fp.redraw();
                     const sel = cal.fp.selectedDates?.[0] ? cal.iso(cal.fp.selectedDates[0]) : payDate;
                     cal.exibirEventos(sel);
@@ -493,7 +491,8 @@
                 window.CURRENT_ID = null;
                 window.CURRENT_TITLE = null;
                 window.CURRENT_DUE_DATE = null;
-            } catch (err) {
+
+            } catch (err){
                 alert(err.message || 'Erro ao registrar pagamento.');
             }
         });
@@ -507,15 +506,24 @@
     <script>
         const INVOICE_PAY_TPL = @json(route('invoice-payment.update', ['cardId' => '__CARD__', 'ym' => '__YM__']));
 
+        // helper para aplicar KPIs (mesmo do bloco acima)
+        function applyKpis(k){
+            const $ = id => document.getElementById(id);
+            if ($('kpi-contas')   && k.accountsBalance_brl) $('kpi-contas').textContent   = k.accountsBalance_brl;
+            if ($('kpi-receber')  && k.aReceber_brl)        $('kpi-receber').textContent  = k.aReceber_brl;
+            if ($('kpi-pagar')    && k.aPagar_brl)          $('kpi-pagar').textContent    = k.aPagar_brl;
+            if ($('kpi-balanco')  && k.saldoMes_brl)        $('kpi-balanco').textContent  = k.saldoMes_brl;
+        }
+
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('[data-pay-invoice]');
             if (!btn) return;
 
             const cardEl = btn.closest('.transaction-card');
             const cardId = btn.dataset.card;
-            const ym = btn.dataset.month;
-            const amt = Number(btn.dataset.amount || 0);
-            const title = btn.dataset.title || 'Fatura paga';
+            const ym     = btn.dataset.month;
+            const amt    = Number(btn.dataset.amount || 0);
+            const title  = btn.dataset.title || 'Fatura paga';
 
             const url = INVOICE_PAY_TPL.replace('__CARD__', cardId).replace('__YM__', ym);
 
@@ -527,6 +535,13 @@
                     credentials: 'same-origin'
                 });
                 if (!resp.ok) throw new Error(await resp.text());
+
+                // KPIs após pagar fatura
+                const currentMonth = document.getElementById('monthPicker')?.value || '';
+                if (currentMonth){
+                    const r = await fetch(`{{ route('dashboard.kpis') }}?month=${currentMonth}`, { headers:{Accept:'application/json'} });
+                    if (r.ok) applyKpis(await r.json());
+                }
 
                 // remove da lista "Próximos pagamentos"
                 if (cardEl) cardEl.remove();
@@ -584,24 +599,19 @@
             (() => {
                 const routeUrl = "{{ route('calendar.events') }}";
 
-                const ym = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                const br = s => {
-                    const [y, m, d] = String(s).slice(0, 10).split('-');
-                    return `${d}/${m}/${y}`;
-                };
-                const brl = n => Number(n || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-                const escAttr = s => String(s ?? '')
-                    .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-                    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const ym  = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                const br  = s => { const [y,m,d] = String(s).slice(0,10).split('-'); return `${d}/${m}/${y}`; };
+                const brl = n => Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                const escAttr = s => String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
                 const eventosCache = {};
                 const loadedWindows = new Set();
 
-                function addEventToCache(ev) {
-                    const day = String(ev.start).slice(0, 10);
-                    const id = ev.id ?? `${ev.title}-${ev.start}`;
-                    const xp = ev.extendedProps || {};
+                function addEventToCache(ev){
+                    const day = String(ev.start).slice(0,10);
+                    const id  = ev.id ?? `${ev.title}-${ev.start}`;
+                    const xp  = ev.extendedProps || {};
                     const item = {
                         id,
                         tipo: (xp.type || '').toLowerCase().trim(),
@@ -610,7 +620,6 @@
                         descricao: ev.title ?? xp.category_name ?? 'Sem descrição',
                         valor: Number(xp.amount ?? 0),
                         valor_brl: xp.amount_brl,
-                        // extras
                         is_invoice: !!xp.is_invoice,
                         paid: !!xp.paid,
                         card_id: xp.card_id || null,
@@ -622,10 +631,10 @@
                     if (!map.has(id)) map.set(id, item);
                 }
 
-                async function loadWindow(ymStr, months = 2) {
+                async function loadWindow(ymStr, months=2){
                     const key = `${ymStr}:${months}`;
                     if (loadedWindows.has(key)) return;
-                    const resp = await fetch(`${routeUrl}?start=${ymStr}&months=${months}`, {headers: {'Accept': 'application/json'}});
+                    const resp = await fetch(`${routeUrl}?start=${ymStr}&months=${months}`, { headers:{'Accept':'application/json'} });
                     if (!resp.ok) return;
                     (await resp.json()).forEach(addEventToCache);
                     loadedWindows.add(key);
@@ -636,79 +645,76 @@
                     return map ? Array.from(map.values()) : [];
                 };
 
-                function diasDoMes(y, m) {
-                    const out = [], d = new Date(y, m - 1, 1);
-                    while (d.getMonth() === m - 1) {
-                        out.push(iso(d));
-                        d.setDate(d.getDate() + 1);
-                    }
+                function diasDoMes(y, m){
+                    const out = [], d = new Date(y, m-1, 1);
+                    while (d.getMonth() === m-1){ out.push(iso(d)); d.setDate(d.getDate()+1); }
                     return out;
                 }
 
-                async function atualizarKpisDoMes(ymStr) {
-                    startLoading('kpi-receber', 'kpi-pagar', 'kpi-balanco');
+                async function atualizarKpisDoMes(ymStr){
+                    startLoading('kpi-contas','kpi-cofrinhos','kpi-receber','kpi-pagar','kpi-balanco');
+                    try{
+                        // queremos PROJEÇÃO por padrão
+                        const url = `{{ route('dashboard.kpis') }}?month=${encodeURIComponent(ymStr)}&cumulative=1`;
+                        const r = await fetch(url, { headers:{Accept:'application/json'} });
+                        if(!r.ok) throw new Error('Falha ao carregar KPIs');
+                        const k = await r.json();
 
-                    await loadWindow(ymStr, 2);
-                    const [y, m] = ymStr.split('-').map(Number);
+                        // mostra os valores
+                        document.getElementById('kpi-receber').textContent = k.aReceber_brl;
+                        document.getElementById('kpi-pagar').textContent   = k.aPagar_brl;
+                        document.getElementById('kpi-balanco').textContent = k.saldoPrevisto_brl;
 
-                    let aReceber = 0, aPagar = 0, balanco = 0;
-
-                    for (const dia of diasDoMes(y, m)) {
-                        for (const ev of eventosDoDia(dia)) {
-                            if (ev.tipo === 'entrada') {
-                                aReceber += +Math.abs(ev.valor);
-                            } else if (ev.tipo === 'despesa') {
-                                aPagar += -Math.abs(ev.valor);
-                            }
-
-                            balanco = Math.abs(aReceber) - Math.abs(aPagar);
-                        }
+                        // se quiser permitir alternar visão (previsto x mensal do mês):
+                        // document.querySelector('.fa-eye')?.onclick = async () => {
+                        //   const monthly = await fetch(`{{ route('dashboard.kpis') }}?month=${ymStr}&cumulative=0`, {headers:{Accept:'application/json'}});
+                        //   if (monthly.ok) {
+                        //     const m = await monthly.json();
+                        //     document.getElementById('kpi-receber').textContent = m.aReceber_brl;
+                        //     document.getElementById('kpi-pagar').textContent   = m.aPagar_brl;
+                        //     document.getElementById('kpi-balanco').textContent = m.saldoPrevisto_brl;
+                        //   }
+                        // };
+                    }catch(e){
+                        console.error(e);
+                    }finally{
+                        finishLoading('kpi-contas','kpi-cofrinhos','kpi-receber','kpi-pagar','kpi-balanco');
                     }
-                    const ymStr = document.getElementById('monthPicker').value;
-                    const r = await fetch(`{{ route('dashboard.kpis') }}?month=${ymStr}`, {headers:{'Accept':'application/json'}});
-                    const k = await r.json();
-                    document.getElementById('kpi-receber').textContent = k.aReceber_brl;
-                    document.getElementById('kpi-pagar').textContent   = k.aPagar_brl;
-                    document.getElementById('kpi-balanco').textContent = k.saldoMes_brl;
-
-                    finishLoading('kpi-receber', 'kpi-pagar', 'kpi-balanco');
                 }
 
-                function exibirEventos(dateStr) {
+                function exibirEventos(dateStr){
                     const c = document.getElementById('calendar-results');
                     const eventos = eventosDoDia(dateStr);
 
                     let html = `<h2 class="mt-3">Lançamentos do dia ${br(dateStr)}</h2>`;
-                    if (!eventos.length) {
+                    if (!eventos.length){
                         html += `<div class="transaction-card"><div class="transaction-info"><div class="icon"><i class="fa-solid fa-sack-dollar"></i></div><div class="details">Nenhum lançamento.</div></div></div>`;
-                        c.innerHTML = html;
-                        return;
+                        c.innerHTML = html; return;
                     }
 
-                    for (const ev of eventos) {
+                    for (const ev of eventos){
                         const isPaidInv = ev.is_invoice && ev.paid === true;
-                        const iconCls = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
-                        const bgColor = isPaidInv ? '#0ea5e9' : (ev.color || '#999');
+                        const iconCls   = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
+                        const bgColor   = isPaidInv ? '#0ea5e9' : (ev.color || '#999');
 
-                        let amountHtml = ev.valor_brl;
-                        let sinal = '';
-                        if (!isPaidInv) {
+                        let amountHtml = ev.valor_brl, sinal = '';
+                        if (!isPaidInv){
                             sinal = ev.tipo === 'despesa' ? '-' : (ev.tipo === 'entrada' ? '+' : '');
                         } else {
                             amountHtml = brl(Math.abs(ev.valor || 0));
                         }
 
                         let action = '';
-                        if (ev.is_invoice && ev.card_id && ev.current_month && !ev.paid) {
+                        if (ev.is_invoice && ev.card_id && ev.current_month && !ev.paid){
                             action = `<button type="button" class="bg-transparent border-0"
-           data-pay-invoice data-card="${ev.card_id}" data-month="${ev.current_month}"
-           data-amount="${Math.abs(ev.valor || 0)}" data-title="${escAttr(ev.descricao)}">
-           <i class="fa-solid fa-check text-success"></i></button>`;
-                        } else if (ev.tipo === 'despesa' && ev.tx_id) {
+                  data-pay-invoice data-card="${ev.card_id}" data-month="${ev.current_month}"
+                  data-amount="${Math.abs(ev.valor || 0)}" data-title="${escAttr(ev.descricao)}">
+                  <i class="fa-solid fa-check text-success"></i></button>`;
+                        } else if ((ev.tipo === 'despesa' || ev.tipo === 'entrada') && ev.tx_id && !ev.paid){
                             action = `<button type="button" class="bg-transparent border-0"
-           data-open-payment data-id="${ev.tx_id}"
-           data-amount="${Math.abs(ev.valor)}" data-date="${dateStr}" data-title="${escAttr(ev.descricao)}">
-           <i class="fa-solid fa-check-to-slot text-success"></i></button>`;
+                  data-open-payment data-id="${ev.tx_id}"
+                  data-amount="${Math.abs(ev.valor)}" data-date="${dateStr}" data-title="${escAttr(ev.descricao)}">
+                  <i class="fa-solid fa-check-to-slot text-success"></i></button>`;
                         }
 
                         html += `
@@ -723,7 +729,6 @@
         </div>
       </div>`;
                     }
-
                     c.innerHTML = html;
                 }
 
@@ -741,23 +746,17 @@
                             const evs = eventosDoDia(d);
                             if (!evs.length) return;
 
-                            // verde: entradas | vermelho: despesas em aberto (inclui faturas não pagas)
-                            // azul: investimentos/pagamentos/faturas pagas
                             const hasGreen = evs.some(e => e.tipo === 'entrada');
-                            const hasRed = evs.some(e => (e.tipo === 'despesa' && !e.is_invoice) || (e.is_invoice && !e.paid));
-                            const hasBlue = evs.some(e => e.tipo === 'investimento' || e.tipo === 'payment' || (e.is_invoice && e.paid));
+                            const hasRed   = evs.some(e => (e.tipo === 'despesa' && !e.is_invoice) || (e.is_invoice && !e.paid));
+                            const hasBlue  = evs.some(e => e.tipo === 'investimento' || e.tipo === 'payment' || (e.is_invoice && e.paid));
 
                             const wrap = document.createElement('div');
                             wrap.style.cssText = 'display:flex;justify-content:center;gap:2px;margin-top:-10px';
-                            const dot = c => {
-                                const s = document.createElement('span');
-                                s.style.cssText = `width:6px;height:6px;background:${c};border-radius:50%`;
-                                wrap.appendChild(s);
-                            };
+                            const dot = c => { const s = document.createElement('span'); s.style.cssText = `width:6px;height:6px;background:${c};border-radius:50%`; wrap.appendChild(s); };
 
                             if (hasGreen) dot('green');
-                            if (hasRed) dot('red');
-                            if (hasBlue) dot('#0ea5e9');
+                            if (hasRed)   dot('red');
+                            if (hasBlue)  dot('#0ea5e9');
 
                             if (wrap.childElementCount) dayElem.appendChild(wrap);
                         },
@@ -792,9 +791,7 @@
                             atualizarKpisDoMes(initialYm);
                         },
 
-                        onChange: sd => {
-                            if (sd?.[0]) exibirEventos(iso(sd[0]));
-                        }
+                        onChange: sd => { if (sd?.[0]) exibirEventos(iso(sd[0])); }
                     });
 
                     document.getElementById('monthForm')?.addEventListener('submit', e => e.preventDefault());
@@ -806,9 +803,9 @@
                     window.__cal = {fp, eventosCache, exibirEventos, iso};
                 });
 
-                async function syncMonthUI(ymStr) {
+                async function syncMonthUI(ymStr){
                     const [y, m] = ymStr.split('-').map(Number);
-                    const first = new Date(y, m - 1, 1);
+                    const first  = new Date(y, m-1, 1);
 
                     await loadWindow(ymStr, 2);
 
@@ -819,21 +816,20 @@
                     exibirEventos(iso(first));
                     atualizarKpisDoMes(ymStr);
                 }
-
                 window.syncMonthUI = syncMonthUI;
 
-                async function changeMonth(delta) {
+                async function changeMonth(delta){
                     const input = document.getElementById('monthPicker');
                     const [y, m] = input.value.split('-').map(Number);
-                    const next = new Date(y, m - 1 + delta, 1);
-                    const ymStr = ym(next);
-                    input.value = ymStr;
+                    const next   = new Date(y, m-1+delta, 1);
+                    const ymStr  = ym(next);
+                    input.value  = ymStr;
                     await syncMonthUI(ymStr);
                 }
-
                 window.changeMonth = changeMonth;
 
             })();
         </script>
     @endpush
+
 @endsection

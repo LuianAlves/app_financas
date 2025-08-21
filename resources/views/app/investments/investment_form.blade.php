@@ -18,7 +18,3 @@
     <x-input col="6" set="" type="text" title="Observações" id="notes" name="notes" placeholder="Opcional"></x-input>
 </div>
 
-<div class="mt-2 d-flex justify-content-end">
-    <button type="button" id="closeModal" class="btn btn-light me-2">Cancelar</button>
-    <button type="submit" class="btn btn-primary">Salvar</button>
-</div>

@@ -25,7 +25,7 @@
         const closeBtn = document.getElementById('closeModal');
 
         openBtn.addEventListener('click', () => modal.classList.add('show'));
-        closeBtn.addEventListener('click', () => modal.classList.remove('show'));
+        closeBtn?.addEventListener('click', () => modal.classList.remove('show'));
 
         function brl(valor) {
             const numero = Number(valor);
@@ -33,6 +33,23 @@
                 ? 'R$ 0,00'
                 : numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
+
+        function pct(valor) {
+            const n = Number(valor);
+            return isNaN(n)
+                ? '0,00%'
+                : n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + '%';
+        }
+
+        function dateBR(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            if (isNaN(d)) return '—';
+            return d.toLocaleDateString('pt-BR');
+        }
+
+        const upper = (s, fallback = '—') =>
+            (s ?? '').toString().trim() ? s.toString().toUpperCase() : fallback;
 
         document.getElementById('formSaving').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -50,8 +67,12 @@
                 });
 
                 if (!response.ok) {
-                    const result = await response.json();
-                    throw new Error(result.message || 'Erro ao salvar cofrinho.');
+                    let message = 'Erro ao salvar cofrinho.';
+                    try {
+                        const result = await response.json();
+                        message = result.message || message;
+                    } catch(_) {}
+                    throw new Error(message);
                 }
 
                 const saving = await response.json();
@@ -68,13 +89,23 @@
             const container = document.getElementById('savingList');
             if (!container) return;
 
-            const color = saving.color_card ?? '#6c757d'; // cinza-padrão se não vier nada
+            const contaNome =
+                saving?.account?.alias
+                    ? upper(saving.account.alias)
+                    : (saving?.account?.bank_name ? upper(saving.account.bank_name) : 'CONTA NÃO DEFINIDA');
+
+            const periodSuffix = saving.rate_period === 'yearly' ? 'a.a.' : (saving.rate_period ? 'a.m.' : '');
+
+            const color = '#00BFA6';
 
             const cardBox = `
                 <div class="saving-box" style="background-color: ${color}">
-                    <div class="saving-name"><strong>${saving.name ?? 'Cofrinho'}</strong></div>
-                    <div class="saving-info">Banco: ${saving.account?.bank_name ?? 'Conta não definida'}</div>
-                    <div class="saving-info">Valor atual: ${brl(saving.current_amount)}</div>
+                    <div class="saving-name"><strong>${upper(saving.name, 'COFRINHO')}</strong></div>
+                    <div class="saving-info">Conta debitada: ${contaNome}</div>
+                    <div class="saving-info">Valor aplicado: ${brl(saving.current_amount)}</div>
+                    <div class="saving-info">Taxa: ${pct(saving.interest_rate)} ${periodSuffix}</div>
+                    <div class="saving-info">Início: ${dateBR(saving.start_date)}</div>
+                    ${saving.notes ? `<div class="saving-info">Obs.: ${saving.notes}</div>` : ''}
                 </div>
             `;
 
@@ -106,7 +137,6 @@
                 flex-direction: column;
                 gap: 12px;
             }
-
             .saving-box {
                 border-radius: 8px;
                 padding: 14px 16px;
@@ -115,19 +145,16 @@
                 box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
                 transition: 0.2s ease-in-out;
             }
-
             .saving-box:hover {
                 transform: scale(1.01);
                 box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
             }
-
             .saving-name {
                 font-size: 16px;
                 font-weight: bold;
                 margin-bottom: 6px;
                 text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
             }
-
             .saving-info {
                 font-size: 14px;
                 text-shadow: 1px 1px 1px rgba(0,0,0,0.2);

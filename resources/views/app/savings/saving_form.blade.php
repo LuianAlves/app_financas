@@ -1,37 +1,39 @@
 <div class="row">
-    <x-select col="6" set="" name="account_id" id="account_id" title="Banco vinculado">
-        @foreach($accounts as $account)
-            <option value="{{$account->id}}">{{$account->bank_name}}</option>
-        @endforeach
+    <x-select col="12" set="" name="account_id" id="account_id" title="Conta (debitar)">
+        @forelse($accounts as $acc)
+            <option value="{{ $acc->id }}">
+                {{ strtoupper($acc->bank_name) }}
+                — Saldo: R$ {{ number_format($acc->current_balance ?? 0, 2, ',', '.') }}
+            </option>
+        @empty
+            <option value="">Nenhuma conta disponível</option>
+        @endforelse
     </x-select>
 </div>
 
 <div class="row">
-    <x-input col="12" set="" type="color" title="Cor do Cofrinho" id="color_card" name="color_card" value="{{ old('color_card', $saving->color_card ?? '#4CAF50') }}"></x-input>
+    <x-input col="12" set="" type="text" title="Nome do cofrinho" id="name" name="name" placeholder="Viagem" required></x-input>
 </div>
 
 <div class="row">
-    <x-input col="12" set="" type="text" title="Nome do cofrinho" id="name" name="name" value="{{ old('name', $saving->name ?? '') }}" placeholder="Viagem"></x-input>
+
+    <x-input
+        col="6" set="" type="number" step="0.01" inputmode="decimal"
+        title="Valor (R$)" id="current_amount" name="current_amount" placeholder="1000,00" required>
+    </x-input>
+
+    <x-input
+        col="3" set="" type="number" step="0.0001" inputmode="decimal"
+        title="Taxa (%)" id="interest_rate" name="interest_rate" placeholder="1.10">
+    </x-input>
+
+    <x-select col="3" set="" name="rate_period" id="rate_period" title="Período">
+        <option value="monthly" selected>Mensal</option>
+        <option value="yearly">Anual</option>
+    </x-select>
 </div>
 
 <div class="row">
-    <x-input col="12" set="" type="number" step="0.01" min="0" title="Valor" id="current_amount" name="current_amount" value="{{ old('current_amount', $saving->current_amount ?? '') }}" placeholder="0,00"></x-input>
+    <x-input col="6" set="" type="date" title="Início (opcional)" id="start_date" name="start_date"></x-input>
+    <x-input col="6" set="" type="text" title="Observações" id="notes" name="notes" placeholder="Opcional"></x-input>
 </div>
-
-@push('styles')
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-@endpush
-
-@push('scripts')
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script>
-        $(function(){
-            $('#account_id').select2({
-                width: '100%',
-                dropdownParent: $('#modalSaving'),
-                minimumResultsForSearch: Infinity
-            });
-        });
-    </script>
-@endpush

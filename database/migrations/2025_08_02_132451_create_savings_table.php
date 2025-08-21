@@ -6,25 +6,36 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('savings', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
-            $table->string('name');
-            $table->decimal('current_amount', 12, 2)->default(0);
-            $table->string('color_card')->nullable();
-            $table->foreignUuid('account_id')->nullable()->constrained('accounts')->onDelete('set null');
+
+            // FKs
+            $table->foreignUuid('user_id')
+                ->constrained('users')
+                ->cascadeOnDelete();
+
+            $table->foreignUuid('account_id')
+                ->constrained('accounts')
+                ->cascadeOnDelete(); // mantém seu desejo de deletar savings ao apagar a conta
+
+            // Dados
+            $table->string('name', 255);
+            $table->decimal('current_amount', 15, 2)->default(0);   // default evita inserts sem valor
+            $table->decimal('interest_rate', 7, 4)->default(0);     // ex.: 1.1000 = 1,10%
+            $table->enum('rate_period', ['monthly', 'yearly'])->default('monthly');
+            $table->date('start_date')->nullable();
+            $table->text('notes')->nullable();
+
+            // Meta
             $table->timestamps();
+
+            // Índices úteis
+            $table->index(['user_id', 'account_id']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('savings');

@@ -1,76 +1,3 @@
-{{--@extends('layouts.templates.app')--}}
-{{--@section('content')--}}
-{{--    <x-card-header--}}
-{{--        prevRoute="{{ route('dashboard') }}"--}}
-{{--        iconRight="fa-solid fa-landmark"--}}
-{{--        title="Contas Bancárias"--}}
-{{--        description="Gerencie suas contas e saldos."--}}
-{{--    ></x-card-header>--}}
-
-{{--    <button id="openAccountModal" class="create-btn"><i class="fa fa-plus text-white"></i></button>--}}
-
-{{--    <div id="confirmDeleteAccount" class="x-confirm" hidden>--}}
-{{--        <div class="x-sheet" role="dialog" aria-modal="true" aria-labelledby="xConfirmTitleAccount">--}}
-{{--            <div class="x-head">--}}
-{{--                <h5 id="xConfirmTitleAccount">Remover conta</h5>--}}
-{{--                <button type="button" class="x-close" data-action="cancel" aria-label="Fechar">×</button>--}}
-{{--            </div>--}}
-{{--            <div class="x-body">Deseja remover esta conta?</div>--}}
-{{--            <div class="x-actions">--}}
-{{--                <button type="button" class="btn btn-light" data-action="cancel">Cancelar</button>--}}
-{{--                <button type="button" class="btn btn-danger" data-action="confirm">Excluir</button>--}}
-{{--            </div>--}}
-{{--        </div>--}}
-{{--    </div>--}}
-
-{{--    <!-- Lista -->--}}
-{{--    <ul id="accountList" class="swipe-list mt-4"></ul>--}}
-
-{{--    <x-modal--}}
-{{--        modalId="modalAccount"--}}
-{{--        formId="formAccount"--}}
-{{--        pathForm="app.accounts.account_form"--}}
-{{--        :data="[]"--}}
-{{--    ></x-modal>--}}
-
-{{--    @push('styles')--}}
-{{--        <style>--}}
-{{--            /* (opcional) estilinho do confirm custom */--}}
-{{--            .x-confirm{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:1050}--}}
-{{--            .x-confirm.show{display:flex}--}}
-{{--            .x-sheet{background:#fff;border-radius:10px;min-width:320px;max-width:90vw;box-shadow:0 10px 30px rgba(0,0,0,.2)}--}}
-{{--            .x-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #eee}--}}
-{{--            .x-body{padding:14px}--}}
-{{--            .x-actions{display:flex;gap:8px;justify-content:end;padding:10px 14px;border-top:1px solid #eee}--}}
-{{--            .x-close{background:transparent;border:0;font-size:22px;line-height:1}--}}
-{{--        </style>--}}
-{{--    @endpush--}}
-
-{{--    <script>--}}
-{{--        window.DATA_CFG = {--}}
-{{--            csrf: "{{ csrf_token() }}",--}}
-{{--            selectors: {--}}
-{{--                list:  "#accountList",--}}
-{{--                form:  "#formAccount",--}}
-{{--                modal: "#modalAccount",--}}
-{{--                plus:  "#openAccountModal",--}}
-{{--                confirmId: "confirmDeleteAccount"--}}
-{{--            },--}}
-{{--            routes: {--}}
-{{--                index:   "{{ route('accounts.index') }}",--}}
-{{--                show:    "{{ url('/accounts') }}/:id",--}}
-{{--                store:   "{{ route('accounts.store') }}",--}}
-{{--                update:  "{{ url('/accounts') }}/:id",--}}
-{{--                destroy: "{{ url('/accounts') }}/:id"--}}
-{{--            }--}}
-{{--        };--}}
-{{--    </script>--}}
-
-{{--    <script type="module" src="{{ asset('assets/js/views/accounts.js') }}"></script>--}}
-{{--@endsection--}}
-
-
-
 @extends('layouts.templates.app')
 @section('content')
     <x-card-header
@@ -108,11 +35,7 @@
     </div>
 
     <style>
-        .balance-box {
-            padding: 20px !important;
-            margin: 0 !important;
-        }
-
+        .balance-box { padding: 20px !important; margin: 0 !important; }
         /* Swipe base */
         .swipe-list{list-style:none;margin:0;padding:0}
         .swipe-item{position:relative;overflow:hidden;background:#fff;border-bottom:1px solid #eee;touch-action:pan-y;user-select:none}
@@ -169,6 +92,7 @@
                 show:    "{{ url('/accounts') }}/:id",
                 update:  "{{ url('/accounts') }}/:id",
                 destroy: "{{ url('/accounts') }}/:id",
+                savings: "{{ route('savings.index') }}", // <<--- NOVO: para somar cofrinhos por conta
             };
 
             const OPEN_W=96, TH_OPEN=40;
@@ -184,14 +108,35 @@
             function u(t,id){ return t.replace(':id', id); }
             function brl(v){
                 const n = typeof v==='number' ? v : parseFloat(String(v??'').replace(/[^\d.-]/g,''));
-                return isNaN(n) ? 'R$ 0,00' : n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                return isNaN(n) ? 'R$ 0,00' : n.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
             }
-            function setVal(id, val){ const el=form.querySelector('#'+id); if(el) el.value=(val??''); }
-            function suppressShow(ms=800){ suppressShowUntil = Date.now()+ms; }
+            function moneyToNumber(v){
+                if (v === null || v === undefined) return 0;
+                if (typeof v === 'number') return v;
+                const s = String(v).trim();
+                const clean = s.replace(/[^\d,.-]/g,'');
+                if (clean.includes(',') && clean.includes('.')) return parseFloat(clean.replace(/\./g,'').replace(',', '.')) || 0;
+                if (clean.includes(',')) return parseFloat(clean.replace(',', '.')) || 0;
+                return parseFloat(clean) || 0;
+            }
+            function ensureArray(data){
+                if (Array.isArray(data)) return data;
+                if (data && Array.isArray(data.data)) return data.data;
+                if (data && typeof data === 'object') return Object.values(data);
+                return [];
+            }
+            function buildSavingsMap(savings){
+                const map = new Map();
+                for (const s of savings){
+                    const accId = s.account_id || (s.account && s.account.id);
+                    if (!accId) continue;
+                    map.set(accId, (map.get(accId) || 0) + moneyToNumber(s.current_amount));
+                }
+                return map;
+            }
 
             // ===== modal =====
             let outsideHandler=null, touchBlocker=null, modalOpenedAt=0;
-
             function setFormMode(mode){
                 currentMode = mode;
                 const isShow = (mode==='show');
@@ -201,6 +146,8 @@
                 });
                 saveBtn.classList.toggle('d-none', isShow);
             }
+            function setVal(id, val){ const el=form.querySelector('#'+id); if(el) el.value=(val??''); }
+            function suppressShow(ms=800){ suppressShowUntil = Date.now()+ms; }
 
             function fillForm(acc){
                 setVal('bank_name', acc.bank_name);
@@ -210,7 +157,6 @@
                 setVal('opening_balance', acc.opening_balance);
                 setVal('color', acc.color);
             }
-
             function openModal(mode, item){
                 setFormMode(mode);
                 if (item) fillForm(item); else form.reset();
@@ -237,13 +183,11 @@
                 touchBlocker = (e)=>{ if (modalEl.classList.contains('show')) e.preventDefault(); };
                 window.addEventListener('touchmove', touchBlocker, {passive:false});
             }
-
             function modalClickCloser(e){
                 if (e.target.matches('#closeModal, .btn-close, .x-close, [data-dismiss="modal"], [data-action="cancel"]')) {
                     e.preventDefault(); closeModal();
                 }
             }
-
             function closeModal(){
                 modalEl.classList.remove('show');
                 document.body.classList.remove('modal-open');
@@ -258,7 +202,6 @@
                     touchBlocker=null;
                 }
             }
-
             document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && modalEl.classList.contains('show')) closeModal(); });
             openBtn.addEventListener('click', ()=>{ currentId=null; openModal('create', null); });
             if (closeBtn) closeBtn.addEventListener('click', closeModal);
@@ -272,63 +215,87 @@
             confirmEl.addEventListener('click', (e)=>{ if(e.target===confirmEl){ if(Date.now()-confirmOpenedAt<150) return; closeConfirm(); } });
 
             // ===== render =====
-            function renderAccount(acc){
-                console.log(acc)
-
-                const id = acc.id ?? acc.uuid;
-                const date = acc.created_at ? String(acc.created_at).slice(0,10) : '';
-                const label = acc.account_type || 'conta';
+            function renderAccount(acc, savingsMap){
+                const id    = acc.id ?? acc.uuid;
                 const color = acc.color || '#666';
 
+                // Saldo da conta (pode vir "R$ 500,00" ou número)
+                const balanceNum     = moneyToNumber(acc.current_balance);
+                const balanceDisplay = (typeof acc.current_balance === 'string')
+                    ? acc.current_balance
+                    : brl(balanceNum);
+
+                // Total de cofrinhos: usa o mapa (somado por account_id) ou fallback do backend
+                const mapValue   = savingsMap ? savingsMap.get(id) : undefined;
+                const savingsNum = (mapValue !== undefined) ? mapValue : moneyToNumber(acc.saving_amount);
+                const savingsDisplay = brl(savingsNum);
+
+                // Topo do card deve exibir APENAS o saldo da conta
+                const totalDisplay = balanceDisplay;
+
                 return `
-      <div class="swipe-item" data-id="${id}">
-        <button class="swipe-edit-btn" type="button">Editar</button>
-        <div class="swipe-content">
-          <div class="balance-box">
-            <div class="tx-line">
-              <div class="d-flex justify-content-between flex-column">
-                <span class="tx-title">${acc.bank_name ?? 'Sem título'}</span>
-<!--                <small class="tx-date">Em ${date}</small>-->
-              </div>
-              <div class="text-end">
-                <span class="tx-amount" style="color:${color}">${acc.total}</span><br>
-<!--                <span class="badge" style="font-size:10px;background:${color};color:#fff">${label}</span>-->
-              </div>
+    <div class="swipe-item" data-id="${id}">
+      <button class="swipe-edit-btn" type="button">Editar</button>
+      <div class="swipe-content">
+        <div class="balance-box">
+          <div class="tx-line">
+            <div class="d-flex justify-content-between flex-column">
+              <span class="tx-title">${(acc.bank_name ?? 'Sem título').toString().toUpperCase()}</span>
             </div>
-
-            <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
-              <small>
-                <b class="text-muted">Na conta </b>
-                <div class="d-flex align-items-center">
-                  <span>${acc.current_balance}</span>
-                </div>
-              </small>
-              <small>
-                <b class="text-muted">Cofrinhos</b>
-                <div class="d-flex align-items-center">
-                  <span>${acc.saving_amount}</span>
-                </div>
-              </small>
+            <div class="text-end">
+              <span class="tx-amount" style="color:${color}">${totalDisplay}</span><br>
             </div>
-
-            <a href="#" class="text-color fw-bold" style="text-decoration:none;font-size:13px;">Ver Extrato</a>
           </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
+            <small>
+              <b class="text-muted">Na conta </b>
+              <div class="d-flex align-items-center">
+                <span>${balanceDisplay}</span>
+              </div>
+            </small>
+            <small>
+              <b class="text-muted">Cofrinhos</b>
+              <div class="d-flex align-items-center">
+                <span>${savingsDisplay}</span>
+              </div>
+            </small>
+          </div>
+
+          <a href="#" class="text-color fw-bold" style="text-decoration:none;font-size:13px;">Ver Extrato</a>
         </div>
-        <button class="swipe-delete-btn" type="button">Excluir</button>
       </div>
-    `;
+      <button class="swipe-delete-btn" type="button">Excluir</button>
+    </div>
+  `;
             }
-            function storeAccount(acc){ list.insertAdjacentHTML('beforeend', renderAccount(acc)); }
+
+
+            function storeAccount(acc, savingsMap){ list.insertAdjacentHTML('beforeend', renderAccount(acc, savingsMap)); }
 
             async function loadAccounts(){
                 try{
-                    const res = await fetch(ROUTES.index, { headers:{ 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' }});
-                    if(!res.ok) throw new Error('Erro ao carregar contas.');
-                    const data = await res.json();
+                    const [resAcc, resSav] = await Promise.all([
+                        fetch(ROUTES.index,  { headers:{ 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' }}),
+                        fetch(ROUTES.savings,{ headers:{ 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' }})
+                    ]);
+
+                    if(!resAcc.ok) throw new Error('Erro ao carregar contas.');
+
+                    const accPayload = await resAcc.json();
+                    const savPayload = resSav.ok ? await resSav.json() : [];
+
+                    const accounts = ensureArray(accPayload);
+                    const savings  = ensureArray(savPayload);
+                    const map = buildSavingsMap(savings); // account_id => soma(current_amount)
+
                     list.innerHTML='';
-                    (Array.isArray(data)?data:Object.values(data||{})).forEach(storeAccount);
-                }catch(err){ alert(err.message); }
+                    accounts.forEach(a => list.insertAdjacentHTML('beforeend', renderAccount(a, map)));
+                }catch(err){
+                    alert(err.message);
+                }
             }
+
 
             // ===== submit create/edit =====
             form.addEventListener('submit', async (e)=>{
@@ -454,5 +421,4 @@
             window.addEventListener('DOMContentLoaded', loadAccounts);
         })();
     </script>
-
 @endsection

@@ -1,3 +1,7 @@
+@push('styles')
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+@endpush
+
 <div class="row">
     <x-select col="6" set="" name="account_id" id="account_id" title="Banco vinculado">
         @foreach($accounts as $account)
@@ -25,7 +29,7 @@
 
 <div class="row">
     <x-input col="6" set="" type="color" title="Cor do cartão" id="color_card" name="color_card" value="{{ old('color_card', $card->color_card ?? '#000000') }}" disabled=""></x-input>
-    <x-input-range col="" set="" rangeInput="credit_limit" rangeValue="creditLimite" name="credit_limit" min="0" max="50000" value="132" title="Limite do cartão"></x-input-range>
+    <x-input-price col="6" title="Valor" id="amount" name="amount"/>
 </div>
 
 <div class="row">
@@ -33,11 +37,11 @@
     <x-input col="6" set="" type="number" title="Vencimento" id="due_day" name="due_day" value="{{ old('due_day', $card->due_day ?? '') }}" disabled=""></x-input>
 </div>
 
-@push('styles')
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-@endpush
 @push('scripts')
+    <script src="{{asset('assets/js/common/mask_price_input.js')}}"></script>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         $(function(){

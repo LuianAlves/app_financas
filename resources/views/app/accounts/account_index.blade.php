@@ -205,10 +205,7 @@
             function fillForm(acc){
                 setVal('bank_name', acc.bank_name);
                 setVal('account_type', acc.account_type);
-                setVal('agency', acc.agency);
-                setVal('number', acc.number);
-                setVal('opening_balance', acc.opening_balance);
-                setVal('color', acc.color);
+                setVal('current_balance', acc.current_balance);
             }
 
             function openModal(mode, item){

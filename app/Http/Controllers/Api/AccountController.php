@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Account;
 use App\Models\Card;
+use App\Models\Saving;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -89,12 +90,21 @@ class AccountController extends Controller
     {
         $account = $this->account->with('savings')->find($id);
 
-
         $cards = Card::where('account_id', $account->id)->get();
 
-        $cards->each(function ($card) {
-            $card->delete();
-        });
+        if($cards) {
+            $cards->each(function ($card) {
+                $card->delete();
+            });
+        }
+
+        $savings = Saving::where('account_id', $account->id)->get();
+
+        if($savings) {
+            $savings->each(function ($saving) {
+                $saving->delete();
+            });
+        }
 
         $account->delete();
 

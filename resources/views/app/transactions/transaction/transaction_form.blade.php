@@ -1,12 +1,3 @@
-
-
-
-
-<!-- -->
-<!-- -->
-<!-- -->
-
-
 <!-- Name/Category -->
 <div class="row">
     <x-input col="6" type="text" title="Título" id="title" name="title" placeholder="Ex: Pagamento aluguel"/>
@@ -25,7 +16,7 @@
 
 <!-- Price/Date -->
 <div class="row">
-    <x-input col="6" type="number" step="0.01" title="Valor" id="amount" name="amount" placeholder="R$ 0,00"/>
+    <x-input-price col="6" title="Valor" id="amount" name="amount"/>
     <x-input col="6" type="date" title="Data (início)" id="date" name="date"/>
 </div>
 
@@ -113,6 +104,8 @@
 </div>
 
 @push('scripts')
+    <script src="{{asset('assets/js/common/mask_price_input.js')}}"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const $ = id => document.getElementById(id);

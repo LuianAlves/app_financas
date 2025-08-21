@@ -15,7 +15,7 @@ return new class extends Migration
                 $table->uuid('id')->primary();
 
                 $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
-                $table->foreignUuid('card_id')->nullable()->constrained('cards')->onDelete('set null');
+                $table->foreignUuid('card_id')->nullable()->constrained('cards')->onDelete('cascade');
                 $table->foreignUuid('transaction_category_id')->constrained('transaction_categories')->onDelete('cascade');
 
                 $table->string('title')->nullable();

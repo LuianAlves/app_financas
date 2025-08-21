@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Account;
+use App\Models\Card;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -31,11 +32,13 @@ class AccountController extends Controller
                 $account->saving_amount = $account->savings[0]->current_amount;
 
                 $account->total = brlPrice($account->total);
+                $account->bank_name = strtoupper($account->bank_name);
             } else {
                 $account->total = brlPrice($account->current_balance);
 
                 $account->current_balance = brlPrice($account->current_balance);
                 $account->saving_amount = brlPrice(0);
+                $account->bank_name = strtoupper($account->bank_name);
             }
 
         });
@@ -87,8 +90,11 @@ class AccountController extends Controller
         $account = $this->account->with('savings')->find($id);
 
 
-        $card = $this->account->card()->get();
-        dd($card);
+        $cards = Card::where('account_id', $account->id)->get();
+
+        $cards->each(function ($card) {
+            $card->delete();
+        });
 
         $account->delete();
 

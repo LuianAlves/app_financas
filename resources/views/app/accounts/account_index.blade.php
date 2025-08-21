@@ -108,6 +108,11 @@
     </div>
 
     <style>
+        .balance-box {
+            padding: 20px !important;
+            margin: 0 !important;
+        }
+
         /* Swipe base */
         .swipe-list{list-style:none;margin:0;padding:0}
         .swipe-item{position:relative;overflow:hidden;background:#fff;border-bottom:1px solid #eee;touch-action:pan-y;user-select:none}
@@ -144,18 +149,14 @@
     </style>
 
     <script>
-        let suppressShowUntil = 0;
-        const suppressShow = (ms = 800) => { suppressShowUntil = Date.now() + ms; };
-
-        (()=>{
-
-            // ===== Elements =====
-            const list   = document.getElementById('accountList');
-            const modalEl= document.getElementById('modalAccount');
-            const form   = document.getElementById('formAccount');
-            const saveBtn= form.querySelector('button[type="submit"]');
-            const openBtn= document.getElementById('openModal');
-            const closeBtn=document.getElementById('closeModal'); // do x-modal
+        (() => {
+            // ===== els/consts =====
+            const list    = document.getElementById('accountList');
+            const modalEl = document.getElementById('modalAccount');
+            const form    = document.getElementById('formAccount');
+            const saveBtn = form.querySelector('button[type="submit"]');
+            const openBtn = document.getElementById('openModal');
+            const closeBtn= document.getElementById('closeModal'); // do x-modal
 
             const confirmEl = document.getElementById('confirmDeleteAccount');
             const confirmOk = confirmEl.querySelector('[data-action="confirm"]');
@@ -172,14 +173,14 @@
 
             const OPEN_W=96, TH_OPEN=40;
 
-            // ===== State =====
+            // ===== state =====
             let currentMode='create'; // create|edit|show
             let currentId=null;
             let swipe={active:null,startX:0,dragging:false};
             let pendingDeleteId=null;
             let suppressShowUntil=0;
 
-            // ===== Utils =====
+            // ===== utils =====
             function u(t,id){ return t.replace(':id', id); }
             function brl(v){
                 const n = typeof v==='number' ? v : parseFloat(String(v??'').replace(/[^\d.-]/g,''));
@@ -188,7 +189,7 @@
             function setVal(id, val){ const el=form.querySelector('#'+id); if(el) el.value=(val??''); }
             function suppressShow(ms=800){ suppressShowUntil = Date.now()+ms; }
 
-            // ===== Modal =====
+            // ===== modal =====
             let outsideHandler=null, touchBlocker=null, modalOpenedAt=0;
 
             function setFormMode(mode){
@@ -220,7 +221,7 @@
 
                 modalEl.addEventListener('click', modalClickCloser, true);
 
-                // fechar clicando fora
+                // clicar fora fecha
                 outsideHandler = (ev)=>{
                     if (!modalEl.classList.contains('show')) return;
                     if (Date.now()-modalOpenedAt < 120) return; // anti-bounce
@@ -262,7 +263,7 @@
             openBtn.addEventListener('click', ()=>{ currentId=null; openModal('create', null); });
             if (closeBtn) closeBtn.addEventListener('click', closeModal);
 
-            // ===== Confirm =====
+            // ===== confirm =====
             let confirmOpenedAt=0;
             function openConfirm(){ confirmOpenedAt=Date.now(); confirmEl.hidden=false; confirmEl.classList.add('show'); document.body.classList.add('modal-open'); }
             function closeConfirm(){ confirmEl.classList.remove('show'); confirmEl.hidden=true; document.body.classList.remove('modal-open'); }
@@ -270,53 +271,52 @@
             confirmCancel.forEach(b=> b.addEventListener('click', closeConfirm));
             confirmEl.addEventListener('click', (e)=>{ if(e.target===confirmEl){ if(Date.now()-confirmOpenedAt<150) return; closeConfirm(); } });
 
-            // ===== Render =====
+            // ===== render =====
             function renderAccount(acc){
+                console.log(acc)
+
                 const id = acc.id ?? acc.uuid;
-                const saldoConta = parseFloat(acc.current_balance ?? acc.balance ?? 0) || 0;
-                const saldoCofrinho = parseFloat(acc.saving_amount ?? (acc.savings?.[0]?.current_amount ?? 0)) || 0;
-                const total = saldoConta + saldoCofrinho;
                 const date = acc.created_at ? String(acc.created_at).slice(0,10) : '';
                 const label = acc.account_type || 'conta';
                 const color = acc.color || '#666';
 
                 return `
-          <div class="swipe-item" data-id="${id}">
-            <button class="swipe-edit-btn" type="button">Editar</button>
-            <div class="swipe-content">
-              <div class="balance-box">
-                <div class="tx-line">
-                  <div class="d-flex justify-content-between flex-column">
-                    <span class="tx-title">${acc.bank_name ?? 'Sem título'}</span>
-                    <small class="tx-date">Em ${date}</small>
-                  </div>
-                  <div class="text-end">
-                    <span class="tx-amount" style="color:${color}">${brl(total)}</span><br>
-                    <span class="badge" style="font-size:10px;background:${color};color:#fff">${label}</span>
-                  </div>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
-                  <small>
-                    <b class="text-muted">Na conta </b>
-                    <div class="d-flex align-items-center">
-                      <span>${brl(saldoConta)}</span>
-                    </div>
-                  </small>
-                  <small>
-                    <b class="text-muted">Cofrinhos</b>
-                    <div class="d-flex align-items-center">
-                      <span>${brl(saldoCofrinho)}</span>
-                    </div>
-                  </small>
-                </div>
-
-                <a href="#" class="text-color fw-bold" style="text-decoration:none;font-size:13px;">Ver Extrato</a>
+      <div class="swipe-item" data-id="${id}">
+        <button class="swipe-edit-btn" type="button">Editar</button>
+        <div class="swipe-content">
+          <div class="balance-box">
+            <div class="tx-line">
+              <div class="d-flex justify-content-between flex-column">
+                <span class="tx-title">${acc.bank_name ?? 'Sem título'}</span>
+<!--                <small class="tx-date">Em ${date}</small>-->
+              </div>
+              <div class="text-end">
+                <span class="tx-amount" style="color:${color}">${acc.total}</span><br>
+<!--                <span class="badge" style="font-size:10px;background:${color};color:#fff">${label}</span>-->
               </div>
             </div>
-            <button class="swipe-delete-btn" type="button">Excluir</button>
+
+            <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
+              <small>
+                <b class="text-muted">Na conta </b>
+                <div class="d-flex align-items-center">
+                  <span>${acc.current_balance}</span>
+                </div>
+              </small>
+              <small>
+                <b class="text-muted">Cofrinhos</b>
+                <div class="d-flex align-items-center">
+                  <span>${acc.saving_amount}</span>
+                </div>
+              </small>
+            </div>
+
+            <a href="#" class="text-color fw-bold" style="text-decoration:none;font-size:13px;">Ver Extrato</a>
           </div>
-        `;
+        </div>
+        <button class="swipe-delete-btn" type="button">Excluir</button>
+      </div>
+    `;
             }
             function storeAccount(acc){ list.insertAdjacentHTML('beforeend', renderAccount(acc)); }
 
@@ -330,7 +330,7 @@
                 }catch(err){ alert(err.message); }
             }
 
-            // ===== Submit (create/edit) =====
+            // ===== submit create/edit =====
             form.addEventListener('submit', async (e)=>{
                 e.preventDefault();
                 if (currentMode==='edit') form.querySelectorAll('[disabled]').forEach(el=>el.disabled=false);
@@ -349,7 +349,7 @@
                 }catch(err){ alert(err.message); }
             });
 
-            // ===== Swipe =====
+            // ===== swipe =====
             function closeAll(){ list.querySelectorAll('.swipe-item.open-left,.swipe-item.open-right').forEach(li=>li.classList.remove('open-left','open-right')); }
             function drag(li, px){ const c=li.querySelector('.swipe-content'); c.style.transition='none'; const clamp=Math.max(-OPEN_W,Math.min(OPEN_W,px)); c.style.transform=`translateX(${clamp}px)`; }
             function restore(li){ const c=li.querySelector('.swipe-content'); requestAnimationFrame(()=> c.style.transition='transform 160ms ease'); }
@@ -385,34 +385,45 @@
             window.addEventListener('mouseup', onEnd);
             document.addEventListener('click', (e)=>{ if(!e.target.closest('.swipe-item')) closeAll(); });
 
-            // ===== Edit/Delete (captura) =====
-            list.addEventListener('click', (e)=>{
-                const btn = e.target.closest('.swipe-edit-btn, .swipe-delete-btn');
-                if(!btn) return;
-                e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-                suppressShow(); // <- evita cair no SHOW
-
-                const li = btn.closest('.swipe-item'); const id = li?.dataset.id; if(!id) return;
+            // ===== editar/excluir (captura + supressor) =====
+            async function handleEdit(id){
                 currentId = id;
+                const res = await fetch(u(ROUTES.show, id), { headers:{ 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' }});
+                if(!res.ok){ alert('Erro ao carregar conta.'); return; }
+                const acc = await res.json();
+                openModal('edit', acc);
+            }
+            function handleAskDelete(id){ pendingDeleteId = id; openConfirm(); }
 
-                if (btn.classList.contains('swipe-edit-btn')){
-                    (async ()=>{
-                        try{
-                            const res = await fetch(u(ROUTES.show, id), { headers:{ 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' }});
-                            if(!res.ok) throw new Error('Erro ao carregar conta.');
-                            const acc = await res.json();
-                            openModal('edit', acc);
-                        }catch(err){ alert(err.message); }
-                    })();
-                } else {
-                    pendingDeleteId = id;
-                    openConfirm();
+            const actionHandler = (e)=>{
+                if (document.body.classList.contains('modal-open')) return;
+                const btn = e.target.closest('.swipe-edit-btn, .swipe-delete-btn');
+                if (!btn) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+
+                suppressShow(); // evita cair no SHOW depois
+
+                const li = btn.closest('.swipe-item');
+                const id = li?.dataset.id;
+                if (!id) return;
+
+                if (btn.classList.contains('swipe-edit-btn')) handleEdit(id);
+                else handleAskDelete(id);
+            };
+            list.addEventListener('touchstart', actionHandler, {capture:true, passive:false});
+            list.addEventListener('pointerdown', actionHandler, true);
+            list.addEventListener('click', (e)=>{
+                if (e.target.closest('.swipe-edit-btn, .swipe-delete-btn')) {
+                    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
                 }
             }, true);
 
-            // ===== Tap = SHOW (retorna cedo se suprimido) =====
+            // ===== tap = show (retorna cedo se suprimido) =====
             list.addEventListener('click', async (e)=>{
-                if (Date.now() < suppressShowUntil) return;   // *** ESSA LINHA É O PULO DO GATO ***
+                if (Date.now() < suppressShowUntil) return;
 
                 const content = e.target.closest('.swipe-content'); if(!content) return;
                 const li = content.closest('.swipe-item'); if(!li) return;
@@ -428,6 +439,7 @@
                 }catch(err){ alert(err.message); }
             });
 
+            // ===== delete =====
             async function doDelete(){
                 if(!pendingDeleteId) return;
                 const res = await fetch(u(ROUTES.destroy, pendingDeleteId), {
@@ -438,9 +450,9 @@
                 pendingDeleteId=null;
             }
 
-            // ===== Start =====
+            // ===== start =====
             window.addEventListener('DOMContentLoaded', loadAccounts);
-
         })();
     </script>
+
 @endsection

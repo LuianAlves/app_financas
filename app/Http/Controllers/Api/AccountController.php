@@ -86,6 +86,10 @@ class AccountController extends Controller
     {
         $account = $this->account->with('savings')->find($id);
 
+
+        $card = $this->account->card()->get();
+        dd($card);
+
         $account->delete();
 
         return response()->json(null, 204);

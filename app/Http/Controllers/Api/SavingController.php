@@ -101,16 +101,16 @@ class SavingController extends Controller
         return response()->json($saving, 201);
     }
 
-    public function show(Saving $saving)
+    public function show($id)
     {
-        $this->authorize('view', $saving);
+        $saving = Saving::where('id', $id)->first();
+
+
         return response()->json($saving->load('account'));
     }
 
-    public function update(Request $request, Saving $saving)
+    public function update(Request $request, $id)
     {
-        $this->authorize('update', $saving);
-
         $data = $request->validate([
             'name'           => 'sometimes|string|max:255',
             'current_amount' => 'sometimes',
@@ -124,7 +124,8 @@ class SavingController extends Controller
             ],
         ]);
 
-        // normalizações dos campos presentes
+        $saving = Saving::where('id', $id)->first();
+
         foreach (['current_amount','purchase_value','interest_rate'] as $f) {
             if (array_key_exists($f, $data)) {
                 $data[$f] = $this->norm($data[$f]);
@@ -184,9 +185,9 @@ class SavingController extends Controller
         return response()->json($saving);
     }
 
-    public function destroy(Saving $saving)
+    public function destroy($id)
     {
-        $this->authorize('delete', $saving);
+        $saving = Saving::where('id', $id)->first();
 
         DB::transaction(function () use ($saving) {
             if ($saving->account_id && $saving->current_amount > 0) {

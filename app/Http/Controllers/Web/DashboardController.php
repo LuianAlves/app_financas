@@ -830,43 +830,59 @@ class DashboardController extends Controller
         $accountsBalance = (float) Account::whereIn('accounts.user_id', $userIds)->sum('current_balance');
 
         // totais projetados (transações/recorrentes)
-        $proj = $this->sumProjectedEntriesAndExpenses($userIds, $rangeStart, $rangeEnd);
-        $receivable   = (float) ($proj['aReceber'] ?? 0);
-        $payableTx    = (float) ($proj['aPagar']   ?? 0);
+        $proj        = $this->sumProjectedEntriesAndExpenses($userIds, $rangeStart, $rangeEnd);
+        $receivable  = (float) ($proj['aReceber'] ?? 0);
 
-        // faturas abertas com vencimento na janela
-        $openInvoices = (float) DB::table('invoices as inv')
+        // === NOVO: somar faturas no breakdown (mês vs atrasados)
+        $monthStart = $rangeEnd->copy()->startOfMonth();
+
+        $rows = DB::table('invoices as inv')
             ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
             ->join('cards as c', 'c.id', '=', 'inv.card_id')
             ->whereIn('inv.user_id', $userIds)
             ->where('inv.paid', false)
-            ->select('inv.current_month','c.due_day', DB::raw('COALESCE(SUM(it.amount),0) as total'))
             ->groupBy('inv.id','inv.current_month','c.due_day')
-            ->get()
-            ->reduce(function ($sum, $row) use ($rangeStart, $rangeEnd) {
-                $base = Carbon::createFromFormat('Y-m', $row->current_month)->startOfMonth();
-                $due  = $base->copy()->day(min((int)($row->due_day ?: 1), $base->daysInMonth));
-                if ($due->betweenIncluded($rangeStart, $rangeEnd)) $sum += (float)$row->total;
-                return $sum;
-            }, 0.0);
+            ->select('inv.current_month','c.due_day', DB::raw('COALESCE(SUM(it.amount),0) as total'))
+            ->get();
 
-        $aPagar       = round(abs($payableTx) + abs($openInvoices), 2);
-        $saldoPrevisto= round($accountsBalance + $receivable - $aPagar, 2);
-        $savingsBalance = (float) Saving::whereIn('savings.user_id', $userIds)->sum('current_amount');
+        $invMes = 0.0;
+        $invAtras = 0.0;
+
+        foreach ($rows as $r) {
+            $base  = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
+            $due   = $base->copy()->day(min((int)($r->due_day ?: 1), $base->daysInMonth));
+            $total = (float) $r->total;
+            if ($total <= 0) continue;
+
+            if ($due->lt($monthStart)) {
+                $invAtras += $total;                           // faturas vencidas antes do mês-alvo
+            } elseif ($due->betweenIncluded($monthStart, $rangeEnd)) {
+                $invMes += $total;                             // faturas que vencem no mês-alvo
+            }
+            // faturas com vencimento > $rangeEnd ficam fora desta visão
+        }
+
+        // soma final do a pagar: transações + faturas (mês + atrasados)
+        $aPagar_mes        = round(($proj['aPagar_mes'] ?? 0) + $invMes, 2);
+        $aPagar_atrasados  = round(($proj['aPagar_atrasados'] ?? 0) + $invAtras, 2);
+        $aPagar            = $aPagar_mes + $aPagar_atrasados;
+
+        $saldoPrevisto     = round($accountsBalance + $receivable - $aPagar, 2);
+        $savingsBalance    = (float) Saving::whereIn('savings.user_id', $userIds)->sum('current_amount');
 
         return [
             'accountsBalance'     => round($accountsBalance, 2),
             'savingsBalance'      => round($savingsBalance, 2),
 
             'aReceber'            => round($receivable, 2),
-            'aPagar'              => $aPagar,
+            'aPagar'              => round($aPagar, 2),
             'saldoPrevisto'       => $saldoPrevisto,
 
-            // repassa o breakdown para quem chamar (kpis())
+            // breakdown (agora COM faturas)
             'aReceber_mes'        => (float)($proj['aReceber_mes'] ?? 0),
             'aReceber_atrasados'  => (float)($proj['aReceber_atrasados'] ?? 0),
-            'aPagar_mes'          => (float)($proj['aPagar_mes'] ?? 0),
-            'aPagar_atrasados'    => (float)($proj['aPagar_atrasados'] ?? 0),
+            'aPagar_mes'          => $aPagar_mes,
+            'aPagar_atrasados'    => $aPagar_atrasados,
         ];
     }
 

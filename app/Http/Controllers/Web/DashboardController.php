@@ -260,19 +260,20 @@ class DashboardController extends Controller
             ->whereHas('transaction', function ($q) {
                 $q->whereIn('recurrence_type', ['monthly','yearly'])
                     ->where(function ($q2) {
-                        $q2->where('transactions.type', '!=', 'card')
+                        $q2->where('transactions.type','!=','card')
                             ->orWhereNull('transactions.type')
-                            ->orWhere(function ($qq) {
-                                $qq->where('transactions.type', 'card')
-                                    ->where('transactions.type_card', '!=', 'credit');
-                            });
+                            ->orWhere(fn($qq)=>$qq->where('transactions.type','card')->where('transactions.type_card','!=','credit'));
                     })
                     ->where(function ($q3) {
                         $q3->whereNull('transactions.title')
-                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', [
-                                'total fatura', 'fatura total', 'total da fatura'
-                            ]);
+                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', ['total fatura','fatura total','total da fatura']);
                     });
+            })
+            // ⬇️ troque por whereNotExists
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('custom_item_recurrents as cir')
+                    ->whereColumn('cir.recurrent_id', 'recurrents.id');
             })
             ->get(['recurrents.id','recurrents.user_id','recurrents.transaction_id','recurrents.payment_day','recurrents.amount']);
 
@@ -311,38 +312,39 @@ class DashboardController extends Controller
             ->with(['transaction.transactionCategory:id,name,type,color,icon'])
             ->whereIn('recurrents.user_id', $userIds)
             ->whereHas('transaction', function ($q) {
-                $q->where('recurrence_type', 'custom')
+                $q->whereIn('recurrence_type', ['custom','monthly','yearly'])
                     ->where(function ($q2) {
-                        $q2->where('transactions.type', '!=', 'card')
+                        $q2->where('transactions.type','!=','card')
                             ->orWhereNull('transactions.type')
-                            ->orWhere(function ($qq) {
-                                $qq->where('transactions.type', 'card')
-                                    ->where('transactions.type_card', '!=', 'credit');
-                            });
+                            ->orWhere(fn($qq)=>$qq->where('transactions.type','card')->where('transactions.type_card','!=','credit'));
                     })
                     ->where(function ($q3) {
                         $q3->whereNull('transactions.title')
-                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', [
-                                'total fatura', 'fatura total', 'total da fatura'
-                            ]);
+                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', ['total fatura','fatura total','total da fatura']);
                     });
+            })
+            // ⬇️ só quem realmente TEM itens custom
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('custom_item_recurrents as cir')
+                    ->whereColumn('cir.recurrent_id', 'recurrents.id');
             })
             ->get(['recurrents.id','recurrents.user_id','recurrents.transaction_id']);
 
         foreach ($recC as $r) {
             $t = $r->transaction; if (!$t) continue;
+            // só emite se houver itens custom
+            $items = CustomItemRecurrents::where('recurrent_id', $r->id)
+                ->get(['payment_day','reference_month','reference_year','amount','custom_occurrence_number']);
 
-            if ($this->isInvoiceControlTitle($t->title) || $t->type === 'card') continue;
+            if ($items->isEmpty()) continue; // evita colisão com o bloco recMY (sem término)
 
             $cat  = $t->transactionCategory;
             $type = in_array($cat?->type, ['entrada','despesa','investimento'], true) ? $cat->type : 'investimento';
 
-            $items = CustomItemRecurrents::where('recurrent_id', $r->id)
-                ->get(['payment_day','reference_month','reference_year','amount','custom_occurrence_number']);
-
             foreach ($items as $ci) {
-                $daysIn = Carbon::create($ci->reference_year, $ci->reference_month, 1)->daysInMonth;
-                $occ = Carbon::create($ci->reference_year, $ci->reference_month, min((int)$ci->payment_day, $daysIn));
+                $daysIn = \Carbon\Carbon::create($ci->reference_year, $ci->reference_month, 1)->daysInMonth;
+                $occ = \Carbon\Carbon::create($ci->reference_year, $ci->reference_month, min((int)$ci->payment_day, $daysIn));
                 if (!$occ->betweenIncluded($winStart, $winEnd)) continue;
 
                 $events->push($this->ev($r->id,'c',$t,$cat,$type,$occ,(float)$ci->amount,$ci->custom_occurrence_number));
@@ -679,62 +681,6 @@ class DashboardController extends Controller
             ->values();
     }
 
-//    private function kpisForMonth(Collection $userIds, Carbon $startOfMonth, Carbon $endOfMonth): array
-//    {
-//        $accountsBalance = (float) Account::whereIn('accounts.user_id', $userIds)->sum('current_balance');
-//
-//        $receivable = (float) Transaction::query()
-//            ->join('transaction_categories as tc', 'tc.id','=','transactions.transaction_category_id')
-//            ->leftJoin('payment_transactions as pt', 'pt.transaction_id','=','transactions.id')
-//            ->whereIn('transactions.user_id', $userIds)
-//            ->whereBetween('transactions.date', [$startOfMonth, $endOfMonth])
-//            ->whereRaw('LOWER(TRIM(tc.type)) = ?', ['entrada'])
-//            ->whereNull('pt.id')                      // ainda não confirmado
-//            ->sum('transactions.amount');
-//
-//        $payableTx = (float) Transaction::query()
-//            ->join('transaction_categories as tc', 'tc.id','=','transactions.transaction_category_id')
-//            ->leftJoin('payment_transactions as pt', 'pt.transaction_id','=','transactions.id')
-//            ->whereIn('transactions.user_id', $userIds)
-//            ->whereBetween('transactions.date', [$startOfMonth, $endOfMonth])
-//            ->whereRaw('LOWER(TRIM(tc.type)) = ?', ['despesa'])
-//            ->where(function ($q) {
-//                $q->where('transactions.type','!=','card')
-//                    ->orWhereNull('transactions.type')
-//                    ->orWhere(fn($qq)=>$qq->where('transactions.type','card')->where('transactions.type_card','!=','credit'));
-//            })
-//            ->whereNull('pt.id')                      // ainda não confirmado
-//            ->sum('transactions.amount');
-//
-//        $openInvoices = (float) DB::table('invoices as inv')
-//            ->leftJoin('invoice_items as it','it.invoice_id','=','inv.id')
-//            ->join('cards as c','c.id','=','inv.card_id')
-//            ->whereIn('inv.user_id', $userIds)
-//            ->where('inv.paid', false)
-//            ->select('inv.current_month','c.due_day', DB::raw('COALESCE(SUM(it.amount),0) as total'))
-//            ->groupBy('inv.id','inv.current_month','c.due_day')
-//            ->get()
-//            ->reduce(function ($sum,$row) use ($startOfMonth,$endOfMonth){
-//                $base = Carbon::createFromFormat('Y-m',$row->current_month)->startOfMonth();
-//                $due  = $base->copy()->day(min((int)($row->due_day ?: 1), $base->daysInMonth));
-//                if ($due->betweenIncluded($startOfMonth,$endOfMonth)) $sum += (float)$row->total;
-//                return $sum;
-//            }, 0.0);
-//
-//        $aPagar = abs($payableTx) + abs($openInvoices);
-//
-//        $saldoReal     = $accountsBalance;                     // agora (sem projeção)
-//        $saldoPrevisto = $accountsBalance + $receivable - $aPagar;
-//
-//        return [
-//            'accountsBalance' => round($accountsBalance, 2),
-//            'aReceber'        => round($receivable, 2),
-//            'aPagar'          => round($aPagar, 2),
-//            'saldoReal'       => round($saldoReal, 2),
-//            'saldoPrevisto'   => round($saldoPrevisto, 2),
-//        ];
-//    }
-
     private function kpisForMonth(Collection $userIds, Carbon $startOfMonth, Carbon $endOfMonth): array {
         return $this->kpisForRange($userIds, $startOfMonth, $endOfMonth);
     }
@@ -763,6 +709,10 @@ class DashboardController extends Controller
             'savingsBalance'      => $kpis['savingsBalance'],        // novo
             'aReceber'            => $kpis['aReceber'],
             'aPagar'              => $kpis['aPagar'],
+            'aReceber_mes_brl'       => brlPrice($kpis['aReceber_mes'] ?? 0),
+            'aReceber_atrasados_brl' => brlPrice($kpis['aReceber_atrasados'] ?? 0),
+            'aPagar_mes_brl'         => brlPrice($kpis['aPagar_mes'] ?? 0),
+            'aPagar_atrasados_brl'   => brlPrice($kpis['aPagar_atrasados'] ?? 0),
             'saldoPrevisto'       => $kpis['saldoPrevisto'],
             'accountsBalance_brl' => brlPrice($kpis['accountsBalance']),
             'savingsBalance_brl'  => brlPrice($kpis['savingsBalance']), // novo
@@ -877,14 +827,14 @@ class DashboardController extends Controller
 
     private function kpisForRange(Collection $userIds, Carbon $rangeStart, Carbon $rangeEnd): array
     {
-        $accountsBalance = (float) Account::whereIn('accounts.user_id', $userIds)
-            ->sum('current_balance');
+        $accountsBalance = (float) Account::whereIn('accounts.user_id', $userIds)->sum('current_balance');
 
-        // === NOVO: entradas/saídas projetadas por ocorrências
-        ['aReceber' => $receivable, 'aPagar' => $payableTx] =
-            $this->sumProjectedEntriesAndExpenses($userIds, $rangeStart, $rangeEnd);
+        // totais projetados (transações/recorrentes)
+        $proj = $this->sumProjectedEntriesAndExpenses($userIds, $rangeStart, $rangeEnd);
+        $receivable   = (float) ($proj['aReceber'] ?? 0);
+        $payableTx    = (float) ($proj['aPagar']   ?? 0);
 
-        // Faturas abertas (mantém como estava)
+        // faturas abertas com vencimento na janela
         $openInvoices = (float) DB::table('invoices as inv')
             ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
             ->join('cards as c', 'c.id', '=', 'inv.card_id')
@@ -900,17 +850,23 @@ class DashboardController extends Controller
                 return $sum;
             }, 0.0);
 
-        $aPagar = abs($payableTx) + abs($openInvoices);
-        $saldoPrevisto = $accountsBalance + $receivable - $aPagar;
-
+        $aPagar       = round(abs($payableTx) + abs($openInvoices), 2);
+        $saldoPrevisto= round($accountsBalance + $receivable - $aPagar, 2);
         $savingsBalance = (float) Saving::whereIn('savings.user_id', $userIds)->sum('current_amount');
 
         return [
-            'accountsBalance' => round($accountsBalance, 2),
-            'savingsBalance'  => round($savingsBalance, 2), // <- novo
-            'aReceber'        => round($receivable, 2),
-            'aPagar'          => round($aPagar, 2),
-            'saldoPrevisto'   => round($saldoPrevisto, 2),
+            'accountsBalance'     => round($accountsBalance, 2),
+            'savingsBalance'      => round($savingsBalance, 2),
+
+            'aReceber'            => round($receivable, 2),
+            'aPagar'              => $aPagar,
+            'saldoPrevisto'       => $saldoPrevisto,
+
+            // repassa o breakdown para quem chamar (kpis())
+            'aReceber_mes'        => (float)($proj['aReceber_mes'] ?? 0),
+            'aReceber_atrasados'  => (float)($proj['aReceber_atrasados'] ?? 0),
+            'aPagar_mes'          => (float)($proj['aPagar_mes'] ?? 0),
+            'aPagar_atrasados'    => (float)($proj['aPagar_atrasados'] ?? 0),
         ];
     }
 
@@ -939,25 +895,141 @@ class DashboardController extends Controller
     {
         $paid = $this->paymentsIndex($userIds);
 
-        $sumReceber = 0.0;
-        $sumPagar   = 0.0;
+        $monthStart       = $end->copy()->startOfMonth();
 
-        // ✅ Trabalhe no mês selecionado (1º dia até fim do mês)
-        $monthStart = $end->copy()->startOfMonth();
+        // breakdown
+        $sumReceberMes    = 0.0;
+        $sumPagarMes      = 0.0;
+        $sumReceberOver   = 0.0;
+        $sumPagarOver     = 0.0;
 
-        // ===== ÚNICAS (no mês selecionado)
+        /* ===== ATRASADOS (antes do mês alvo) ===== */
+
+        // únicas atrasadas
+        $uniqueOver = Transaction::withoutGlobalScopes()
+            ->with(['transactionCategory:id,type'])
+            ->whereIn('transactions.user_id', $userIds)
+            ->where('recurrence_type', 'unique')
+            ->whereDate('transactions.date', '<', $monthStart)
+            ->where(function ($q) {
+                $q->where('transactions.type','!=','card')
+                    ->orWhereNull('transactions.type')
+                    ->orWhere(fn($qq)=>$qq->where('transactions.type','card')
+                        ->where('transactions.type_card','!=','credit'));
+            })
+            ->where(function ($q) {
+                $q->whereNull('transactions.title')
+                    ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', [
+                        'total fatura','fatura total','total da fatura'
+                    ]);
+            })
+            ->get(['id','amount','date','transaction_category_id']);
+
+        foreach ($uniqueOver as $t) {
+            $type = strtolower($t->transactionCategory?->type ?? '');
+            $ym   = Carbon::parse($t->date)->format('Y-m');
+            if (!empty($paid[$t->id][$ym])) continue;
+            $v = abs((float)$t->amount);
+            if ($type === 'entrada') $sumReceberOver += $v;
+            elseif ($type === 'despesa') $sumPagarOver += $v;
+        }
+
+        // monthly/yearly atrasados
+        $recMYOver = Recurrent::withoutGlobalScopes()
+            ->with(['transaction.transactionCategory:id,type'])
+            ->whereIn('recurrents.user_id', $userIds)
+            ->whereHas('transaction', function ($q) {
+                $q->whereIn('recurrence_type', ['monthly','yearly'])
+                    ->where(function ($q2) {
+                        $q2->where('transactions.type','!=','card')
+                            ->orWhereNull('transactions.type')
+                            ->orWhere(fn($qq)=>$qq->where('transactions.type','card')
+                                ->where('transactions.type_card','!=','credit'));
+                    })
+                    ->where(function ($q3) {
+                        $q3->whereNull('transactions.title')
+                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', [
+                                'total fatura','fatura total','total da fatura'
+                            ]);
+                    });
+            })
+            ->get(['id','transaction_id','payment_day','amount']);
+
+        $limit = $monthStart->copy()->subDay();
+
+        foreach ($recMYOver as $r) {
+            $t      = $r->transaction; if (!$t) continue;
+            $type   = strtolower($t->transactionCategory?->type ?? '');
+            $amount = abs((float)$r->amount);
+
+            $anchor = Carbon::parse($t->date)->startOfDay();
+            $payDay = max(1, (int)$r->payment_day);
+
+            if ($t->recurrence_type === 'monthly') {
+                $cur = $anchor->copy()->day(min($payDay, $anchor->daysInMonth));
+                while ($cur->lte($limit)) {
+                    $ym = $cur->format('Y-m');
+                    if (empty($paid[$t->id][$ym])) {
+                        if ($type === 'entrada') $sumReceberOver += $amount; else $sumPagarOver += $amount;
+                    }
+                    $cur->addMonthNoOverflow()->day(min($payDay, $cur->daysInMonth));
+                }
+            } else { // yearly
+                $anchorMonth = (int) $anchor->month;
+                $cur = Carbon::create($anchor->year, $anchorMonth, 1)
+                    ->day(min($payDay, Carbon::create($anchor->year, $anchorMonth, 1)->daysInMonth));
+                while ($cur->lt($anchor)) $cur->addYear();
+                while ($cur->lte($limit)) {
+                    $ym = $cur->format('Y-m');
+                    if (empty($paid[$t->id][$ym])) {
+                        if ($type === 'entrada') $sumReceberOver += $amount; else $sumPagarOver += $amount;
+                    }
+                    $cur->addYear();
+                }
+            }
+        }
+
+        // custom (itens) atrasados
+        $recCOver = Recurrent::withoutGlobalScopes()
+            ->with(['transaction.transactionCategory:id,type'])
+            ->whereIn('recurrents.user_id', $userIds)
+            ->whereHas('transaction', fn($q) => $q->where('recurrence_type','custom'))
+            ->get(['id','transaction_id']);
+
+        foreach ($recCOver as $r) {
+            $t    = $r->transaction; if (!$t) continue;
+            $type = strtolower($t->transactionCategory?->type ?? '');
+
+            $items = CustomItemRecurrents::where('recurrent_id', $r->id)->get([
+                'payment_day','reference_month','reference_year','amount'
+            ]);
+
+            foreach ($items as $ci) {
+                $daysIn = Carbon::create($ci->reference_year, $ci->reference_month, 1)->daysInMonth;
+                $occ    = Carbon::create($ci->reference_year, $ci->reference_month, min((int)$ci->payment_day, $daysIn));
+                if ($occ->gte($monthStart)) continue;
+
+                $ym = $occ->format('Y-m');
+                if (!empty($paid[$t->id][$ym])) continue;
+
+                $v = abs((float)$ci->amount);
+                if ($type === 'entrada') $sumReceberOver += $v; else $sumPagarOver += $v;
+            }
+        }
+
+        /* ===== MÊS ALVO (monthStart..$end) ===== */
+
+        // únicas no mês
         $uniqueTx = Transaction::withoutGlobalScopes()
             ->with(['transactionCategory:id,type'])
             ->whereIn('transactions.user_id', $userIds)
             ->where('recurrence_type', 'unique')
-            ->whereBetween('transactions.date', [$monthStart, $end])   // << aqui
+            ->whereBetween('transactions.date', [$monthStart, $end])
             ->where(function ($q) {
-                $q->where('transactions.type', '!=', 'card')
+                $q->where('transactions.type','!=','card')
                     ->orWhereNull('transactions.type')
-                    ->orWhere(function ($qq) {
-                        $qq->where('transactions.type', 'card')
-                            ->where('transactions.type_card', '!=', 'credit');
-                    });
+                    ->orWhere(fn($qq)=>$qq->where('transactions.type','card')
+                        ->where('transactions.type_card','!=','credit'));
             })
             ->where(function ($q) {
                 $q->whereNull('transactions.title')
@@ -970,95 +1042,89 @@ class DashboardController extends Controller
         foreach ($uniqueTx as $t) {
             $type = strtolower($t->transactionCategory?->type ?? '');
             $ym   = Carbon::parse($t->date)->format('Y-m');
-            if (!empty($paid[$t->id][$ym])) continue; // já liquidada
+            if (!empty($paid[$t->id][$ym])) continue;
 
-            if ($type === 'entrada')     $sumReceber += abs((float)$t->amount);
-            elseif ($type === 'despesa') $sumPagar   += abs((float)$t->amount);
+            $v = abs((float)$t->amount);
+            if ($type === 'entrada') $sumReceberMes += $v; else if ($type === 'despesa') $sumPagarMes += $v;
         }
 
-        // ===== RECORRENTES MONTHLY / YEARLY (ocorrências do mês selecionado)
+        // monthly/yearly no mês
         $recMY = Recurrent::withoutGlobalScopes()
-            ->with(['transaction.transactionCategory:id,type'])
+            ->with(['transaction.transactionCategory:id,name,type,color,icon'])
             ->whereIn('recurrents.user_id', $userIds)
             ->whereHas('transaction', function ($q) {
                 $q->whereIn('recurrence_type', ['monthly','yearly'])
                     ->where(function ($q2) {
-                        $q2->where('transactions.type', '!=', 'card')
+                        $q2->where('transactions.type','!=','card')
                             ->orWhereNull('transactions.type')
-                            ->orWhere(function ($qq) {
-                                $qq->where('transactions.type', 'card')
-                                    ->where('transactions.type_card', '!=', 'credit');
-                            });
+                            ->orWhere(fn($qq)=>$qq->where('transactions.type','card')->where('transactions.type_card','!=','credit'));
                     })
                     ->where(function ($q3) {
                         $q3->whereNull('transactions.title')
-                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', [
-                                'total fatura','fatura total','total da fatura'
-                            ]);
+                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', ['total fatura','fatura total','total da fatura']);
                     });
             })
-            ->get(['id','transaction_id','payment_day','amount']);
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('custom_item_recurrents as cir')
+                    ->whereColumn('cir.recurrent_id', 'recurrents.id');
+            })
+            ->get(['recurrents.id','recurrents.user_id','recurrents.transaction_id','recurrents.payment_day','recurrents.amount']);
 
         foreach ($recMY as $r) {
             $t      = $r->transaction; if (!$t) continue;
             $type   = strtolower($t->transactionCategory?->type ?? '');
-            $amount = (float)$r->amount;
+            $amount = abs((float)$r->amount);
 
             if ($t->recurrence_type === 'monthly') {
-                // Só o mês-alvo
                 $occ = $monthStart->copy()->day(min((int)$r->payment_day, $monthStart->daysInMonth));
-
                 if ($occ->betweenIncluded($monthStart, $end) && $occ->gte(Carbon::parse($t->date))) {
                     $ym = $occ->format('Y-m');
                     if (empty($paid[$t->id][$ym])) {
-                        if ($type === 'entrada')     $sumReceber += abs($amount);
-                        elseif ($type === 'despesa') $sumPagar   += abs($amount);
+                        if ($type === 'entrada') $sumReceberMes += $amount; else $sumPagarMes += $amount;
                     }
                 }
             } else { // yearly
                 $anchorMonth = (int) Carbon::parse($t->date)->month;
-                // A ocorrência anual deste mês-alvo
                 if ($monthStart->month === $anchorMonth) {
                     $daysIn = $monthStart->daysInMonth;
                     $occ = Carbon::create($monthStart->year, $anchorMonth, min((int)$r->payment_day, $daysIn));
-
                     if ($occ->betweenIncluded($monthStart, $end) && $occ->gte(Carbon::parse($t->date))) {
                         $ym = $occ->format('Y-m');
                         if (empty($paid[$t->id][$ym])) {
-                            if ($type === 'entrada')     $sumReceber += abs($amount);
-                            elseif ($type === 'despesa') $sumPagar   += abs($amount);
+                            if ($type === 'entrada') $sumReceberMes += $amount; else $sumPagarMes += $amount;
                         }
                     }
                 }
             }
         }
 
-        // ===== RECORRENTES CUSTOM (itens)
+        // custom (itens) no mês
         $recC = Recurrent::withoutGlobalScopes()
-            ->with(['transaction.transactionCategory:id,type'])
+            ->with(['transaction.transactionCategory:id,name,type,color,icon'])
             ->whereIn('recurrents.user_id', $userIds)
             ->whereHas('transaction', function ($q) {
-                $q->where('recurrence_type', 'custom')
+                $q->whereIn('recurrence_type', ['custom','monthly','yearly'])
                     ->where(function ($q2) {
-                        $q2->where('transactions.type', '!=', 'card')
+                        $q2->where('transactions.type','!=','card')
                             ->orWhereNull('transactions.type')
-                            ->orWhere(function ($qq) {
-                                $qq->where('transactions.type', 'card')
-                                    ->where('transactions.type_card', '!=', 'credit');
-                            });
+                            ->orWhere(fn($qq)=>$qq->where('transactions.type','card')->where('transactions.type_card','!=','credit'));
                     })
                     ->where(function ($q3) {
                         $q3->whereNull('transactions.title')
-                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', [
-                                'total fatura','fatura total','total da fatura'
-                            ]);
+                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', ['total fatura','fatura total','total da fatura']);
                     });
             })
-            ->get(['id','transaction_id']);
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('custom_item_recurrents as cir')
+                    ->whereColumn('cir.recurrent_id', 'recurrents.id');
+            })
+            ->get(['recurrents.id','recurrents.user_id','recurrents.transaction_id']);
 
         foreach ($recC as $r) {
             $t    = $r->transaction; if (!$t) continue;
-            $type = $this->normType($t->transactionCategory?->type ?? '');
+            $type = strtolower($t->transactionCategory?->type ?? '');
 
             $items = CustomItemRecurrents::where('recurrent_id', $r->id)
                 ->get(['payment_day','reference_month','reference_year','amount']);
@@ -1066,18 +1132,17 @@ class DashboardController extends Controller
             foreach ($items as $ci) {
                 $daysIn = Carbon::create($ci->reference_year, $ci->reference_month, 1)->daysInMonth;
                 $occ = Carbon::create($ci->reference_year, $ci->reference_month, min((int)$ci->payment_day, $daysIn));
-                if (!$occ->betweenIncluded($start, $end)) continue;
+                if (!$occ->betweenIncluded($monthStart, $end)) continue;
 
                 $ym = $occ->format('Y-m');
                 if (!empty($paid[$t->id][$ym])) continue;
 
-                $amount = (float)$ci->amount;
-                if ($type === 'entrada')  $sumReceber += abs($amount);
-                elseif ($type === 'despesa') $sumPagar   += abs($amount);
+                $v = abs((float)$ci->amount);
+                if ($type === 'entrada') $sumReceberMes += $v; else $sumPagarMes += $v;
             }
         }
 
-        // ===== RECORRENTES CUSTOM (X dias) SEM TÉRMINO (sem itens)
+        // custom “a cada X dias” no mês (sem itens)
         $recD = Recurrent::withoutGlobalScopes()
             ->with(['transaction.transactionCategory:id,type'])
             ->whereIn('recurrents.user_id', $userIds)
@@ -1085,12 +1150,10 @@ class DashboardController extends Controller
             ->whereHas('transaction', function ($q) {
                 $q->where('recurrence_type', 'custom')
                     ->where(function ($q2) {
-                        $q2->where('transactions.type', '!=', 'card')
+                        $q2->where('transactions.type','!=','card')
                             ->orWhereNull('transactions.type')
-                            ->orWhere(function ($qq) {
-                                $qq->where('transactions.type', 'card')
-                                    ->where('transactions.type_card', '!=', 'credit');
-                            });
+                            ->orWhere(fn($qq)=>$qq->where('transactions.type','card')
+                                ->where('transactions.type_card','!=','credit'));
                     })
                     ->where(function ($q3) {
                         $q3->whereNull('transactions.title')
@@ -1102,32 +1165,26 @@ class DashboardController extends Controller
             ->get(['recurrents.*']);
 
         foreach ($recD as $r) {
-            // se tiver itens explícitos, deixa o bloco anterior cuidar
             if (DB::table('custom_item_recurrents')->where('recurrent_id', $r->id)->exists()) continue;
 
             $t    = $r->transaction; if (!$t) continue;
-            $type = $this->normType($t->transactionCategory?->type ?? '');
+            $type = strtolower($t->transactionCategory?->type ?? '');
             if (!in_array($type, ['entrada','despesa','investimento'], true)) $type = 'investimento';
 
             $start    = Carbon::parse($r->start_date)->startOfDay();
             $interval = max(1, (int)$r->interval_value);
 
-            // janela do mês alvo apenas
-            $monthStart = $end->copy()->startOfMonth();
             $cursor = $this->firstAlignedDays($start, $monthStart, $interval);
             $cursor = $this->normalizeW($cursor, (bool)$r->include_sat, (bool)$r->include_sun);
 
             while ($cursor->lte($end)) {
-                if ($cursor->lt($monthStart)) { // segurança
-                    $cursor->addDays($interval); continue;
-                }
+                if ($cursor->lt($monthStart)) { $cursor->addDays($interval); continue; }
 
                 $ym = $cursor->format('Y-m');
                 if (empty($paid[$t->id][$ym])) {
-                    $amt = abs((float)$r->amount);
-                    if     ($type === 'entrada')     $sumReceber += $amt;
-                    elseif ($type === 'despesa')     $sumPagar   += $amt;
-                    else /* investimento */          $sumPagar   += $amt; // investimento entra como saída prevista
+                    $v = abs((float)$r->amount);
+                    if ($type === 'entrada') $sumReceberMes += $v;
+                    else /* despesa ou investimento */ $sumPagarMes += $v;
                 }
 
                 $cursor = $this->normalizeW(
@@ -1138,7 +1195,15 @@ class DashboardController extends Controller
             }
         }
 
-        return ['aReceber' => $sumReceber, 'aPagar' => $sumPagar];
+        // totais finais
+        return [
+            'aReceber'              => $sumReceberMes + $sumReceberOver,
+            'aPagar'                => $sumPagarMes   + $sumPagarOver,
+            'aReceber_mes'          => $sumReceberMes,
+            'aReceber_atrasados'    => $sumReceberOver,
+            'aPagar_mes'            => $sumPagarMes,
+            'aPagar_atrasados'      => $sumPagarOver,
+        ];
     }
 
     private function normalizeW(Carbon $d, bool $sat, bool $sun): Carbon

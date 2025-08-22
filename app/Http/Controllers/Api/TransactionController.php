@@ -88,16 +88,23 @@ class TransactionController extends Controller
             'account_id' => 'required_if:type,pix|nullable|uuid|exists:accounts,id',
 
             'type_card' => 'nullable|required_if:type,card|in:credit,debit',
-            'card_id'   => 'required_if:type,card|prohibited_if:alternate_cards,1|nullable|uuid|exists:cards,id',
+
+            'card_id'   => [
+                'exclude_if:alternate_cards,1',   // se alternar=1, ignora todas as regras abaixo
+                'nullable',
+                'required_if:type,card',          // obrigatório se for cartão (quando NÃO alterna)
+                'uuid',
+                'exists:cards,id',
+            ],
+
+            'alternate_cards'      => ['nullable','boolean'],
+            'alternate_card_ids'   => ['required_if:alternate_cards,1','array'],
+            'alternate_card_ids.*' => ['uuid','distinct','exists:cards,id'],
 
             'recurrence_type' => 'nullable|in:unique,monthly,yearly,custom',
             'termination'        => 'nullable|in:no_end,has_end',
             'custom_occurrences' => ['nullable','integer','min:1','required_if:termination,has_end'],
             'interval_value'     => 'required_if:recurrence_type,custom|integer|min:1',
-
-            'alternate_cards'     => ['nullable','boolean'],
-            'alternate_card_ids'  => ['required_if:alternate_cards,1','array'],
-            'alternate_card_ids.*'=> ['uuid','distinct','exists:cards,id'],
 
             'saving_id' => [function($attr,$val,$fail) use ($request) {
                 $cat = \App\Models\TransactionCategory::find($request->transaction_category_id);

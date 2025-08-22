@@ -42,7 +42,7 @@
             /* Swipe base */
             .swipe-list{list-style:none;margin:0;padding:0}
             .swipe-item{position:relative;overflow:hidden;background:#fff;border-bottom:1px solid #eee;touch-action:pan-y;user-select:none}
-            .swipe-content{position:relative;z-index:2;background:#fff;padding:0;transform:translateX(0);transition:transform 160ms ease;will-change:transform}
+            .swipe-content{position:relative;z-index:2;background:#fff;padding:0 !important;transform:translateX(0);transition:transform 160ms ease;will-change:transform}
             .swipe-edit-btn,.swipe-delete-btn{position:absolute;top:0;bottom:0;width:96px;border:0;color:#fff;font-weight:600;z-index:5;pointer-events:none}
             .swipe-edit-btn{left:0;background:#3498db;transform:translateX(-100%)}
             .swipe-delete-btn{right:0;background:#dc3545;transform:translateX(100%)}
@@ -52,7 +52,7 @@
             .swipe-item.open-right .swipe-edit-btn  {transform:translateX(0); pointer-events:auto;}
 
             /* Card visual (mantém seu layout) */
-            .saving-card {background:#00BFA6;border-radius:8px;padding:14px 16px;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.1);margin:10px 12px;transition:.2s}
+            .saving-card {background:#fff;border-radius:8px;padding:14px 16px;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.1);margin: 0 !important;transition:.2s}
             .saving-card:hover {transform:scale(1.01);box-shadow:0 4px 10px rgba(0,0,0,.15)}
             .saving-name{font-size:16px;font-weight:700;margin-bottom:6px;text-shadow:1px 1px 2px rgba(0,0,0,.2)}
             .saving-info{font-size:14px;text-shadow:1px 1px 1px rgba(0,0,0,.2)}
@@ -254,13 +254,9 @@
                 if (currentMode==='edit') form.querySelectorAll('[disabled]').forEach(el=>el.disabled=false);
 
                 const fd = new FormData(form);
-                // normaliza números (seu form pode ter vírgula/ponto)
-                ['current_amount','interest_rate'].forEach(k=>{
-                    const v = fd.get(k);
-                    if (v!=null) fd.set(k, String(v).replace(/\./g,'').replace(',','.'));
-                });
 
                 let url = ROUTES.store, method='POST';
+
                 if (currentMode==='edit' && currentId){ url = u(ROUTES.update, currentId); fd.append('_method','PUT'); }
 
                 try{

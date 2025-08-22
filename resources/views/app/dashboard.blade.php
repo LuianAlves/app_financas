@@ -16,8 +16,11 @@
                 grid-area: stack
             }
 
-            .value-line small { font-weight: 600; }
-            .value-line small .late { color: #dc2626; } /* vermelho */
+            .value-line .value-real, .value-line .value-real .late {
+                display: flex;
+                align-items: center;
+                font-size: 12px !important;
+            }
 
             .preloader-values-sm {
                 width: 75px;
@@ -106,59 +109,44 @@
 
             {{-- Saldo do mês --}}
             <div class="value-line is-loading">
-                <strong class="value-real" id="kpi-balanco"></strong>
+                <strong class="value-real" id="kpi-balanco" style="font-size: 36px !important;"></strong>
                 <div class="preloader-values preloader-values-lg"></div>
             </div>
 
 
             <div class="d-flex justify-content-between flex-column">
 
-                <!-- Saldo contas -->
-                <div class="d-flex justify-content-between">
-                    <b class="text-muted dash-amounts">Saldo contas</b>
-                    <div class="d-flex align-items-center">
-                        <div class="value-line is-loading">
-                            <span class="price-default value-real" id="kpi-contas">{{ brlPrice($accountsBalance) }}</span>
-                            <div class="preloader-values preloader-values-sm"></div>
+                <div class="row">
+                    <!-- Saldo contas -->
+                    <div class="col-12">
+                        <b class="text-primary dash-amounts">Saldo contas</b>
+                        <div class="d-flex align-items-center">
+                            <div class="value-line is-loading w-100">
+                                <span class="price-default value-real d-flex justify-content-between" id="kpi-contas"></span>
+                                <div class="preloader-values preloader-values-sm"></div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Cofrinhos -->
-                <div class="d-flex justify-content-between mb-2">
-                    <b class="text-muted dash-amounts">Cofrinhos</b>
-                    <div class="d-flex align-items-center">
-                        <div class="value-line is-loading">
-                            <span class="price-default value-real" id="kpi-cofrinhos">{{ brlPrice($savingsBalance) }}</span>
-                            <div class="preloader-values preloader-values-sm"></div>
+                    <!-- A receber -->
+                    <div class="col-12">
+                        <b class="text-color dash-amounts">A receber</b>
+                        <div class="d-flex align-items-center">
+                            <div class="value-line is-loading w-100">
+                                <span class="price-default value-real d-flex justify-content-between" id="kpi-receber"></span>
+                                <div class="preloader-values preloader-values-sm"></div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {{-- A receber --}}
-                <div class="d-flex justify-content-between">
-                    <b class="text-muted dash-amounts">A receber</b>
-                    <div class="d-flex align-items-center">
-                        <a href="{{ route('transactionCategory-view.index') }}">
-                            <i class="fa fa-arrow-right text-color mx-2" style="font-size:12px;"></i>
-                        </a>
-                        <div class="value-line is-loading">
-                            <span class="price-default value-real" id="kpi-receber"></span>
-                            <div class="preloader-values preloader-values-sm"></div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- A pagar --}}
-                <div class="d-flex justify-content-between">
-                    <b class="text-muted dash-amounts">A pagar</b>
-                    <div class="d-flex align-items-center">
-                        <a href="{{ route('transactionCategory-view.index') }}">
-                            <i class="fa fa-arrow-right text-danger mx-2" style="font-size:12px;"></i>
-                        </a>
-                        <div class="value-line is-loading">
-                            <span class="price-default value-real" id="kpi-pagar"></span>
-                            <div class="preloader-values preloader-values-sm"></div>
+                    <!-- A pagar -->
+                    <div class="col-12">
+                        <b class="text-danger dash-amounts">A pagar</b>
+                        <div class="d-flex align-items-center">
+                            <div class="value-line is-loading w-100">
+                                <span class="price-default value-real d-flex justify-content-between" id="kpi-pagar"></span>
+                                <div class="preloader-values preloader-values-sm"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -166,8 +154,8 @@
 
             <div class="d-flex justify-content-end align-items-center mt-3">
                 <a href="{{ url()->current() . '?month=' . $startOfMonth->format('Y-m') }}"
-                   class="text-muted fw-bold" style="text-decoration: none; font-size: 13px;">
-                    Extrato do mês<i class="fa fa-chevron-right mx-2" style="font-size: 12px;"></i>
+                   class="text-color fw-bold" style="text-decoration: none; font-size: 13px;">
+                    Extrato do mês
                 </a>
             </div>
         </div>
@@ -350,83 +338,112 @@
 
     <script>
         // === Pagar TRANSAÇÃO (abre modal) ===
-        const PAY_TPL      = @json(route('transaction-payment', ['transaction' => '__ID__']));
+        const PAY_TPL = @json(route('transaction-payment', ['transaction' => '__ID__']));
         const paymentModal = document.getElementById('paymentModal');
-        const paymentForm  = document.getElementById('paymentForm');
-        const inAmount     = document.getElementById('payment_amount');
-        const inDate       = document.getElementById('payment_date');
+        const paymentForm = document.getElementById('paymentForm');
+        const inAmount = document.getElementById('payment_amount');
+        const inDate = document.getElementById('payment_date');
 
         let CURRENT_TX_CARD = null;
 
-        function showPaymentModal(){ paymentModal.classList.add('show'); }
-        function hidePaymentModal(){ paymentModal.classList.remove('show'); }
+        function showPaymentModal() {
+            paymentModal.classList.add('show');
+        }
 
-        function startLoading(...ids){
+        function hidePaymentModal() {
+            paymentModal.classList.remove('show');
+        }
+
+        function startLoading(...ids) {
             ids.forEach(id => {
                 const box = document.getElementById(id)?.closest('.value-line');
-                if (box){ box.classList.add('is-loading'); box.classList.remove('loaded'); }
+                if (box) {
+                    box.classList.add('is-loading');
+                    box.classList.remove('loaded');
+                }
             });
         }
-        function finishLoading(...ids){
+
+        function finishLoading(...ids) {
             ids.forEach(id => {
                 const box = document.getElementById(id)?.closest('.value-line');
-                if (box){ box.classList.remove('is-loading'); box.classList.add('loaded'); }
+                if (box) {
+                    box.classList.remove('is-loading');
+                    box.classList.add('loaded');
+                }
             });
         }
 
         // parser BR/EN robusto
-        function parseMoneyBR(input){
+        function parseMoneyBR(input) {
             if (typeof input === 'number') return input;
             let s = String(input || '').trim();
             s = s.replace(/[^\d.,-]/g, '');
             const lastComma = s.lastIndexOf(','), lastDot = s.lastIndexOf('.');
-            if (lastComma > -1 && lastDot > -1){
-                if (lastComma > lastDot) s = s.replace(/\./g,'').replace(',', '.'); // 1.234,56
+            if (lastComma > -1 && lastDot > -1) {
+                if (lastComma > lastDot) s = s.replace(/\./g, '').replace(',', '.'); // 1.234,56
                 else s = s.replace(/,/g, '');                                       // 1,234.56
-            } else if (lastComma > -1){ s = s.replace(',', '.'); }
+            } else if (lastComma > -1) {
+                s = s.replace(',', '.');
+            }
             return Number(s || 0);
         }
-        const formatBRL = v => Number(v || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+
+        const formatBRL = v => Number(v || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 
         // abrir modal com defaults
         document.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-open-payment]');
             if (!btn) return;
 
-            window.CURRENT_ID       = btn.dataset.id;
-            window.CURRENT_TITLE    = btn.dataset.title || 'Pagamento';
+            window.CURRENT_ID = btn.dataset.id;
+            window.CURRENT_TITLE = btn.dataset.title || 'Pagamento';
             window.CURRENT_DUE_DATE = (btn.dataset.date || '').slice(0, 10);
-            CURRENT_TX_CARD         = btn.closest('.transaction-card') || null;
+            CURRENT_TX_CARD = btn.closest('.transaction-card') || null;
 
             paymentForm.action = PAY_TPL.replace('__ID__', window.CURRENT_ID);
-            inAmount.value     = btn.dataset.amount || '0';
-            inDate.value       = window.CURRENT_DUE_DATE;
+            inAmount.value = btn.dataset.amount || '0';
+            inDate.value = window.CURRENT_DUE_DATE;
 
             showPaymentModal();
         });
 
-        function renderBreakdown(elId, k, root){
+        function renderBreakdown(elId, k, root) {
             const el = document.getElementById(elId);
             if (!el) return;
-            const mes   = k[`${root}_mes_brl`];
+            const mes = k[`${root}_mes_brl`];
             const atras = k[`${root}_atrasados_brl`];
-            const tot   = k[`${root}_brl`];
+            const tot = k[`${root}_brl`];
 
             if (typeof mes === 'string' && typeof atras === 'string') {
-                el.innerHTML = `${mes} <span class="price-default text-danger" style="font-size: 10px !important;"><span class="late">+ ${atras}</span></span>`;
+                el.innerHTML = `${mes}<span class="price-default mx-1"><span class="late"> + ${atras} atrasados</span></span>`;
             } else if (typeof tot === 'string') {
                 el.textContent = tot;
             }
         }
 
+        function renderSaldoCofrinhos(elId, contasBRL, cofrinhosBRL){
+            const el = document.getElementById(elId);
+            if (!el) return;
+
+            const contas = (typeof contasBRL === 'string') ? contasBRL : '';
+            const cofr   = (typeof cofrinhosBRL === 'string') ? cofrinhosBRL : '';
+
+            // se não veio o breakdown, mostra só o saldo das contas
+            el.innerHTML = cofr
+                ? `${contas}<span class="price-default mx-1"><span class="late"> +  ${cofr} cofrinhos</span></span>`
+                : contas;
+        }
+
         function applyKpis(k){
             const $ = id => document.getElementById(id);
-            if (k.accountsBalance_brl) $('kpi-contas').textContent    = k.accountsBalance_brl;
-            if (k.savingsBalance_brl)  $('kpi-cofrinhos').textContent = k.savingsBalance_brl;
 
+            // antes: if (k.accountsBalance_brl) $('kpi-contas').textContent = k.accountsBalance_brl;
+            renderSaldoCofrinhos('kpi-contas', k.accountsBalance_brl, k.savingsBalance_brl);
+
+            if (k.savingsBalance_brl) $('kpi-cofrinhos').textContent = k.savingsBalance_brl; // só se não escondeu esse bloco
             renderBreakdown('kpi-receber', k, 'aReceber');
             renderBreakdown('kpi-pagar',   k, 'aPagar');
-
             $('kpi-balanco').textContent = (k.saldoPrevisto_brl || k.saldoMes_brl || k.saldoReal_brl || '');
         }
 
@@ -447,7 +464,7 @@
                     credentials: 'same-origin'
                 });
 
-                if (resp.status === 422){
+                if (resp.status === 422) {
                     const j = await resp.json();
                     throw new Error(Object.values(j.errors || {})[0]?.[0] || 'Dados inválidos.');
                 }
@@ -455,23 +472,30 @@
 
 
                 // datas
-                const payDate   = (inDate.value || '').slice(0, 10);
-                const dueDate   = (window.CURRENT_DUE_DATE || payDate);
+                const payDate = (inDate.value || '').slice(0, 10);
+                const dueDate = (window.CURRENT_DUE_DATE || payDate);
                 const payAmount = parseMoneyBR(inAmount.value);
 
                 // tenta aplicar KPIs vindos do controller; se não vier JSON, busca do endpoint
-                let data = null; try { data = await resp.json(); } catch(_){}
-                if (data && data.ok){
+                let data = null;
+                try {
+                    data = await resp.json();
+                } catch (_) {
+                }
+                if (data && data.ok) {
                     applyKpis(data);
                 } else if (currentMonth) {
-                    const r = await fetch(`{{ route('dashboard.kpis') }}?month=${currentMonth}`, { headers:{Accept:'application/json'} });
+                    const r = await fetch(`{{ route('dashboard.kpis') }}?month=${currentMonth}`, {headers: {Accept: 'application/json'}});
                     if (r.ok) applyKpis(await r.json());
                 }
 
                 hidePaymentModal();
 
                 // remove card "Próximos pagamentos"
-                if (CURRENT_TX_CARD){ CURRENT_TX_CARD.remove(); CURRENT_TX_CARD = null; }
+                if (CURRENT_TX_CARD) {
+                    CURRENT_TX_CARD.remove();
+                    CURRENT_TX_CARD = null;
+                }
                 paymentForm.reset();
 
                 // Atualiza o calendário em memória (remove ponto vermelho do vencimento e cria azul no dia do pagamento)
@@ -526,7 +550,7 @@
                 window.CURRENT_TITLE = null;
                 window.CURRENT_DUE_DATE = null;
 
-            } catch (err){
+            } catch (err) {
                 alert(err.message || 'Erro ao registrar pagamento.');
             }
         });
@@ -540,23 +564,36 @@
     <script>
         const INVOICE_PAY_TPL = @json(route('invoice-payment.update', ['cardId' => '__CARD__', 'ym' => '__YM__']));
 
-        function renderBreakdown(elId, k, root){
+        function renderBreakdown(elId, k, root) {
             const el = document.getElementById(elId);
             if (!el) return;
-            const mes   = k[`${root}_mes_brl`];
+            const mes = k[`${root}_mes_brl`];
             const atras = k[`${root}_atrasados_brl`];
-            const tot   = k[`${root}_brl`];
+            const tot = k[`${root}_brl`];
 
             if (typeof mes === 'string' && typeof atras === 'string') {
-                el.innerHTML = `${mes} <span class="price-default text-danger" style="font-size: 10px !important;"><span class="late">+ ${atras}</span></span>`;
+                el.innerHTML = `${mes}<span class="price-default mx-1"><span class="late"> + ${atras} atrasados</span></span>`;
             } else if (typeof tot === 'string') {
                 el.textContent = tot;
             }
         }
 
+        function renderSaldoCofrinhos(elId, contasBRL, cofrinhosBRL){
+            const el = document.getElementById(elId);
+            if (!el) return;
+
+            const contas = (typeof contasBRL === 'string') ? contasBRL : '';
+            const cofr   = (typeof cofrinhosBRL === 'string') ? cofrinhosBRL : '';
+
+            el.innerHTML = cofr
+                ? `${contas}<span class="price-default mx-1"><span class="late"> +  ${cofr} cofrinhos</span></span>`
+                : contas;
+        }
+
         function applyKpis(k){
             const $ = id => document.getElementById(id);
-            if ($('kpi-contas')   && k.accountsBalance_brl) $('kpi-contas').textContent   = k.accountsBalance_brl;
+
+            renderSaldoCofrinhos('kpi-contas', k.accountsBalance_brl, k.savingsBalance_brl);
 
             renderBreakdown('kpi-receber', k, 'aReceber');
             renderBreakdown('kpi-pagar',   k, 'aPagar');
@@ -571,9 +608,9 @@
 
             const cardEl = btn.closest('.transaction-card');
             const cardId = btn.dataset.card;
-            const ym     = btn.dataset.month;
-            const amt    = Number(btn.dataset.amount || 0);
-            const title  = btn.dataset.title || 'Fatura paga';
+            const ym = btn.dataset.month;
+            const amt = Number(btn.dataset.amount || 0);
+            const title = btn.dataset.title || 'Fatura paga';
 
             const url = INVOICE_PAY_TPL.replace('__CARD__', cardId).replace('__YM__', ym);
 
@@ -588,8 +625,8 @@
 
                 // KPIs após pagar fatura
                 const currentMonth = document.getElementById('monthPicker')?.value || '';
-                if (currentMonth){
-                    const r = await fetch(`{{ route('dashboard.kpis') }}?month=${currentMonth}`, { headers:{Accept:'application/json'} });
+                if (currentMonth) {
+                    const r = await fetch(`{{ route('dashboard.kpis') }}?month=${currentMonth}`, {headers: {Accept: 'application/json'}});
                     if (r.ok) applyKpis(await r.json());
                 }
 
@@ -649,19 +686,22 @@
             (() => {
                 const routeUrl = "{{ route('calendar.events') }}";
 
-                const ym  = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-                const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-                const br  = s => { const [y,m,d] = String(s).slice(0,10).split('-'); return `${d}/${m}/${y}`; };
-                const brl = n => Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-                const escAttr = s => String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const ym = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                const br = s => {
+                    const [y, m, d] = String(s).slice(0, 10).split('-');
+                    return `${d}/${m}/${y}`;
+                };
+                const brl = n => Number(n || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+                const escAttr = s => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
                 const eventosCache = {};
                 const loadedWindows = new Set();
 
-                function addEventToCache(ev){
-                    const day = String(ev.start).slice(0,10);
-                    const id  = ev.id ?? `${ev.title}-${ev.start}`;
-                    const xp  = ev.extendedProps || {};
+                function addEventToCache(ev) {
+                    const day = String(ev.start).slice(0, 10);
+                    const id = ev.id ?? `${ev.title}-${ev.start}`;
+                    const xp = ev.extendedProps || {};
                     const item = {
                         id,
                         tipo: (xp.type || '').toLowerCase().trim(),
@@ -681,10 +721,10 @@
                     if (!map.has(id)) map.set(id, item);
                 }
 
-                async function loadWindow(ymStr, months=2){
+                async function loadWindow(ymStr, months = 2) {
                     const key = `${ymStr}:${months}`;
                     if (loadedWindows.has(key)) return;
-                    const resp = await fetch(`${routeUrl}?start=${ymStr}&months=${months}`, { headers:{'Accept':'application/json'} });
+                    const resp = await fetch(`${routeUrl}?start=${ymStr}&months=${months}`, {headers: {'Accept': 'application/json'}});
                     if (!resp.ok) return;
                     (await resp.json()).forEach(addEventToCache);
                     loadedWindows.add(key);
@@ -695,64 +735,69 @@
                     return map ? Array.from(map.values()) : [];
                 };
 
-                function diasDoMes(y, m){
-                    const out = [], d = new Date(y, m-1, 1);
-                    while (d.getMonth() === m-1){ out.push(iso(d)); d.setDate(d.getDate()+1); }
+                function diasDoMes(y, m) {
+                    const out = [], d = new Date(y, m - 1, 1);
+                    while (d.getMonth() === m - 1) {
+                        out.push(iso(d));
+                        d.setDate(d.getDate() + 1);
+                    }
                     return out;
                 }
 
-                async function atualizarKpisDoMes(ymStr){
-                    startLoading('kpi-contas','kpi-cofrinhos','kpi-receber','kpi-pagar','kpi-balanco');
-                    try{
-                        // queremos PROJEÇÃO por padrão
+                async function atualizarKpisDoMes(ymStr) {
+                    startLoading('kpi-contas', 'kpi-cofrinhos', 'kpi-receber', 'kpi-pagar', 'kpi-balanco');
+                    try {
                         const url = `{{ route('dashboard.kpis') }}?month=${encodeURIComponent(ymStr)}&cumulative=1`;
-                        const r = await fetch(url, { headers:{Accept:'application/json'} });
-                        if(!r.ok) throw new Error('Falha ao carregar KPIs');
+                        const r = await fetch(url, {headers: {Accept: 'application/json'}});
+                        if (!r.ok) throw new Error('Falha ao carregar KPIs');
                         const k = await r.json();
 
-                        if (k.accountsBalance_brl) document.getElementById('kpi-contas').textContent    = k.accountsBalance_brl;
-                        if (k.savingsBalance_brl)  document.getElementById('kpi-cofrinhos').textContent = k.savingsBalance_brl;
+                        //if (k.accountsBalance_brl) document.getElementById('kpi-contas').textContent = k.accountsBalance_brl;
+                        //if (k.savingsBalance_brl) document.getElementById('kpi-cofrinhos').textContent = k.savingsBalance_brl;
+
+                        renderSaldoCofrinhos('kpi-contas', k.accountsBalance_brl, k.savingsBalance_brl);
 
                         // mostra os valores
                         renderBreakdown('kpi-receber', k, 'aReceber');
-                        renderBreakdown('kpi-pagar',   k, 'aPagar');
+                        renderBreakdown('kpi-pagar', k, 'aPagar');
                         document.getElementById('kpi-balanco').textContent = k.saldoPrevisto_brl;
-                    }catch(e){
+                    } catch (e) {
                         console.error(e);
-                    }finally{
-                        finishLoading('kpi-contas','kpi-cofrinhos','kpi-receber','kpi-pagar','kpi-balanco');
+                    } finally {
+                        finishLoading('kpi-contas', 'kpi-cofrinhos', 'kpi-receber', 'kpi-pagar', 'kpi-balanco');
                     }
                 }
 
-                function exibirEventos(dateStr){
+                function exibirEventos(dateStr) {
                     const c = document.getElementById('calendar-results');
                     const eventos = eventosDoDia(dateStr);
 
                     let html = `<h2 class="mt-3">Lançamentos do dia ${br(dateStr)}</h2>`;
-                    if (!eventos.length){
+                    if (!eventos.length) {
                         html += `<div class="transaction-card"><div class="transaction-info"><div class="icon"><i class="fa-solid fa-sack-dollar"></i></div><div class="details">Nenhum lançamento.</div></div></div>`;
-                        c.innerHTML = html; return;
+                        c.innerHTML = html;
+                        return;
                     }
 
-                    for (const ev of eventos){
+                    for (const ev of eventos) {
                         const isPaidInv = ev.is_invoice && ev.paid === true;
-                        const iconCls   = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
-                        const bgColor   = isPaidInv ? '#0ea5e9' : (ev.color || '#999');
+                        const iconCls = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
+                        const bgColor = isPaidInv ? '#0ea5e9' : (ev.color || '#999');
 
                         let amountHtml = ev.valor_brl, sinal = '';
-                        if (!isPaidInv){
+                        if (!isPaidInv) {
                             sinal = ev.tipo === 'despesa' ? '-' : (ev.tipo === 'entrada' ? '+' : '');
                         } else {
                             amountHtml = brl(Math.abs(ev.valor || 0));
                         }
 
                         let action = '';
-                        if (ev.is_invoice && ev.card_id && ev.current_month && !ev.paid){
+                        if (ev.is_invoice && ev.card_id && ev.current_month && !ev.paid) {
                             action = `<button type="button" class="bg-transparent border-0"
                   data-pay-invoice data-card="${ev.card_id}" data-month="${ev.current_month}"
                   data-amount="${Math.abs(ev.valor || 0)}" data-title="${escAttr(ev.descricao)}">
                   <i class="fa-solid fa-check text-success"></i></button>`;
-                        } else if ((ev.tipo === 'despesa' || ev.tipo === 'entrada') && ev.tx_id && !ev.paid){
+                        } else if ((ev.tipo === 'despesa' || ev.tipo === 'entrada') && ev.tx_id && !ev.paid) {
                             action = `<button type="button" class="bg-transparent border-0"
                   data-open-payment data-id="${ev.tx_id}"
                   data-amount="${Math.abs(ev.valor)}" data-date="${dateStr}" data-title="${escAttr(ev.descricao)}">
@@ -789,16 +834,20 @@
                             if (!evs.length) return;
 
                             const hasGreen = evs.some(e => e.tipo === 'entrada');
-                            const hasRed   = evs.some(e => (e.tipo === 'despesa' && !e.is_invoice) || (e.is_invoice && !e.paid));
-                            const hasBlue  = evs.some(e => e.tipo === 'investimento' || e.tipo === 'payment' || (e.is_invoice && e.paid));
+                            const hasRed = evs.some(e => (e.tipo === 'despesa' && !e.is_invoice) || (e.is_invoice && !e.paid));
+                            const hasBlue = evs.some(e => e.tipo === 'investimento' || e.tipo === 'payment' || (e.is_invoice && e.paid));
 
                             const wrap = document.createElement('div');
                             wrap.style.cssText = 'display:flex;justify-content:center;gap:2px;margin-top:-10px';
-                            const dot = c => { const s = document.createElement('span'); s.style.cssText = `width:6px;height:6px;background:${c};border-radius:50%`; wrap.appendChild(s); };
+                            const dot = c => {
+                                const s = document.createElement('span');
+                                s.style.cssText = `width:6px;height:6px;background:${c};border-radius:50%`;
+                                wrap.appendChild(s);
+                            };
 
                             if (hasGreen) dot('green');
-                            if (hasRed)   dot('red');
-                            if (hasBlue)  dot('#0ea5e9');
+                            if (hasRed) dot('red');
+                            if (hasBlue) dot('#0ea5e9');
 
                             if (wrap.childElementCount) dayElem.appendChild(wrap);
                         },
@@ -833,7 +882,9 @@
                             atualizarKpisDoMes(initialYm);
                         },
 
-                        onChange: sd => { if (sd?.[0]) exibirEventos(iso(sd[0])); }
+                        onChange: sd => {
+                            if (sd?.[0]) exibirEventos(iso(sd[0]));
+                        }
                     });
 
                     document.getElementById('monthForm')?.addEventListener('submit', e => e.preventDefault());
@@ -845,9 +896,9 @@
                     window.__cal = {fp, eventosCache, exibirEventos, iso};
                 });
 
-                async function syncMonthUI(ymStr){
+                async function syncMonthUI(ymStr) {
                     const [y, m] = ymStr.split('-').map(Number);
-                    const first  = new Date(y, m-1, 1);
+                    const first = new Date(y, m - 1, 1);
 
                     await loadWindow(ymStr, 2);
 
@@ -858,16 +909,18 @@
                     exibirEventos(iso(first));
                     atualizarKpisDoMes(ymStr);
                 }
+
                 window.syncMonthUI = syncMonthUI;
 
-                async function changeMonth(delta){
+                async function changeMonth(delta) {
                     const input = document.getElementById('monthPicker');
                     const [y, m] = input.value.split('-').map(Number);
-                    const next   = new Date(y, m-1+delta, 1);
-                    const ymStr  = ym(next);
-                    input.value  = ymStr;
+                    const next = new Date(y, m - 1 + delta, 1);
+                    const ymStr = ym(next);
+                    input.value = ymStr;
                     await syncMonthUI(ymStr);
                 }
+
                 window.changeMonth = changeMonth;
 
             })();

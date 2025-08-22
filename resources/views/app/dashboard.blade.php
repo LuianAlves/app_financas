@@ -16,6 +16,9 @@
                 grid-area: stack
             }
 
+            .value-line small { font-weight: 600; }
+            .value-line small .late { color: #dc2626; } /* vermelho */
+
             .preloader-values-sm {
                 width: 75px;
                 height: 22px;
@@ -402,13 +405,28 @@
             showPaymentModal();
         });
 
-        // aplica os KPIs na UI
+        function renderBreakdown(elId, k, root){
+            const el = document.getElementById(elId);
+            if (!el) return;
+            const mes   = k[`${root}_mes_brl`];
+            const atras = k[`${root}_atrasados_brl`];
+            const tot   = k[`${root}_brl`];
+
+            if (typeof mes === 'string' && typeof atras === 'string') {
+                el.innerHTML = `${mes} <span class="price-default text-danger" style="font-size: 10px !important;"><span class="late">+ ${atras}</span></span>`;
+            } else if (typeof tot === 'string') {
+                el.textContent = tot;
+            }
+        }
+
         function applyKpis(k){
             const $ = id => document.getElementById(id);
             if (k.accountsBalance_brl) $('kpi-contas').textContent    = k.accountsBalance_brl;
             if (k.savingsBalance_brl)  $('kpi-cofrinhos').textContent = k.savingsBalance_brl;
-            if (k.aReceber_brl)        $('kpi-receber').textContent   = k.aReceber_brl;
-            if (k.aPagar_brl)          $('kpi-pagar').textContent     = k.aPagar_brl;
+
+            renderBreakdown('kpi-receber', k, 'aReceber');
+            renderBreakdown('kpi-pagar',   k, 'aPagar');
+
             $('kpi-balanco').textContent = (k.saldoPrevisto_brl || k.saldoMes_brl || k.saldoReal_brl || '');
         }
 
@@ -522,13 +540,29 @@
     <script>
         const INVOICE_PAY_TPL = @json(route('invoice-payment.update', ['cardId' => '__CARD__', 'ym' => '__YM__']));
 
-        // helper para aplicar KPIs (mesmo do bloco acima)
+        function renderBreakdown(elId, k, root){
+            const el = document.getElementById(elId);
+            if (!el) return;
+            const mes   = k[`${root}_mes_brl`];
+            const atras = k[`${root}_atrasados_brl`];
+            const tot   = k[`${root}_brl`];
+
+            if (typeof mes === 'string' && typeof atras === 'string') {
+                el.innerHTML = `${mes} <span class="price-default text-danger" style="font-size: 10px !important;"><span class="late">+ ${atras}</span></span>`;
+            } else if (typeof tot === 'string') {
+                el.textContent = tot;
+            }
+        }
+
         function applyKpis(k){
             const $ = id => document.getElementById(id);
             if ($('kpi-contas')   && k.accountsBalance_brl) $('kpi-contas').textContent   = k.accountsBalance_brl;
-            if ($('kpi-receber')  && k.aReceber_brl)        $('kpi-receber').textContent  = k.aReceber_brl;
-            if ($('kpi-pagar')    && k.aPagar_brl)          $('kpi-pagar').textContent    = k.aPagar_brl;
-            if ($('kpi-balanco')  && k.saldoMes_brl)        $('kpi-balanco').textContent  = k.saldoMes_brl;
+
+            renderBreakdown('kpi-receber', k, 'aReceber');
+            renderBreakdown('kpi-pagar',   k, 'aPagar');
+
+            if ($('kpi-balanco') && (k.saldoPrevisto_brl || k.saldoMes_brl))
+                $('kpi-balanco').textContent = (k.saldoPrevisto_brl || k.saldoMes_brl);
         }
 
         document.addEventListener('click', async (e) => {
@@ -676,21 +710,13 @@
                         if(!r.ok) throw new Error('Falha ao carregar KPIs');
                         const k = await r.json();
 
-                        // mostra os valores
-                        document.getElementById('kpi-receber').textContent = k.aReceber_brl;
-                        document.getElementById('kpi-pagar').textContent   = k.aPagar_brl;
-                        document.getElementById('kpi-balanco').textContent = k.saldoPrevisto_brl;
+                        if (k.accountsBalance_brl) document.getElementById('kpi-contas').textContent    = k.accountsBalance_brl;
+                        if (k.savingsBalance_brl)  document.getElementById('kpi-cofrinhos').textContent = k.savingsBalance_brl;
 
-                        // se quiser permitir alternar visão (previsto x mensal do mês):
-                        // document.querySelector('.fa-eye')?.onclick = async () => {
-                        //   const monthly = await fetch(`{{ route('dashboard.kpis') }}?month=${ymStr}&cumulative=0`, {headers:{Accept:'application/json'}});
-                        //   if (monthly.ok) {
-                        //     const m = await monthly.json();
-                        //     document.getElementById('kpi-receber').textContent = m.aReceber_brl;
-                        //     document.getElementById('kpi-pagar').textContent   = m.aPagar_brl;
-                        //     document.getElementById('kpi-balanco').textContent = m.saldoPrevisto_brl;
-                        //   }
-                        // };
+                        // mostra os valores
+                        renderBreakdown('kpi-receber', k, 'aReceber');
+                        renderBreakdown('kpi-pagar',   k, 'aPagar');
+                        document.getElementById('kpi-balanco').textContent = k.saldoPrevisto_brl;
                     }catch(e){
                         console.error(e);
                     }finally{

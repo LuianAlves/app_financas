@@ -103,7 +103,7 @@
         <!-- Saldo das contas -->
         <div class="balance-box mt-2">
             <div class="d-flex justify-content-between">
-                <span>Saldo do mês</span>
+                <span>Projeção do mês</span>
                 <i class="fa fa-eye"></i>
             </div>
 
@@ -120,7 +120,7 @@
                     <!-- Saldo contas -->
                     <div class="col-12">
                         <b class="text-primary dash-amounts">Saldo contas</b>
-                        <div class="d-flex align-items-center">
+                        <div class="d-flex align-items-center" style="height: 15px !important;">
                             <div class="value-line is-loading w-100">
                                 <span class="price-default value-real d-flex justify-content-between" id="kpi-contas"></span>
                                 <div class="preloader-values preloader-values-sm"></div>
@@ -129,9 +129,9 @@
                     </div>
 
                     <!-- A receber -->
-                    <div class="col-12">
+                    <div class="col-12 my-2">
                         <b class="text-color dash-amounts">A receber</b>
-                        <div class="d-flex align-items-center">
+                        <div class="d-flex align-items-center" style="height: 15px !important;">
                             <div class="value-line is-loading w-100">
                                 <span class="price-default value-real d-flex justify-content-between" id="kpi-receber"></span>
                                 <div class="preloader-values preloader-values-sm"></div>
@@ -142,7 +142,7 @@
                     <!-- A pagar -->
                     <div class="col-12">
                         <b class="text-danger dash-amounts">A pagar</b>
-                        <div class="d-flex align-items-center">
+                        <div class="d-flex align-items-center" style="height: 15px !important;">
                             <div class="value-line is-loading w-100">
                                 <span class="price-default value-real d-flex justify-content-between" id="kpi-pagar"></span>
                                 <div class="preloader-values preloader-values-sm"></div>

@@ -13,6 +13,8 @@ class Transaction extends BaseModel
     protected $fillable = [
         'user_id',
         'card_id',
+        'saving_id',
+        'account_id',
         'transaction_category_id',
         'title',
         'description',

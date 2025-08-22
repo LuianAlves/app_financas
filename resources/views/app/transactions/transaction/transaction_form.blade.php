@@ -3,7 +3,7 @@
     <x-input col="6" type="text" title="Título" id="title" name="title" placeholder="Ex: Pagamento aluguel"/>
     <x-select col="6" name="transaction_category_id" id="transaction_category_id" title="Categoria">
         @foreach($categories as $category)
-            <option value="{{ $category->id }}">{{ $category->name }}</option>
+            <option value="{{ $category->id }}" data-type="{{ $category->type }}">{{ $category->name }}</option>
         @endforeach
     </x-select>
 </div>
@@ -19,6 +19,16 @@
     <x-input-price col="6" title="Valor" id="amount" name="amount"/>
     <x-input col="6" type="date" title="Data (início)" id="date" name="date"/>
 </div>
+
+<!-- Saving -->
+<div class="row mt-2 d-none" id="savingContainer">
+    <x-select col="12" name="saving_id" id="saving_id" title="Cofrinho">
+        @foreach($savings as $s)
+            <option value="{{ $s->id }}">{{ $s->name }}</option>
+        @endforeach
+    </x-select>
+</div>
+
 
 <!-- Payment Type -->
 <label class="mt-2">Forma de pagamento</label>
@@ -84,12 +94,30 @@
 </div>
 
 <!--  Custom (dias) -->
+<!--  Custom (dias) -->
 <div class="row mt-2 d-none" id="customRecurrenceContainer">
-    <x-select col="6" name="interval_value" id="interval_value" title="Intervalo (dias)">
-        @foreach([7,15,30,45,90] as $d)
-            <option value="{{ $d }}">{{ $d }} dias</option>
-        @endforeach
-    </x-select>
+    <div class="col-6">
+        <label class="mb-1 d-block">Intervalo (dias)</label>
+        <input
+            type="number"
+            min="1"
+            id="interval_value"
+            name="interval_value"
+            class="form-control"
+            placeholder="Ex: 7"
+            list="interval_presets"
+            value="7"
+        >
+        <datalist id="interval_presets">
+            <option value="7"></option>
+            <option value="15"></option>
+            <option value="30"></option>
+            <option value="45"></option>
+            <option value="90"></option>
+            <option value="145"></option>
+        </datalist>
+    </div>
+
     <div class="col-6">
         <label class="mb-1 d-block">Contar fim de semana?</label>
         <label class="me-3"><input type="checkbox" name="include_sat" id="include_sat" value="1" checked> Sábado</label>
@@ -103,67 +131,162 @@
              placeholder="Ex: 3 parcelas"/>
 </div>
 
+<div class="row mt-2 d-none" id="terminationRow">
+    <label class="mb-1">Término</label>
+    <x-input-check col="6" id="no_end"  value="no_end"  name="termination" title="Sem término" checked="1"/>
+    <x-input-check col="6" id="has_end" value="has_end" name="termination" title="Com término"/>
+</div>
+
+<div class="row mt-2 d-none" id="occurrencesContainer">
+    <x-input col="12" type="number" min="1" title="Nº de ocorrências" id="custom_occurrences" name="custom_occurrences" placeholder="Ex: 12"/>
+</div>
+
 @push('scripts')
     <script src="{{asset('assets/js/common/mask_price_input.js')}}"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const $ = id => document.getElementById(id);
+            const $  = s => document.querySelector(s);
+            const $$ = s => [...document.querySelectorAll(s)];
 
-            const pay = ['pix', 'card', 'money'];
-            const rec = ['unique', 'monthly', 'yearly', 'custom'];
+            // elementos
+            const el = {
+                pay: { pix: $('#pix'), card: $('#card'), money: $('#money') },
+                rec: { unique: $('#unique'), monthly: $('#monthly'), yearly: $('#yearly'), custom: $('#custom') },
+                typeCardCon: $('#typeCardContainer'),
+                cardSelCon:  $('#cardSelectContainer'),
+                pixCon:      $('#pixAccountContainer'),
+                customCon:   $('#customRecurrenceContainer'),
+                instCon:     $('#installmentsContainer'),
+                altRow:      $('#alternateCardsRow'),
+                altSel:      $('#alternateCardsSelect'),
+                altChk:      $('#alternate_cards'),
+                cardId:      $('#card_id'),
+                credit:      $('#credit'),
+                debit:       $('#debit'),
+                cat:         $('#transaction_category_id'),
+                savingCon:   $('#savingContainer'),
+                termRow:     $('#terminationRow'),
+                occCon:      $('#occurrencesContainer'),
+                occInput:    $('#custom_occurrences'),
+                intervalSel: $('#interval_value'),
+            };
 
-            const pixCon = $('pixAccountContainer'),
-                cardSelCon = $('cardSelectContainer'),
-                typeCardCon = $('typeCardContainer'),
-                recRow = $('recurrenceRow'),
-                customCon = $('customRecurrenceContainer'),
-                instCon = $('installmentsContainer'),
-                altRow = $('alternateCardsRow'),
-                altSel = $('alternateCardsSelect'),
-                altChk = $('alternate_cards'),
-                credit = $('credit'), debit = $('debit');
+            // exclusividade nos "type" (se estiver usando checkbox)
+            ['pix','card','money'].forEach(id => {
+                const input = el.pay[id];
+                input?.addEventListener('change', e => {
+                    if (e.target.checked) {
+                        ['pix','card','money'].forEach(o => { if (o !== id) el.pay[o].checked = false; });
+                        toggleAll();
+                    }
+                });
+            });
 
-            function current(ids) {
-                for (const id of ids) {
-                    const el = $(id);
-                    if (el?.checked) return el.value;
-                }
-                return null;
+            function disableInside(container, disabled) {
+                if (!container) return;
+                container.querySelectorAll('input,select,textarea').forEach(i => {
+                    i.disabled = disabled;
+                    if (disabled && (i.type === 'checkbox' || i.type === 'radio')) i.checked = false;
+                    if (disabled && i.tagName === 'SELECT') i.selectedIndex = 0;
+                    if (disabled && i.tagName === 'INPUT' && ['text','number','date'].includes(i.type)) i.value = '';
+                });
             }
+
+            function payVal() { return el.pay.pix.checked ? 'pix' : (el.pay.card.checked ? 'card' : (el.pay.money.checked ? 'money' : null)); }
+            function recVal() { return el.rec.custom.checked ? 'custom' : (el.rec.monthly.checked ? 'monthly' : (el.rec.yearly.checked ? 'yearly' : 'unique')); }
+            function catType() { return el.cat?.selectedOptions?.[0]?.dataset?.type || null; }
+
+            function isInvest() { return catType() === 'investimento'; }
 
             function toggleAll() {
-                const p = current(pay), r = current(rec);
-                const isCard = p === 'card';
-                const isCred = credit.checked;
-                const isRec = r !== 'unique';
+                const pay = payVal();           // pix|card|money
+                const rec = recVal();           // unique|monthly|yearly|custom
+                const invest = isInvest();
 
-                pixCon.classList.toggle('d-none', !(p === 'pix' || p === 'money'));
-                cardSelCon.classList.toggle('d-none', !isCard);
-                typeCardCon.classList.toggle('d-none', !isCard);
+                // Investimento: bloquear crédito
+                if (invest && el.credit) {
+                    el.credit.disabled = true;
+                    // se estava crédito, força débito
+                    if (el.credit.checked) { el.credit.checked = false; el.debit.checked = true; }
+                } else {
+                    if (el.credit) el.credit.disabled = false;
+                }
 
-                recRow.classList.remove('d-none');
-                customCon.classList.toggle('d-none', r !== 'custom');
+                const isCard = pay === 'card';
+                const isCred = isCard && el.credit?.checked;
+                const isRec  = rec !== 'unique';
 
-                // parcelas: só crédito + unique
-                instCon.classList.toggle('d-none', !(isCard && isCred && !isRec));
+                // PIX account
+                const showPixAcc = pay === 'pix';
+                el.pixCon.classList.toggle('d-none', !showPixAcc);
+                disableInside(el.pixCon, !showPixAcc);
 
-                // alternância: só crédito + recorrente
-                const showAlt = isCard && isCred && isRec;
-                altRow.classList.toggle('d-none', !showAlt);
-                altSel.classList.toggle('d-none', !(showAlt && altChk.checked));
+                // Card container
+                const showTypeCard = isCard;
+                el.typeCardCon.classList.toggle('d-none', !showTypeCard);
+                disableInside(el.typeCardCon, !showTypeCard);
 
-                // se alterna, esconder select de um cartão fixo
-                cardSelCon.classList.toggle('d-none', showAlt && altChk.checked);
+                // Parcelas (apenas crédito + única)
+                const showInst = isCred && !isRec;
+                el.instCon.classList.toggle('d-none', !showInst);
+                disableInside(el.instCon, !showInst);
+
+                if (invest && isCard && !el.debit.checked && !el.credit.checked) {
+                    el.debit.checked = true;
+                }
+
+                // Alternância (crédito + recorrente)
+                const showAlt     = isCred && isRec;
+                const showAltSel  = showAlt && el.altChk?.checked;
+
+                el.altRow.classList.toggle('d-none', !showAlt);
+                el.altSel.classList.toggle('d-none', !showAltSel);
+                disableInside(el.altSel, !showAltSel);
+
+                // Recorrência custom (X dias)
+                const showCustom = rec === 'custom';
+                el.customCon.classList.toggle('d-none', !showCustom);
+                disableInside(el.customCon, !showCustom);
+
+                const showCardSelect = isCard && !showAltSel;
+
+                el.cardSelCon.classList.toggle('d-none', !showCardSelect);
+                disableInside(el.cardSelCon, !showCardSelect);
+                if (!showCardSelect) el.cardId.value = '';
+
+                // Término/ocorrências:
+                if (rec === 'monthly' || rec === 'yearly' || rec === 'custom') {
+                    el.termRow.classList.remove('d-none');
+                    disableInside(el.termRow, false);
+                    const hasEnd = $('#has_end')?.checked;
+                    el.occCon.classList.toggle('d-none', !hasEnd);
+                    disableInside(el.occCon, !hasEnd);
+                } else {
+                    // unique
+                    el.termRow.classList.add('d-none');
+                    el.occCon.classList.add('d-none');
+                    disableInside(el.termRow, true);
+                    disableInside(el.occCon, true);
+                }
+
+                // Investimento: mostrar cofrinho
+                const showSaving = invest;
+                el.savingCon.classList.toggle('d-none', !showSaving);
+                disableInside(el.savingCon, !showSaving);
             }
 
-            [...pay.map(id => $(id))].forEach(el => el.addEventListener('change', toggleAll));
-            [...rec.map(id => $(id))].forEach(el => el.addEventListener('change', toggleAll));
-            credit.addEventListener('change', toggleAll);
-            debit.addEventListener('change', toggleAll);
-            $('alternate_cards').addEventListener('change', toggleAll);
+            // Listeners
+            [...Object.values(el.rec)].forEach(i => i?.addEventListener('change', toggleAll));
+            el.credit?.addEventListener('change', toggleAll);
+            el.debit?.addEventListener('change', toggleAll);
+            el.altChk?.addEventListener('change', toggleAll);
+            el.cat?.addEventListener('change', toggleAll);
+            $('#has_end')?.addEventListener('change', toggleAll);
+            $('#no_end')?.addEventListener('change', toggleAll);
 
             toggleAll();
         });
     </script>
 @endpush
+

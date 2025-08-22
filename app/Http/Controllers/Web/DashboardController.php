@@ -349,6 +349,59 @@ class DashboardController extends Controller
             }
         }
 
+        // ===== 3b) RECORRENTES CUSTOM (X dias) SEM TÉRMINO (não têm itens em custom_item_recurrents)
+        $recD = Recurrent::withoutGlobalScopes()
+            ->with(['transaction.transactionCategory:id,name,type,color,icon'])
+            ->whereIn('recurrents.user_id', $userIds)
+            ->where('interval_unit', 'days')
+            ->whereHas('transaction', function ($q) {
+                $q->where('recurrence_type', 'custom')
+                    ->where(function ($q2) {
+                        $q2->where('transactions.type', '!=', 'card')
+                            ->orWhereNull('transactions.type')
+                            ->orWhere(function ($qq) {
+                                $qq->where('transactions.type', 'card')
+                                    ->where('transactions.type_card', '!=', 'credit');
+                            });
+                    })
+                    ->where(function ($q3) {
+                        $q3->whereNull('transactions.title')
+                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', [
+                                'total fatura','fatura total','total da fatura'
+                            ]);
+                    });
+            })
+            ->get(['recurrents.*']); // pega start_date, interval_value, include_sat/sun, amount, etc.
+
+        foreach ($recD as $r) {
+            $t = $r->transaction; if (!$t) continue;
+
+            // se já existem itens explícitos p/ esse recurrent → pula (evita duplicar com bloco $recC)
+            $hasItems = DB::table('custom_item_recurrents')->where('recurrent_id', $r->id)->exists();
+            if ($hasItems) continue;
+
+            $cat  = $t->transactionCategory;
+            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true) ? $cat->type : 'investimento';
+
+            $start    = Carbon::parse($r->start_date)->startOfDay();
+            $interval = max(1, (int)$r->interval_value);
+
+            // primeira >= janela e alinhada ao step
+            $cursor = $this->firstAlignedDays($start, $winStart, $interval);
+            $cursor = $this->normalizeW($cursor, (bool)$r->include_sat, (bool)$r->include_sun);
+
+            while ($cursor->lte($winEnd)) {
+                if ($cursor->gte($start)) {
+                    $events->push($this->ev($r->id, 'd', $t, $cat, $type, $cursor, (float)$r->amount));
+                }
+                $cursor = $this->normalizeW(
+                    $cursor->copy()->addDays($interval),
+                    (bool)$r->include_sat,
+                    (bool)$r->include_sun
+                );
+            }
+        }
+
         // ===== 4) FATURAS DE CARTÃO (um evento por invoice, na data de vencimento)
         $rows = DB::table('invoices as inv')
             ->join('cards as c', 'c.id', '=', 'inv.card_id')
@@ -1024,6 +1077,86 @@ class DashboardController extends Controller
             }
         }
 
+        // ===== RECORRENTES CUSTOM (X dias) SEM TÉRMINO (sem itens)
+        $recD = Recurrent::withoutGlobalScopes()
+            ->with(['transaction.transactionCategory:id,type'])
+            ->whereIn('recurrents.user_id', $userIds)
+            ->where('interval_unit', 'days')
+            ->whereHas('transaction', function ($q) {
+                $q->where('recurrence_type', 'custom')
+                    ->where(function ($q2) {
+                        $q2->where('transactions.type', '!=', 'card')
+                            ->orWhereNull('transactions.type')
+                            ->orWhere(function ($qq) {
+                                $qq->where('transactions.type', 'card')
+                                    ->where('transactions.type_card', '!=', 'credit');
+                            });
+                    })
+                    ->where(function ($q3) {
+                        $q3->whereNull('transactions.title')
+                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', [
+                                'total fatura','fatura total','total da fatura'
+                            ]);
+                    });
+            })
+            ->get(['recurrents.*']);
+
+        foreach ($recD as $r) {
+            // se tiver itens explícitos, deixa o bloco anterior cuidar
+            if (DB::table('custom_item_recurrents')->where('recurrent_id', $r->id)->exists()) continue;
+
+            $t    = $r->transaction; if (!$t) continue;
+            $type = $this->normType($t->transactionCategory?->type ?? '');
+            if (!in_array($type, ['entrada','despesa','investimento'], true)) $type = 'investimento';
+
+            $start    = Carbon::parse($r->start_date)->startOfDay();
+            $interval = max(1, (int)$r->interval_value);
+
+            // janela do mês alvo apenas
+            $monthStart = $end->copy()->startOfMonth();
+            $cursor = $this->firstAlignedDays($start, $monthStart, $interval);
+            $cursor = $this->normalizeW($cursor, (bool)$r->include_sat, (bool)$r->include_sun);
+
+            while ($cursor->lte($end)) {
+                if ($cursor->lt($monthStart)) { // segurança
+                    $cursor->addDays($interval); continue;
+                }
+
+                $ym = $cursor->format('Y-m');
+                if (empty($paid[$t->id][$ym])) {
+                    $amt = abs((float)$r->amount);
+                    if     ($type === 'entrada')     $sumReceber += $amt;
+                    elseif ($type === 'despesa')     $sumPagar   += $amt;
+                    else /* investimento */          $sumPagar   += $amt; // investimento entra como saída prevista
+                }
+
+                $cursor = $this->normalizeW(
+                    $cursor->copy()->addDays($interval),
+                    (bool)$r->include_sat,
+                    (bool)$r->include_sun
+                );
+            }
+        }
+
         return ['aReceber' => $sumReceber, 'aPagar' => $sumPagar];
+    }
+
+    private function normalizeW(Carbon $d, bool $sat, bool $sun): Carbon
+    {
+        if (!$sat && $d->isSaturday()) $d->addDays(2);
+        if (!$sun && $d->isSunday())   $d->addDay();
+        return $d;
+    }
+
+    /** primeira ocorrência alinhada ao intervalo >= $from  */
+    private function firstAlignedDays(Carbon $start, Carbon $from, int $interval): Carbon
+    {
+        $s = $start->copy();
+        if ($s->lt($from)) {
+            $diff  = $s->diffInDays($from);
+            $steps = intdiv($diff + $interval - 1, $interval); // ceil
+            $s->addDays($steps * $interval);
+        }
+        return $s;
     }
 }

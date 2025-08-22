@@ -7,6 +7,7 @@ use App\Models\Card;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Transaction;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -27,8 +28,19 @@ class CardController extends Controller
         $cards->each(function ($card) {
             $card->cardholder_name = strtoupper($card->cardholder_name);
             $card->credit_limit = brlPrice($card->credit_limit);
-            $card->account->bank_name = strtoupper($card->account->bank_name);
+
+            if($card->account && $card->account->bank_name) {
+                $card->account->bank_name = strtoupper($card->account->bank_name);
+            }
+
+            $currentMonth = Carbon::now()->format('Y-m');
+            $invoice = $card->invoices()->where('current_month', $currentMonth)->first();
+
+            if($invoice) {
+                $card->invoice_total = $invoice->items()->sum('amount');
+            }
         });
+
 
         return response()->json($cards);
     }
@@ -49,7 +61,10 @@ class CardController extends Controller
 
         $card->cardholder_name = strtoupper($card->cardholder_name);
         $card->credit_limit = brlPrice($card->credit_limit);
-        $card->account->bank_name = strtoupper($card->account->bank_name);
+
+        if($card->account && $card->account->bank_name) {
+            $card->account->bank_name = strtoupper($card->account->bank_name);
+        }
 
         return response()->json($card);
     }

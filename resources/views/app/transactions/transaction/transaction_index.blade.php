@@ -29,7 +29,7 @@
         modalId="modalTransaction"
         formId="formTransaction"
         pathForm="app.transactions.transaction.transaction_form"
-        :data="['cards' => $cards, 'categories' => $categories, 'accounts' => $accounts]"
+        :data="['cards' => $cards, 'categories' => $categories, 'accounts' => $accounts, 'savings' => $savings]"
     />
 
     <!-- CONFIRM CUSTOM -->

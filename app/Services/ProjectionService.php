@@ -33,7 +33,10 @@ class ProjectionService
             ->merge($this->expandRecurrentsCustom($userIds, $from, $to))
             ->merge($this->expandRecurrentsCustomDays($userIds, $from, $to)); // << NOVO
 
-        $occ = $occ->reject(fn($o) => ($o['type'] ?? null) === 'card' && ($o['type_card'] ?? null) === 'credit');
+        $occ = $occ
+            ->reject(fn($o) => ($o['type'] ?? null) === 'card' && ($o['type_card'] ?? null) === 'credit')
+            ->unique(fn($o) => (($o['id'] ?? $o['title']).'@'.$o['date']))
+            ->values();
 
         // 2) Faturas de cartão
         $bills = $this->cardBillsFromInvoices($userIds, $from, $to);
@@ -139,7 +142,13 @@ class ProjectionService
                     ->select('id','user_id','transaction_category_id','title','amount','date','type','type_card','card_id','recurrence_type');
             }])
             ->whereIn('recurrents.user_id', $userIds)
-            ->whereHas('transaction', fn($q) => $q->whereIn('recurrence_type', ['monthly','yearly']))
+            ->whereHas('transaction', fn($q) => $q->whereIn('recurrence_type',['monthly','yearly']))
+            // <<< NÃO trazer aqueles com itens custom gerados (com término)
+            ->whereNotExists(function($q){
+                $q->select(DB::raw(1))
+                    ->from('custom_item_recurrents as cir')
+                    ->whereColumn('cir.recurrent_id','recurrents.id');
+            })
             ->get(['id','user_id','transaction_id','payment_day','amount']);
 
         $out = collect();
@@ -172,52 +181,68 @@ class ProjectionService
         return $out;
     }
 
-    protected function expandRecurrentsCustom(array $userIds, Carbon $from, Carbon $to): Collection
+    protected function expandRecurrentsCustom(array $userIds, Carbon $from, Carbon $to): \Illuminate\Support\Collection
     {
         $recs = Recurrent::withoutGlobalScopes()
             ->with(['transaction' => function($q) use ($userIds) {
                 $q->withoutGlobalScopes()
                     ->with(['transactionCategory:id,name,type'])
                     ->whereIn('transactions.user_id', $userIds)
-                    ->select('id','user_id','transaction_category_id','title','amount','date','type','type_card','card_id','recurrence_type','custom_occurrences');
+                    ->select('id','user_id','transaction_category_id','title','amount','date','type','type_card','card_id','recurrence_type');
             }])
             ->whereIn('recurrents.user_id', $userIds)
-            ->whereHas('transaction', fn($q) => $q->where('recurrence_type', 'custom'))
-            ->get([
-                'id','user_id','transaction_id',
-                'payment_day','amount',
-                'start_date','interval_unit','interval_value','include_sat','include_sun' // <- adiciona
-            ]);
+            ->whereHas('transaction', fn($q) => $q->whereIn('recurrence_type', ['custom','monthly','yearly']))
+            // ⬇️ somente quem TEM itens em custom_item_recurrents
+            ->whereExists(function($q){
+                $q->select(DB::raw(1))
+                    ->from('custom_item_recurrents as cir')
+                    ->whereColumn('cir.recurrent_id','recurrents.id');
+            })
+            ->get(['id','user_id','transaction_id']);
 
         $out = collect();
 
         foreach ($recs as $r) {
-            $t = $r->transaction;
-            if (!$t) continue;
+            $t = $r->transaction; if (!$t) continue;
 
-            $items = CustomItemRecurrents::where('recurrent_id', $r->id)->get(['payment_day','reference_month','reference_year','amount','custom_occurrence_number']);
-            if ($items->count()) {
-                foreach ($items as $ci) {
-                    $dt = $this->dateFromRefs((int)$ci->payment_day, (int)$ci->reference_month, (int)$ci->reference_year);
-                    if ($dt->betweenIncluded($from, $to)) {
-                        $out->push($this->mapTxLike($t, $dt, (float)$ci->amount, 'custom', $ci->custom_occurrence_number));
+            // 2.1) Se existirem itens custom → usar somente eles (serve p/ monthly/yearly/custom COM TÉRMINO)
+            $items = CustomItemRecurrents::where('recurrent_id',$r->id)
+                ->get(['payment_day','reference_month','reference_year','amount','custom_occurrence_number']);
+
+            foreach ($items as $ci) {
+                $dt = $this->dateFromRefs((int)$ci->payment_day, (int)$ci->reference_month, (int)$ci->reference_year);
+                if ($dt->betweenIncluded($from,$to)) {
+                    $out->push($this->mapTxLike($t, $dt, (float)$ci->amount, 'custom', $ci->custom_occurrence_number));
+                }
+            }
+
+            // 2.2) A CADA X DIAS, SEM TÉRMINO (não há itens)
+            if ($t->recurrence_type === 'custom'
+                && $r->interval_unit === 'days'
+                && (int)($t->custom_occurrences ?? 0) === 0) {
+
+                $norm = function (Carbon $d) use ($r) {
+                    if (!$r->include_sat && $d->isSaturday()) $d->addDays(2);
+                    if (!$r->include_sun && $d->isSunday())   $d->addDay();
+                    return $d;
+                };
+
+                $cursor = $norm(Carbon::parse($r->start_date)->startOfDay());
+                $step   = max(1, (int)$r->interval_value);
+
+                while ($cursor->lte($to)) {
+                    if ($cursor->gte($from)) {
+                        $out->push($this->mapTxLike($t, $cursor, (float)($r->amount ?? $t->amount), 'custom'));
                     }
+                    $cursor = $norm($cursor->copy()->addDays($step));
                 }
-                continue;
+
+                continue; // nada mais a emitir para este recorrente
             }
 
-            $totalParc  = max(1, (int)($t->custom_occurrences ?? 1));
-            $paymentDay = (int)($r->payment_day ?? Carbon::parse($t->date)->day);
-            $first      = Carbon::parse($t->date)->startOfDay()->day($paymentDay);
-            $parcValue  = $this->inferCustomInstallmentAmount($t, $r, $totalParc);
-
-            for ($i=1; $i <= $totalParc; $i++) {
-                $dt = $first->copy()->addMonthsNoOverflow($i-1)->day($paymentDay);
-                if ($dt->betweenIncluded($from, $to)) {
-                    $val = $i === $totalParc ? $this->fixLastInstallment($parcValue, $totalParc, $t->amount) : $parcValue;
-                    $out->push($this->mapTxLike($t, $dt, $val, 'custom', $i));
-                }
-            }
+            // 2.3) Caso contrário não emitimos nada aqui:
+            // - monthly/yearly SEM término → já são emitidos por expandRecurrentsMonthlyYearly()
+            // - custom COM término → tratado em 2.1 (itens)
         }
 
         return $out;

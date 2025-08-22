@@ -12,7 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('custom_item_recurrents', function (Blueprint $table) {
-            $table->unique(['recurrent_id','reference_year','reference_month','payment_day']);
+            $table->unique(
+                ['recurrent_id','reference_year','reference_month','payment_day'],
+                'custom_item_rec_unique' // nome curto do índice
+            );
+
+            $table->string('payment_day', 2)->change();
+            $table->string('reference_month', 2)->change();
+            $table->string('reference_year', 4)->change();
         });
     }
 
@@ -22,7 +29,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('custom_item_recurrents', function (Blueprint $table) {
-            //
+            $table->dropUnique('custom_item_rec_unique'); // usa o mesmo nome
         });
     }
 };

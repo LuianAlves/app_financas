@@ -59,7 +59,7 @@
         <div class="col-6">
             <label class="d-flex align-items-center gap-2">
                 <input type="checkbox" name="alternate_card_ids[]" value="{{ $card->id }}">
-                <span>{{ "{$card->account->bank_name} {$card->last_four_digits}" }}</span>
+                <span>{{$card->account ? $card->account->bank_name : ''}} {{$card->last_four_digits}}</span>
             </label>
         </div>
     @endforeach
@@ -79,7 +79,7 @@
     <x-select col="12" name="card_id" id="card_id" title="Cartão vinculado">
         <option value="">Selecione um cartão</option>
         @foreach($cards as $card)
-            <option value="{{ $card->id }}">{{ "{$card->account->bank_name} {$card->last_four_digits}" }}</option>
+            <option value="{{ $card->id }}">{{$card->account ? $card->account->bank_name : ''}} {{$card->last_four_digits}}</option>
         @endforeach
     </x-select>
 </div>

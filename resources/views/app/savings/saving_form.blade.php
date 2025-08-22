@@ -3,7 +3,7 @@
         @forelse($accounts as $acc)
             <option value="{{ $acc->id }}">
                 {{ strtoupper($acc->bank_name) }}
-                — Saldo: R$ {{ number_format($acc->current_balance ?? 0, 2, ',', '.') }}
+                — Saldo: R$ {{ brlPrice($acc->current_balance) }}
             </option>
         @empty
             <option value="">Nenhuma conta disponível</option>
@@ -16,11 +16,7 @@
 </div>
 
 <div class="row">
-
-    <x-input
-        col="6" set="" type="number" step="0.01" inputmode="decimal"
-        title="Valor (R$)" id="current_amount" name="current_amount" placeholder="1000,00" required>
-    </x-input>
+    <x-input-price col="6" title="Valor (R$)" id="current_amount" name="current_amount" value="{{ old('current_amount', $saving->current_amount ?? '') }}" />
 
     <x-input
         col="3" set="" type="number" step="0.0001" inputmode="decimal"
@@ -37,3 +33,7 @@
     <x-input col="6" set="" type="date" title="Início (opcional)" id="start_date" name="start_date"></x-input>
     <x-input col="6" set="" type="text" title="Observações" id="notes" name="notes" placeholder="Opcional"></x-input>
 </div>
+
+@push('scripts')
+    <script src="{{asset('assets/js/common/mask_price_input.js')}}"></script>
+@endpush

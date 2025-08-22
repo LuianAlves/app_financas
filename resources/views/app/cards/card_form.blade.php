@@ -30,6 +30,9 @@
 
 <div class="row">
     <x-input col="6" set="" type="color" title="Cor do cartão" id="color_card" name="color_card" value="{{ old('color_card', $card->color_card ?? '#000000') }}" disabled=""></x-input>
+</div>
+
+<div class="row">
     <x-input-price col="6" title="Valor" id="credit_limit" name="credit_limit"/>
 </div>
 

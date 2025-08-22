@@ -13,17 +13,6 @@ use Illuminate\Validation\ValidationException;
 
 class SavingController extends Controller
 {
-    /** Normaliza "1.234,56" ou "1234.56" para float 1234.56 */
-    private function norm($v): ?float
-    {
-        if ($v === null || $v === '') return null;
-        if (is_string($v)) {
-            $v = str_replace([' ', '.'], '', $v); // remove separador de milhar
-            $v = str_replace(',', '.', $v);       // vírgula -> ponto
-        }
-        return (float) $v;
-    }
-
     public function index()
     {
         $savings = Saving::with('account')
@@ -56,14 +45,6 @@ class SavingController extends Controller
             ],
         ]);
 
-        // normalizações
-        $data['current_amount'] = $this->norm($data['current_amount']);
-        if (array_key_exists('purchase_value', $data)) {
-            $data['purchase_value'] = $this->norm($data['purchase_value']);
-        }
-        if (array_key_exists('interest_rate', $data)) {
-            $data['interest_rate'] = $this->norm($data['interest_rate']);
-        }
         $data['start_date'] = !empty($data['start_date']) ? substr($data['start_date'], 0, 10) : null;
 
         // se não vier purchase_value, usar o mesmo do current_amount
@@ -76,7 +57,6 @@ class SavingController extends Controller
         $saving = null;
 
         DB::transaction(function () use (&$saving, $data) {
-            /** @var Account $account */
             $account = Account::lockForUpdate()->find($data['account_id']);
 
             if ($account->current_balance < $data['current_amount']) {
@@ -126,11 +106,6 @@ class SavingController extends Controller
 
         $saving = Saving::where('id', $id)->first();
 
-        foreach (['current_amount','purchase_value','interest_rate'] as $f) {
-            if (array_key_exists($f, $data)) {
-                $data[$f] = $this->norm($data[$f]);
-            }
-        }
         if (array_key_exists('start_date', $data) && $data['start_date']) {
             $data['start_date'] = substr($data['start_date'], 0, 10);
         }

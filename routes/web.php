@@ -71,6 +71,8 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
 
     // Transactions
     Route::get('/transaction', [WebTransactionController::class, 'index'])->name('transaction-view.index');
+    Route::get('/transaction/custom-item-projections', [WebTransactionController::class, 'custom-item-projections']);
+
     Route::resource('transactions', ApiTransactionController::class)->scoped(['transaction' => 'uuid']);
 
 

@@ -16,7 +16,8 @@
 <div class="row position-relative" id="iconPickerWrap">
     <label class="form-label">Ícone</label>
     <div class="d-flex align-items-center gap-2">
-        <input type="hidden" id="iconInput" class="form-control" value="{{ $iconValue }}" readonly style="max-width:220px">
+        <input type="hidden" id="iconInput" class="form-control" value="{{ $iconValue }}" readonly
+               style="max-width:220px">
         <button type="button" id="iconBtn" class="btn btn-light border"><i class="{{ $iconValue }}"></i></button>
         <i id="iconPreview" class="{{ $iconValue }}" style="font-size:22px;margin-left:8px"></i>
         <input type="hidden" name="icon" id="icon" value="{{ $iconValue }}">
@@ -50,8 +51,7 @@
 </div>
 
 <div class="row d-none" id="rangeContainer">
-    <x-input-range col="" set="" rangeInput="monthly_limit" rangeValue="limiteMensal" name="monthly_limit" min="0"
-                   max="9999" value="{{ old('monthly_limit', 0) }}" title="Limite de gasto"></x-input-range>
+    <x-input-price col="6" title="Valor" id="amount" name="amount"/>
 </div>
 
 
@@ -160,6 +160,8 @@
 @endpush
 
 @push('scripts')
+    <script src="{{asset('assets/js/common/mask_price_input.js')}}"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const typeRadios = document.querySelectorAll('input[name="type"]');
@@ -190,7 +192,6 @@
 
     <script>
         (function () {
-            // Lista base (adicione os que quiser)
             const ICONS = [
                 'tags', 'address-card', 'wallet', 'cart-shopping', 'bag-shopping', 'basket-shopping', 'money-bill', 'money-check',
                 'sack-dollar', 'arrow-trend-up', 'arrow-trend-down', 'chart-line', 'piggy-bank', 'utensils', 'house', 'wifi',
@@ -219,7 +220,29 @@
                 'first-aid', 'bandage', 'pills', 'syringe', 'kit-medical', 'dna', 'vial', 'vials',
                 'tv', 'radio', 'satellite', 'plug', 'server', 'database',
                 'handshake', 'thumbs-up', 'thumbs-down', 'hand-holding', 'hand-holding-heart', 'hand-holding-usd',
-                'coins', 'credit-card', 'landmark', 'balance-scale', 'gavel'
+                'coins', 'credit-card', 'landmark', 'balance-scale', 'gavel', 'cog', 'cogs', 'sliders-h', 'toggle-on', 'toggle-off', 'spinner', 'circle-notch', 'sync', 'ban', 'question', 'info', 'exclamation', 'exclamation-triangle', 'exclamation-circle', 'info-circle', 'question-circle', 'check-square', 'square-check', 'minus-square', 'plus-square', 'square', 'dot-circle', 'bullseye',
+                'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right', 'external-link-alt', 'exchange-alt', 'arrows-alt', 'expand', 'compress', 'arrows-alt-h', 'arrows-alt-v', 'angle-left', 'angle-right', 'angle-up', 'angle-down', 'chevron-left', 'chevron-right', 'chevron-up', 'chevron-down', 'caret-left', 'caret-right', 'caret-up', 'caret-down', 'long-arrow-alt-left', 'long-arrow-alt-right', 'long-arrow-alt-up', 'long-arrow-alt-down', 'location-arrow',
+                'list', 'list-ul', 'list-ol', 'table', 'columns', 'align-left', 'align-center', 'align-right', 'align-justify', 'indent', 'outdent', 'paragraph', 'link', 'unlink', 'paperclip', 'copy', 'cut', 'paste', 'highlighter', 'pen', 'edit', 'pen-nib', 'pencil-alt', 'eraser', 'ruler', 'ruler-combined', 'crop', 'brush', 'paint-roller', 'palette',
+                'book-open', 'bookmark', 'book-reader', 'address-book', 'file-lines', 'file-code', 'file-csv', 'file-powerpoint', 'file-zipper', 'file-archive', 'file-download', 'file-upload', 'file-signature', 'file-invoice', 'folder-closed', 'folder-open', 'folder-tree', 'envelope-square', 'inbox', 'box-archive',
+                'money-bill-wave', 'money-bill-alt', 'money-bills', 'money-check-alt', 'percent', 'calculator', 'receipt', 'cash-register', 'chart-bar', 'chart-pie', 'chart-area', 'barcode', 'qrcode', 'cart-plus', 'cart-arrow-down', 'tag',
+                'at', 'hashtag', 'bullhorn', 'concierge-bell', 'share-square', 'share-alt', 'comment-alt', 'sms',
+                'code', 'code-branch', 'terminal', 'bug', 'cube', 'cubes', 'server', 'network-wired', 'microchip', 'memory', 'hdd', 'keyboard', 'laptop-code', 'tablet-alt', 'mobile-alt', 'shield-alt', 'unlock-alt',
+                'heartbeat', 'user-md', 'notes-medical', 'briefcase-medical', 'ambulance', 'hospital-alt', 'clinic-medical',
+                'walking', 'running', 'swimmer', 'hiking', 'truck-monster', 'truck-moving', 'tractor', 'tram', 'plane-departure', 'plane-arrival', 'parachute-box', 'suitcase-rolling', 'map-pin', 'map-signs', 'route', 'road', 'location-arrow',
+                'bed', 'bath', 'shower', 'toilet', 'sink', 'mug-hot', 'wine-glass', 'wine-bottle', 'beer', 'umbrella', 'fan', 'thermometer-half', 'thermometer-full', 'temperature-high', 'temperature-low',
+                'pizza-slice', 'hamburger', 'hotdog', 'bacon', 'egg', 'cheese', 'fish', 'drumstick-bite', 'carrot', 'apple-alt', 'lemon', 'pepper-hot', 'ice-cream', 'cookie', 'bread-slice', 'coffee',
+                'seedling', 'tree', 'mountain', 'campground', 'recycle', 'globe-africa', 'globe-asia', 'globe-europe',
+                'user-tie', 'user-cog', 'user-edit', 'user-clock', 'user-shield', 'user-secret', 'user-graduate', 'user-ninja', 'user-astronaut', 'users-cog', 'users-slash', 'child', 'baby', 'female', 'male', 'smile', 'meh', 'frown', 'surprise', 'smile-beam', 'tired',
+                'box-open', 'boxes', 'clipboard-check', 'clipboard-user', 'dolly', 'dolly-flatbed', 'truck-loading',
+                'unlock', 'fingerprint', 'id-card-alt', 'id-card-clip',
+                'play', 'pause', 'stop', 'backward', 'forward', 'step-backward', 'step-forward', 'fast-backward', 'fast-forward', 'volume-mute', 'headphones', 'headset', 'microphone-alt', 'podcast', 'record-vinyl', 'video', 'video-slash',
+                'calendar-plus', 'calendar-minus', 'calendar-times', 'calendar-week', 'calendar-alt', 'history', 'hourglass-start', 'hourglass-end',
+                'futbol', 'basketball-ball', 'volleyball-ball', 'baseball-ball', 'golf-ball', 'table-tennis', 'swimmer', 'running', 'biking',
+                'school', 'chalkboard', 'chalkboard-teacher', 'building', 'university', 'landmark', 'business-time',
+                'scroll', 'file-contract', 'balance-scale-left', 'balance-scale-right', 'handshake-alt-slash',
+                'compass', 'globe', 'map-marked-alt', 'map-marked', 'map-pin', 'street-view',
+                'thumbtack', 'hands-helping', 'hand-point-up', 'hand-point-down', 'hand-point-left', 'hand-point-right', 'hand-pointer', 'hand-paper', 'hand-rock', 'hand-peace', 'hand-scissors',
+                'ghost', 'bomb', 'magnet', 'lightbulb', 'lightbulb-slash', 'moon', 'sun', 'spray-can', 'wrench', 'screwdriver', 'flask', 'vial'
             ];
 
             function detectPrefix(cls) {
@@ -237,7 +260,7 @@
             const search = document.getElementById('iconSearch');
             const wrap = document.getElementById('iconPickerWrap');
 
-            const currentPrefix = detectPrefix(hidden.value); // 'fas' ou 'fa-solid'
+            const currentPrefix = detectPrefix(hidden.value);
 
             function render(list) {
                 grid.innerHTML = '';
@@ -271,11 +294,9 @@
                 dd.style.bottom = '';
                 dd.style.top = '';
                 if (spaceBelow < 280) {
-                    // abre pra cima
                     dd.style.bottom = '100%';
                     dd.style.marginBottom = '6px';
                 } else {
-                    // abre pra baixo
                     dd.style.top = '100%';
                     dd.style.marginTop = '6px';
                 }

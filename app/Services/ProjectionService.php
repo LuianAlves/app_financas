@@ -30,7 +30,8 @@ class ProjectionService
         $occ = collect()
             ->merge($this->expandUnique($userIds, $from, $to))
             ->merge($this->expandRecurrentsMonthlyYearly($userIds, $from, $to))
-            ->merge($this->expandRecurrentsCustom($userIds, $from, $to));
+            ->merge($this->expandRecurrentsCustom($userIds, $from, $to))
+            ->merge($this->expandRecurrentsCustomDays($userIds, $from, $to)); // << NOVO
 
         $occ = $occ->reject(fn($o) => ($o['type'] ?? null) === 'card' && ($o['type_card'] ?? null) === 'credit');
 
@@ -182,7 +183,11 @@ class ProjectionService
             }])
             ->whereIn('recurrents.user_id', $userIds)
             ->whereHas('transaction', fn($q) => $q->where('recurrence_type', 'custom'))
-            ->get(['id','user_id','transaction_id','payment_day','amount']);
+            ->get([
+                'id','user_id','transaction_id',
+                'payment_day','amount',
+                'start_date','interval_unit','interval_value','include_sat','include_sun' // <- adiciona
+            ]);
 
         $out = collect();
 
@@ -212,6 +217,77 @@ class ProjectionService
                     $val = $i === $totalParc ? $this->fixLastInstallment($parcValue, $totalParc, $t->amount) : $parcValue;
                     $out->push($this->mapTxLike($t, $dt, $val, 'custom', $i));
                 }
+            }
+        }
+
+        return $out;
+    }
+
+    protected function expandRecurrentsCustomDays(array $userIds, Carbon $from, Carbon $to): Collection
+    {
+        // pega recorrentes custom cujo intervalo é em DIAS
+        $recs = \App\Models\Recurrent::withoutGlobalScopes()
+            ->with(['transaction' => function($q) use ($userIds) {
+                $q->withoutGlobalScopes()
+                    ->with(['transactionCategory:id,name,type'])
+                    ->whereIn('transactions.user_id', $userIds)
+                    ->select('id','user_id','transaction_category_id','title','amount','date','type','type_card','card_id','recurrence_type');
+            }])
+            ->whereIn('recurrents.user_id', $userIds)
+            ->where('interval_unit', 'days')
+            ->whereHas('transaction', function ($q) {
+                $q->where('recurrence_type', 'custom')
+                    ->where(function ($q2) {
+                        $q2->where('transactions.type', '!=', 'card')
+                            ->orWhereNull('transactions.type')
+                            ->orWhere(function ($qq) {
+                                $qq->where('transactions.type', 'card')
+                                    ->where('transactions.type_card', '!=', 'credit');
+                            });
+                    })
+                    ->where(function ($q3) {
+                        $q3->whereNull('transactions.title')
+                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', [
+                                'total fatura','fatura total','total da fatura'
+                            ]);
+                    });
+            })
+            ->get([
+                'id','user_id','transaction_id',
+                'start_date','interval_unit','interval_value',
+                'include_sat','include_sun','amount'
+            ]);
+
+        $out = collect();
+
+        foreach ($recs as $r) {
+            $t = $r->transaction; if (!$t) continue;
+
+            // se existirem itens explícitos, deixamos outro bloco cuidar para não duplicar
+            $hasItems = DB::table('custom_item_recurrents')->where('recurrent_id', $r->id)->exists();
+            if ($hasItems) continue;
+
+            // só projetar se for realmente "custom sem término" em DIAS
+            if (trim((string)$r->interval_unit) !== 'days') continue;
+
+            $startBase = Carbon::parse($t->date)->startOfDay();
+            $start     = Carbon::parse($r->start_date ?: $startBase)->startOfDay();
+            if ($start->lt($startBase)) $start = $startBase; // âncora >= data da transação
+
+            $interval = max(1, (int)($r->interval_value ?? 1));
+            $sat = (bool)$r->include_sat;
+            $sun = (bool)$r->include_sun;
+
+            // primeira ocorrência dentro da janela (alinhada ao step) e normalizada p/ fds
+            $cursor = $this->firstAlignedDays($start, $from, $interval);
+            $cursor = $this->normalizeW($cursor, $sat, $sun);
+
+            // valor: usa amount do recurrent se houver, senão da transação
+            $val = (float)($r->amount ?: $t->amount);
+
+            while ($cursor->lte($to)) {
+                $out->push($this->mapTxLike($t, $cursor, (float)$val, 'custom')); // recurrence='custom' mantém sua UI
+                $cursor = $this->normalizeW($cursor->copy()->addDays($interval), $sat, $sun);
             }
         }
 
@@ -367,5 +443,24 @@ class ProjectionService
         $arr['recurrence'] = $rt;
         if ($installment) $arr['installment'] = $installment;
         return $arr;
+    }
+
+    private function normalizeW(Carbon $d, bool $sat, bool $sun): Carbon
+    {
+        if (!$sat && $d->isSaturday()) $d->addDays(2);
+        if (!$sun && $d->isSunday())   $d->addDay();
+        return $d;
+    }
+
+    /** Retorna a primeira data >= $from, alinhada ao step de $interval dias a partir de $start  */
+    private function firstAlignedDays(Carbon $start, Carbon $from, int $interval): Carbon
+    {
+        $s = $start->copy();
+        if ($s->lt($from)) {
+            $diff  = $s->diffInDays($from);
+            $steps = intdiv($diff + $interval - 1, $interval); // ceil
+            $s->addDays($steps * $interval);
+        }
+        return $s;
     }
 }

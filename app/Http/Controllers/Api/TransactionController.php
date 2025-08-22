@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Helpers\CardCycle;
+use App\Models\Saving;
+use App\Models\SavingMovement;
+use App\Models\TransactionCategory;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -80,15 +83,31 @@ class TransactionController extends Controller
             'transaction_category_id' => 'required|uuid|exists:transaction_categories,id',
             'amount' => 'required|numeric|min:0.01',
             'date' => 'required|date',
+
             'type' => 'required|in:pix,card,money',
-            'type_card' => 'nullable|in:credit,debit',
+            'account_id' => 'required_if:type,pix|nullable|uuid|exists:accounts,id',
+
+            'type_card' => 'nullable|required_if:type,card|in:credit,debit',
+            'card_id'   => 'required_if:type,card|prohibited_if:alternate_cards,1|nullable|uuid|exists:cards,id',
+
             'recurrence_type' => 'nullable|in:unique,monthly,yearly,custom',
-            'interval_value' => 'nullable|integer|min:1',
-            'installments' => 'nullable|integer|min:1',
-            'account_id' => 'nullable|uuid|exists:accounts,id',
-            'alternate_cards' => ['nullable','boolean'],
-            'alternate_card_ids' => ['required_if:alternate_cards,1','array'],
-            'alternate_card_ids.*' => ['uuid','exists:cards,id'],
+            'termination'        => 'nullable|in:no_end,has_end',
+            'custom_occurrences' => ['nullable','integer','min:1','required_if:termination,has_end'],
+            'interval_value'     => 'required_if:recurrence_type,custom|integer|min:1',
+
+            'alternate_cards'     => ['nullable','boolean'],
+            'alternate_card_ids'  => ['required_if:alternate_cards,1','array'],
+            'alternate_card_ids.*'=> ['uuid','distinct','exists:cards,id'],
+
+            'saving_id' => [function($attr,$val,$fail) use ($request) {
+                $cat = \App\Models\TransactionCategory::find($request->transaction_category_id);
+                if ($cat && $cat->type === 'investimento' && empty($val)) {
+                    $fail('saving_id é obrigatório para categoria investimento.');
+                }
+                if ($cat && $cat->type === 'investimento' && $request->type === 'card' && $request->type_card === 'credit') {
+                    $fail('Investimento não pode ser no crédito.');
+                }
+            }],
         ]);
 
         $txDate       = Carbon::parse($request->date)->startOfDay();
@@ -147,6 +166,8 @@ class TransactionController extends Controller
             'user_id' => Auth::id(),
             'card_id' => $request->card_id,
             'transaction_category_id' => $request->transaction_category_id,
+            'saving_id' => $request->saving_id,
+            'account_id' => $request->account_id,
             'title' => $request->title,
             'description' => $request->description,
             'amount' => $request->amount,
@@ -194,6 +215,8 @@ class TransactionController extends Controller
         $transaction = $this->transaction->create([
             'user_id' => Auth::id(),
             'card_id' => $request->card_id,
+            'saving_id' => $request->saving_id,
+            'account_id' => $request->account_id,
             'transaction_category_id' => $request->transaction_category_id,
             'title' => $request->title,
             'description' => $request->description,
@@ -230,14 +253,14 @@ class TransactionController extends Controller
 
     protected function handleUniqueTransaction(Request $request, Carbon $txDate, ?string $typeCard, bool $isCard)
     {
-        $catType = optional(\App\Models\TransactionCategory::find($request->transaction_category_id))->type;
-
         $recurrenceType = $request->recurrence_type ?? 'unique';
         $isRecurring    = $recurrenceType !== 'unique';
+        $cat = TransactionCategory::find($request->transaction_category_id);
 
         $transaction = $this->transaction->create([
             'user_id'                  => Auth::id(),
-            'account_id'               => $request->account_id,
+            'saving_id' => $request->saving_id,
+            'account_id' => $request->account_id,
             'card_id'                  => $request->card_id,
             'transaction_category_id'  => $request->transaction_category_id,
             'title'                    => $request->title,
@@ -250,43 +273,81 @@ class TransactionController extends Controller
             'custom_occurrences'       => $request->custom_occurrences ?? $request->installments,
         ]);
 
-        if ($isRecurring && !($isCard && $typeCard === 'credit')) {
+        if ($cat && $cat->type === 'investimento' && $recurrenceType === 'unique') {
+            DB::transaction(function() use ($request, $transaction, $txDate) {
+                SavingMovement::create([
+                    'user_id'       => Auth::id(),
+                    'saving_id'     => $request->saving_id,
+                    'transaction_id'=> $transaction->id,
+                    'account_id'    => $request->type === 'pix' ? $request->account_id : null,
+                    'direction'     => 'deposit',
+                    'amount'        => $transaction->amount,
+                    'date'          => $txDate->toDateString(),
+                    'notes'         => $transaction->title,
+                ]);
+                Saving::where('id',$request->saving_id)
+                    ->increment('current_amount', $transaction->amount);
+            });
+        }
 
+        if ($isRecurring && !($isCard && $typeCard === 'credit')) {
             $recurrent = $this->recurrent->create([
-                'user_id'       => $transaction->user_id,
-                'transaction_id'=> $transaction->id,
-                'payment_day'   => $txDate->format('d'),
-                'amount'        => $transaction->amount,
+                'user_id'        => $transaction->user_id,
+                'transaction_id' => $transaction->id,
+                'payment_day'    => $txDate->format('d'),
+                'amount'         => $transaction->amount,
+
+                // novos campos de recorrents já existem na tua migration extra
+                'start_date'     => $txDate,
+                'interval_unit'  => $recurrenceType === 'yearly' ? 'years' : ($recurrenceType === 'custom' ? 'days' : 'months'),
+                'interval_value' => $recurrenceType === 'custom' ? (int)($request->interval_value ?? 1) : 1,
+                'include_sat'    => (bool)($request->include_sat ?? true),
+                'include_sun'    => (bool)($request->include_sun ?? true),
+                'next_run_date'  => $txDate,
+                'active'         => true,
             ]);
 
-            if ($transaction->recurrence_type === 'monthly') {
-                $this->monthlyItemRecurrents->create([
-                    'recurrent_id'    => $recurrent->id,
-                    'payment_day'     => $txDate->format('d'),
-                    'reference_month' => $txDate->format('m'),
-                    'reference_year'  => $txDate->format('Y'),
-                    'amount'          => $transaction->amount,
-                    'status'          => false,
-                ]);
+            $occ = (int)($request->custom_occurrences ?? 0);
+
+            // SEM TÉRMINO → 1 linha modelo em monthly/yearly
+            if (in_array($recurrenceType, ['monthly','yearly']) && $occ === 0) {
+                if ($recurrenceType === 'monthly') {
+                    $this->monthlyItemRecurrents->create([
+                        'recurrent_id'    => $recurrent->id,
+                        'payment_day'     => $txDate->format('d'),
+                        'reference_month' => $txDate->format('m'),
+                        'reference_year'  => $txDate->format('Y'),
+                        'amount'          => $transaction->amount,
+                        'status'          => false,
+                    ]);
+                } else { // yearly
+                    $this->yearlyItemRecurrents->create([
+                        'recurrent_id'   => $recurrent->id,
+                        'payment_day'    => $txDate->format('d'),
+                        'reference_year' => $txDate->format('Y'),
+                        'amount'         => $transaction->amount,
+                        'status'         => false,
+                    ]);
+                }
             }
+            // COM TÉRMINO → gerar N datas em custom_item_recurrents
+            elseif ($occ > 0) {
+                $includeSat = (bool)($request->include_sat ?? true);
+                $includeSun = (bool)($request->include_sun ?? true);
+                $norm = function (Carbon $d) use ($includeSat,$includeSun) {
+                    if (!$includeSat && $d->isSaturday()) $d->addDays(2);
+                    if (!$includeSun && $d->isSunday())   $d->addDay();
+                    return $d;
+                };
 
-            if ($transaction->recurrence_type === 'yearly') {
-                $this->yearlyItemRecurrents->create([
-                    'recurrent_id'   => $recurrent->id,
-                    'payment_day'    => $txDate->format('d'),
-                    'reference_year' => $txDate->format('Y'),
-                    'amount'         => $transaction->amount,
-                    'status'         => false,
-                ]);
-            }
+                $step = match ($recurrenceType) {
+                    'yearly'  => fn(Carbon $d, $i) => $norm($d->copy()->addYearsNoOverflow($i)),
+                    'monthly' => fn(Carbon $d, $i) => $norm($d->copy()->addMonthsNoOverflow($i)),
+                    'custom'  => fn(Carbon $d, $i) => $norm($d->copy()->addDays(($request->interval_value ?? 1) * $i)),
+                };
 
-            if ($transaction->recurrence_type === 'custom') {
-                $total     = (int)($transaction->custom_occurrences ?? 0);
-                $startDate = $txDate->copy();
-
-                for ($i = 0; $i < $total; $i++) {
-                    $current = $startDate->copy()->addMonths($i); // mantém sua lógica original (mensal)
-
+                for ($i = 0; $i < $occ; $i++) {
+                    $current = $step($txDate, $i);
                     $this->customItemRecurrents->create([
                         'recurrent_id'             => $recurrent->id,
                         'payment_day'              => $current->format('d'),
@@ -304,19 +365,6 @@ class TransactionController extends Controller
                 'transaction' => $transaction,
             ]);
         }
-
-//        if (!$isRecurring && (in_array($request->type, ['pix', 'money']) || ($isCard && $typeCard === 'debit'))) {
-//            if ($request->account_id) {
-//                // se categoria é 'entrada' credita, se 'despesa'/'investimento' debita
-//                if ($catType === 'entrada') {
-//                    \App\Models\Account::where('id', $request->account_id)
-//                        ->increment('current_balance', $transaction->amount);
-//                } else {
-//                    \App\Models\Account::where('id', $request->account_id)
-//                        ->decrement('current_balance', $transaction->amount);
-//                }
-//            }
-//        }
 
         return response()->json([
             'message'     => 'Transação registrada com sucesso',
@@ -407,7 +455,7 @@ class TransactionController extends Controller
                     ['paid' => false]
                 );
 
-                $this->createInvoiceItemIfNotExists($invoice->id, $recurrent->id, $request, $occur);
+                $this->createInvoiceItemIfNotExists($invoice->id, $transaction->id, $recurrent->id, $request, $occur);
 
                 $occur = $nextFn($occur);
             }
@@ -440,6 +488,146 @@ class TransactionController extends Controller
                 'current_installment' => 1,
                 'is_projection' => true,
             ]);
+        }
+    }
+
+    public function projections(Request $req)
+    {
+        $from = Carbon::parse($req->get('from', now()->startOfMonth()))->startOfDay();
+        $to   = Carbon::parse($req->get('to',   now()->copy()->addMonths(12)->endOfMonth()))->endOfDay();
+
+        // Pegamos todos os recorrentes ativos do usuário
+        $recs = Recurrent::with([
+            'transaction:id,title,transaction_category_id,amount,type,type_card'
+        ])
+            ->where('user_id', Auth::id())
+            ->where('active', true)
+            ->get();
+
+        $out = [];
+
+        foreach ($recs as $rec) {
+            // se for cartão de CRÉDITO recorrente, você já projeta via faturas/invoice_items → pula aqui
+            if (optional($rec->transaction)->type === 'card' && optional($rec->transaction)->type_card === 'credit') {
+                continue;
+            }
+
+            switch ($rec->interval_unit) {
+                case 'days':
+                    // custom (X dias) — inclui seu caso "15 dias sem término"
+                    foreach ($this->projectDays($rec, $from, $to) as $occ) $out[] = $occ;
+                    break;
+                case 'months':
+                    // mensal sem término: 1 “modelo” em monthly_item_recurrents,
+                    // mas para a UI podemos expandir aqui também
+                    foreach ($this->projectMonths($rec, $from, $to) as $occ) $out[] = $occ;
+                    break;
+                case 'years':
+                    foreach ($this->projectYears($rec, $from, $to) as $occ) $out[] = $occ;
+                    break;
+            }
+        }
+
+        // Também pode mesclar aqui o que estiver em custom_item_recurrents (quando houver término)
+        // e monthly_item_recurrents/yearly_item_recurrents “modelo” se quiser
+        // (opcional; depende de como sua UI consome).
+
+        return response()->json(collect($out)->sortBy('date')->values());
+    }
+
+    protected function normalizeWeekends(Carbon $d, $includeSat, $includeSun): Carbon
+    {
+        if (!$includeSat && $d->isSaturday()) $d->addDays(2);
+        if (!$includeSun && $d->isSunday())   $d->addDay();
+        return $d;
+    }
+
+    protected function projectDays(Recurrent $rec, Carbon $from, Carbon $to): \Generator
+    {
+        $start    = Carbon::parse($rec->start_date)->startOfDay();
+        $interval = max(1, (int) $rec->interval_value);
+
+        // pula direto para a primeira ocorrência >= $from
+        if ($start->lt($from)) {
+            $diffDays = $start->diffInDays($from);
+            $steps = intdiv($diffDays + $interval - 1, $interval); // ceil
+            $start->addDays($steps * $interval);
+        }
+
+        $cursor = $this->normalizeWeekends($start, (bool)$rec->include_sat, (bool)$rec->include_sun);
+
+        while ($cursor->lte($to)) {
+            yield [
+                'date'           => $cursor->toDateString(),
+                'amount'         => (float)$rec->amount,
+                'transaction_id' => $rec->transaction_id,
+                'recurrent_id'   => $rec->id,
+                'title'          => optional($rec->transaction)->title,
+                'type'           => optional($rec->transaction)->type,
+            ];
+            $cursor = $this->normalizeWeekends(
+                $cursor->copy()->addDays($interval),
+                (bool)$rec->include_sat,
+                (bool)$rec->include_sun
+            );
+        }
+    }
+
+    protected function projectMonths(Recurrent $rec, Carbon $from, Carbon $to): \Generator
+    {
+        // usa payment_day (string '03') ou o dia de start_date
+        $day   = (int) ($rec->payment_day ?: Carbon::parse($rec->start_date)->day);
+        $start = Carbon::parse($rec->start_date)->startOfDay()->day($day);
+
+        // primeira >= from
+        while ($start->lt($from)) {
+            $start = $start->copy()->addMonthsNoOverflow(1)->day($day);
+        }
+
+        $cursor = $this->normalizeWeekends($start, (bool)$rec->include_sat, (bool)$rec->include_sun);
+
+        while ($cursor->lte($to)) {
+            yield [
+                'date'           => $cursor->toDateString(),
+                'amount'         => (float)$rec->amount,
+                'transaction_id' => $rec->transaction_id,
+                'recurrent_id'   => $rec->id,
+                'title'          => optional($rec->transaction)->title,
+                'type'           => optional($rec->transaction)->type,
+            ];
+            $cursor = $this->normalizeWeekends(
+                $cursor->copy()->addMonthsNoOverflow(1)->day($day),
+                (bool)$rec->include_sat,
+                (bool)$rec->include_sun
+            );
+        }
+    }
+
+    protected function projectYears(Recurrent $rec, Carbon $from, Carbon $to): \Generator
+    {
+        $day   = (int) ($rec->payment_day ?: Carbon::parse($rec->start_date)->day);
+        $start = Carbon::parse($rec->start_date)->startOfDay()->day($day);
+
+        while ($start->lt($from)) {
+            $start = $start->copy()->addYearsNoOverflow(1)->day($day);
+        }
+
+        $cursor = $this->normalizeWeekends($start, (bool)$rec->include_sat, (bool)$rec->include_sun);
+
+        while ($cursor->lte($to)) {
+            yield [
+                'date'           => $cursor->toDateString(),
+                'amount'         => (float)$rec->amount,
+                'transaction_id' => $rec->transaction_id,
+                'recurrent_id'   => $rec->id,
+                'title'          => optional($rec->transaction)->title,
+                'type'           => optional($rec->transaction)->type,
+            ];
+            $cursor = $this->normalizeWeekends(
+                $cursor->copy()->addYearsNoOverflow(1)->day($day),
+                (bool)$rec->include_sat,
+                (bool)$rec->include_sun
+            );
         }
     }
 }

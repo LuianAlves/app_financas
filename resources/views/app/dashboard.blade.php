@@ -408,17 +408,18 @@
             showPaymentModal();
         });
 
-        function renderBreakdown(elId, k, root) {
+        function renderBreakdown(elId, k, root, label = 'atrasados') {
             const el = document.getElementById(elId);
             if (!el) return;
-            const mes = k[`${root}_mes_brl`];
-            const atras = k[`${root}_atrasados_brl`];
-            const tot = k[`${root}_brl`];
+            const mes   = k[`${root}_mes_brl`];
+            const extra = k[`${root}_atrasados_brl`]; // mantemos o campo; só muda o texto
 
-            if (typeof mes === 'string' && typeof atras === 'string') {
-                el.innerHTML = `${mes}<span class="price-default mx-1"><span class="late"> + ${atras} atrasados</span></span>`;
-            } else if (typeof tot === 'string') {
-                el.textContent = tot;
+            if (typeof mes === 'string' && typeof extra === 'string') {
+                el.innerHTML =
+                    `${mes}<span class="price-default mx-1"><span class="late"> + ${extra} ${label}</span></span>`;
+            } else {
+                const tot = k[`${root}_brl`];
+                if (typeof tot === 'string') el.textContent = tot;
             }
         }
 
@@ -442,8 +443,8 @@
             renderSaldoCofrinhos('kpi-contas', k.accountsBalance_brl, k.savingsBalance_brl);
 
             if (k.savingsBalance_brl) $('kpi-cofrinhos').textContent = k.savingsBalance_brl; // só se não escondeu esse bloco
-            renderBreakdown('kpi-receber', k, 'aReceber');
-            renderBreakdown('kpi-pagar',   k, 'aPagar');
+            renderBreakdown('kpi-receber', k, 'aReceber', 'pendentes');
+            renderBreakdown('kpi-pagar',   k, 'aPagar',   'atrasados');
             $('kpi-balanco').textContent = (k.saldoPrevisto_brl || k.saldoMes_brl || k.saldoReal_brl || '');
         }
 
@@ -564,17 +565,18 @@
     <script>
         const INVOICE_PAY_TPL = @json(route('invoice-payment.update', ['cardId' => '__CARD__', 'ym' => '__YM__']));
 
-        function renderBreakdown(elId, k, root) {
+        function renderBreakdown(elId, k, root, label = 'atrasados') {
             const el = document.getElementById(elId);
             if (!el) return;
-            const mes = k[`${root}_mes_brl`];
-            const atras = k[`${root}_atrasados_brl`];
-            const tot = k[`${root}_brl`];
+            const mes   = k[`${root}_mes_brl`];
+            const extra = k[`${root}_atrasados_brl`]; // mantemos o campo; só muda o texto
 
-            if (typeof mes === 'string' && typeof atras === 'string') {
-                el.innerHTML = `${mes}<span class="price-default mx-1"><span class="late"> + ${atras} atrasados</span></span>`;
-            } else if (typeof tot === 'string') {
-                el.textContent = tot;
+            if (typeof mes === 'string' && typeof extra === 'string') {
+                el.innerHTML =
+                    `${mes}<span class="price-default mx-1"><span class="late"> + ${extra} ${label}</span></span>`;
+            } else {
+                const tot = k[`${root}_brl`];
+                if (typeof tot === 'string') el.textContent = tot;
             }
         }
 
@@ -595,8 +597,8 @@
 
             renderSaldoCofrinhos('kpi-contas', k.accountsBalance_brl, k.savingsBalance_brl);
 
-            renderBreakdown('kpi-receber', k, 'aReceber');
-            renderBreakdown('kpi-pagar',   k, 'aPagar');
+            renderBreakdown('kpi-receber', k, 'aReceber', 'pendentes');
+            renderBreakdown('kpi-pagar',   k, 'aPagar',   'atrasados');
 
             if ($('kpi-balanco') && (k.saldoPrevisto_brl || k.saldoMes_brl))
                 $('kpi-balanco').textContent = (k.saldoPrevisto_brl || k.saldoMes_brl);
@@ -758,8 +760,8 @@
                         renderSaldoCofrinhos('kpi-contas', k.accountsBalance_brl, k.savingsBalance_brl);
 
                         // mostra os valores
-                        renderBreakdown('kpi-receber', k, 'aReceber');
-                        renderBreakdown('kpi-pagar', k, 'aPagar');
+                        renderBreakdown('kpi-receber', k, 'aReceber', 'pendentes');
+                        renderBreakdown('kpi-pagar',   k, 'aPagar',   'atrasados');
                         document.getElementById('kpi-balanco').textContent = k.saldoPrevisto_brl;
                     } catch (e) {
                         console.error(e);

@@ -1033,6 +1033,59 @@ class DashboardController extends Controller
             }
         }
 
+        // custom (a cada X dias) ATRASADOS (sem itens em custom_item_recurrents)
+        $recDOver = Recurrent::withoutGlobalScopes()
+            ->with(['transaction.transactionCategory:id,type'])
+            ->whereIn('recurrents.user_id', $userIds)
+            ->where('interval_unit', 'days')
+            ->whereHas('transaction', function ($q) {
+                $q->where('recurrence_type', 'custom')
+                    ->where(function ($q2) {
+                        $q2->where('transactions.type','!=','card')
+                            ->orWhereNull('transactions.type')
+                            ->orWhere(fn($qq)=>$qq->where('transactions.type','card')
+                                ->where('transactions.type_card','!=','credit'));
+                    })
+                    ->where(function ($q3) {
+                        $q3->whereNull('transactions.title')
+                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?, ?, ?)', [
+                                'total fatura','fatura total','total da fatura'
+                            ]);
+                    });
+            })
+            ->get(['recurrents.*']);
+
+        foreach ($recDOver as $r) {
+            // se tiver itens custom explícitos, já foi tratado em $recCOver
+            if (DB::table('custom_item_recurrents')->where('recurrent_id', $r->id)->exists()) continue;
+
+            $t    = $r->transaction; if (!$t) continue;
+            $type = strtolower(optional($t->transactionCategory)->type ?? '');
+            if (!in_array($type, ['entrada','despesa','investimento'], true)) $type = 'investimento';
+
+            $start    = \Carbon\Carbon::parse($r->start_date)->startOfDay();
+            $interval = max(1, (int)$r->interval_value);
+
+            // primeira ocorrência alinhada >= start
+            $cursor = $this->firstAlignedDays($start, $start, $interval);
+            $cursor = $this->normalizeW($cursor, (bool)$r->include_sat, (bool)$r->include_sun);
+
+            // conta todas as ocorrências antes do início do mês alvo
+            while ($cursor->lt($monthStart)) {
+                $ym = $cursor->format('Y-m');
+                if (empty($paid[$t->id][$ym])) {
+                    $v = abs((float)$r->amount);
+                    if ($type === 'entrada') $sumReceberOver += $v;
+                    else /* despesa/investimento */ $sumPagarOver += $v;
+                }
+                $cursor = $this->normalizeW(
+                    $cursor->copy()->addDays($interval),
+                    (bool)$r->include_sat,
+                    (bool)$r->include_sun
+                );
+            }
+        }
+
         /* ===== MÊS ALVO (monthStart..$end) ===== */
 
         // únicas no mês

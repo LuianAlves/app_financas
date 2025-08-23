@@ -783,3 +783,48 @@
     letter-spacing: .75px !important;
     font-size: 12.5px !important;
 }
+
+
+/* Loading Content */
+.shimmer {
+    --sk-height: 22px;
+    --sk-radius: 5px;
+    --sk-bg: rgba(143,143,143,.35);
+    --sk-shine: rgba(255,255,255,.7);
+    --sk-speed: 1.8s;
+    width: 100%;
+    position: relative;
+    display: grid;
+    grid-template-areas: "stack";
+}
+.shimmer > * { grid-area: stack; }
+
+.shimmer.is-loading { min-height: var(--sk-height); }
+.shimmer.is-loading > * { opacity: 0; }
+.shimmer.is-loading::before,
+.shimmer.is-loading::after{
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: var(--sk-radius);
+    grid-area: stack;
+    pointer-events: none;
+}
+.shimmer.is-loading::before { background: var(--sk-bg); }
+.shimmer.is-loading::after  {
+    background: linear-gradient(90deg, transparent, var(--sk-shine), transparent);
+    background-size: 200% 100%;
+    animation: shimmer var(--sk-speed) linear infinite;
+}
+
+.shimmer.is-loaded > * { opacity: 1; transition: opacity .18s ease; }
+.shimmer.is-loaded::before,
+.shimmer.is-loaded::after { display: none; }
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.shimmer--lg { --sk-height: 36px; --sk-radius: 18px; }
+.shimmer--xl { --sk-height: 60px; --sk-radius: 22px; }
+.shimmer--pill { --sk-radius: 999px; }

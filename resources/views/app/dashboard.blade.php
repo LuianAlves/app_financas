@@ -2,82 +2,10 @@
 @section('content')
     @push('styles')
         <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
-
-        <style>
-            .value-line {
-                position: relative;
-                display: grid;
-                grid-template-areas:"stack";
-                align-items: center;
-                min-height: 25px
-            }
-
-            .value-line > * {
-                grid-area: stack
-            }
-
-            .value-line .value-real, .value-line .value-real .late {
-                display: flex;
-                align-items: center;
-                font-size: 12px !important;
-            }
-
-            .preloader-values-sm {
-                width: 75px;
-                height: 22px;
-                margin: 5px 0;
-            }
-
-            .preloader-values-lg {
-                width: 100%;
-                height: 32px;
-                margin: 10px 0px 5px 0px;
-            }
-
-            .preloader-values {
-                border-radius: 25px;
-                background: rgba(143, 143, 143, 0.55);
-                overflow: hidden;
-                position: relative
-            }
-
-            .preloader-values::after {
-                content: "";
-                position: absolute;
-                inset: 0;
-                background: linear-gradient(90deg, rgba(229, 229, 229, .38), rgba(255, 255, 255, .75), rgba(229, 229, 229, .38));
-                background-size: 200% 100%;
-                animation: shimmer 2s linear infinite
-            }
-
-            @keyframes shimmer {
-                0% {
-                    background-position: 200% 0
-                }
-                100% {
-                    background-position: -200% 0
-                }
-            }
-
-            .value-line.is-loading .value-real {
-                opacity: 0
-            }
-
-            .value-line.is-loading .preloader-values {
-                opacity: 1
-            }
-
-            .value-line.loaded .value-real {
-                opacity: 1;
-                transition: opacity .18s
-            }
-
-            .value-line.loaded .preloader-values {
-                opacity: 0;
-                pointer-events: none
-            }
-        </style>
     @endpush
+
+    <button class="btn btn-sm btn-light d-none" data-install>Instalar app</button>
+    <script src="{{asset('assets/js/install.js')}}" defer></script>
 
     <div class="header">
         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -108,22 +36,18 @@
             </div>
 
             {{-- Saldo do mês --}}
-            <div class="value-line is-loading">
-                <strong class="value-real" id="kpi-balanco" style="font-size: 36px !important;"></strong>
-                <div class="preloader-values preloader-values-lg"></div>
+            <div class="shimmer is-loading shimmer--xl">
+                <strong id="kpi-balanco" style="font-size:36px"></strong>
             </div>
 
-
             <div class="d-flex justify-content-between flex-column">
-
                 <div class="row">
                     <!-- Saldo contas -->
                     <div class="col-12">
                         <b class="text-primary dash-amounts">Saldo contas</b>
                         <div class="d-flex align-items-center" style="height: 15px !important;">
-                            <div class="value-line is-loading w-100">
-                                <span class="price-default value-real d-flex justify-content-between" id="kpi-contas"></span>
-                                <div class="preloader-values preloader-values-sm"></div>
+                            <div class="shimmer is-loading">
+                                <span id="kpi-contas" class="price-default d-flex justify-content-between"></span>
                             </div>
                         </div>
                     </div>
@@ -132,9 +56,8 @@
                     <div class="col-12 my-2">
                         <b class="text-color dash-amounts">A receber</b>
                         <div class="d-flex align-items-center" style="height: 15px !important;">
-                            <div class="value-line is-loading w-100">
-                                <span class="price-default value-real d-flex justify-content-between" id="kpi-receber"></span>
-                                <div class="preloader-values preloader-values-sm"></div>
+                            <div class="shimmer is-loading">
+                                <span id="kpi-receber" class="price-default d-flex justify-content-between"></span>
                             </div>
                         </div>
                     </div>
@@ -143,9 +66,8 @@
                     <div class="col-12">
                         <b class="text-danger dash-amounts">A pagar</b>
                         <div class="d-flex align-items-center" style="height: 15px !important;">
-                            <div class="value-line is-loading w-100">
-                                <span class="price-default value-real d-flex justify-content-between" id="kpi-pagar"></span>
-                                <div class="preloader-values preloader-values-sm"></div>
+                            <div class="shimmer is-loading">
+                                <span id="kpi-pagar" class="price-default d-flex justify-content-between"></span>
                             </div>
                         </div>
                     </div>
@@ -169,12 +91,14 @@
                 Bancos
             </a>
         </div>
+
         <div class="icon-button">
             <a href="{{ route('transaction-view.index') }}" class="nav-link-atalho">
                 <i class="fa-solid fa-cart-plus"></i>
                 <span>Transações</span>
             </a>
         </div>
+
         <div class="icon-button">
             <a href="{{ route('card-view.index') }}" class="nav-link-atalho">
                 <i class="fas fa-credit-card"></i><span>Cartões</span></a>
@@ -199,6 +123,7 @@
             </a>
         </div>
     </div>
+
     <div class="">
         <div id="calendar"></div>
     </div>
@@ -337,6 +262,21 @@
     />
 
     <script>
+        function startLoading(...ids){
+            ids.forEach(id=>{
+                document.getElementById(id)?.closest('.shimmer')?.classList.add('is-loading');
+                document.getElementById(id)?.closest('.shimmer')?.classList.remove('is-loaded');
+            });
+        }
+        function finishLoading(...ids){
+            ids.forEach(id=>{
+                document.getElementById(id)?.closest('.shimmer')?.classList.remove('is-loading');
+                document.getElementById(id)?.closest('.shimmer')?.classList.add('is-loaded');
+            });
+        }
+    </script>
+
+    <script>
         // === Pagar TRANSAÇÃO (abre modal) ===
         const PAY_TPL = @json(route('transaction-payment', ['transaction' => '__ID__']));
         const paymentModal = document.getElementById('paymentModal');
@@ -354,25 +294,6 @@
             paymentModal.classList.remove('show');
         }
 
-        function startLoading(...ids) {
-            ids.forEach(id => {
-                const box = document.getElementById(id)?.closest('.value-line');
-                if (box) {
-                    box.classList.add('is-loading');
-                    box.classList.remove('loaded');
-                }
-            });
-        }
-
-        function finishLoading(...ids) {
-            ids.forEach(id => {
-                const box = document.getElementById(id)?.closest('.value-line');
-                if (box) {
-                    box.classList.remove('is-loading');
-                    box.classList.add('loaded');
-                }
-            });
-        }
 
         // parser BR/EN robusto
         function parseMoneyBR(input) {

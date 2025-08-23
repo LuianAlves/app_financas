@@ -1,3 +1,4 @@
+// public/assets/js/push-register.js
 (function () {
     const ua = navigator.userAgent || '';
     window.PUSH_CFG = Object.assign({
@@ -63,12 +64,11 @@
         }
     }
 
-    let initializing = false; // trava simples para não duplicar
+    let initializing = false;
 
     async function initializePush() {
         if (initializing) return;
         initializing = true;
-
         try {
             if (!('serviceWorker' in navigator && 'PushManager' in window)) {
                 console.warn('Push não suportado neste navegador');
@@ -94,7 +94,7 @@
             // VAPID
             let vapidKey;
             try {
-                const respKey = await fetch(window.PUSH_CFG.vapidKeyUrl, {cache: 'no-store'});
+                const respKey = await fetch(window.PUSH_CFG.vapidKeyUrl, { cache: 'no-store' });
                 vapidKey = (await respKey.text()).trim();
             } catch (e) {
                 console.error('Falha ao obter VAPID:', e);
@@ -116,41 +116,45 @@
             }
 
             await postSubscription(sub.toJSON());
-
-            // marcou como concedido → não precisa mais de gesto
             localStorage.setItem('pushGranted', '1');
         } finally {
             initializing = false;
         }
     }
 
+    // === pedir permissão de forma segura (gesto em iOS fora do standalone) ===
     async function ensurePermissionByGesture() {
         const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
         const isiOS = window.PUSH_CFG.isIOS;
 
-        async function ensurePermissionByGesture() {
-            if (isiOS && !isStandalone) {
-                return;
-            }
+        // iOS só tem push em PWA instalado; em aba não adianta pedir
+        if (isiOS && !isStandalone) {
+            // opcional: mostrar banner “Adicionar à Tela de Início”
+            return;
+        }
 
-            // fluxo atual:
-            if (Notification.permission === 'granted') {
-                await initializePush();
-            } else if (Notification.permission === 'default') {
-                // precise de gesto? mantenha seu handler de clique/touch aqui
-                const handler = async () => {
-                    await initializePush();
-                    document.removeEventListener('click', handler);
-                    document.removeEventListener('touchstart', handler);
-                };
-                document.addEventListener('click', handler, {once: true});
-                document.addEventListener('touchstart', handler, {once: true});
-            }
+        if (Notification.permission === 'granted') {
+            await initializePush();
+            return;
+        }
+
+        // Para pedir permissão, amarra num gesto do usuário
+        const handler = async () => {
+            document.removeEventListener('click', handler);
+            document.removeEventListener('touchstart', handler);
+            await initializePush();
+        };
+
+        if (Notification.permission === 'default') {
+            document.addEventListener('click', handler, { once: true });
+            document.addEventListener('touchstart', handler, { once: true });
         }
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
-        await sendPendingIfAny();   // se logou agora, envia a sub pendente
+        // debug opcional
+        // console.log('Perm:', Notification.permission, 'SW?', 'serviceWorker' in navigator, 'Push?', 'PushManager' in window);
+        await sendPendingIfAny();
         await ensurePermissionByGesture();
     });
 })();

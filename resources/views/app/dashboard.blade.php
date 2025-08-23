@@ -5,6 +5,18 @@
     @endpush
 
     <div class="header">
+        <button class="btn bg-color w-100 mb-3 d-none"
+                style="letter-spacing:.75px;font-size:12px;font-weight:600"
+                data-install>
+            <i class="fa fa-download mx-2"></i>Baixe o aplicativo
+        </button>
+
+        <div id="ios-a2hs" class="alert alert-light d-none" role="alert" style="margin:8px 0">
+            No iPhone: toque <strong>Compartilhar</strong> → <strong>Adicionar à Tela de Início</strong> para instalar o app.
+        </div>
+
+        <button id="ios-enable-push" class="btn btn-sm btn-primary d-none">Ativar notificações</button>
+
         <div class="d-flex justify-content-between align-items-center mb-2">
             <h1 class="m-0 mb-3">Tela inicial</h1>
         </div>

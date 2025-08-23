@@ -1,71 +1,101 @@
 (() => {
-    // Elementos
-    const installBtn = document.querySelector('[data-install]'); // comece com d-none no HTML
-    const iosHint = document.getElementById('ios-a2hs');
-
-    // --- Detectores robustos ---
-    const ua = navigator.userAgent || '';
-    const isStandalone =
-        matchMedia('(display-mode: standalone)').matches ||
-        (navigator.standalone === true); // iOS Safari
-
-    // iOS/iPadOS: inclui casos em que o iPadOS reporta "MacIntel" mas tem touch
-    const isIOSLike = (() => {
-        const iOSUA = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-        const iPadOS13Plus = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
-        return iOSUA || iPadOS13Plus;
-    })();
-
-    // Desktop (macOS/Windows/Linux) = NÃO iOSLike e não Android
-    const isAndroid = /Android/i.test(ua);
-
-    // Garantia: começa tudo escondido
-    installBtn?.classList.add('d-none');
-    iosHint?.classList.add('d-none');
-
-    // Já instalado? (PWA aberto em standalone)
-    if (isStandalone) {
-        // Nada a exibir em nenhum SO
-        return;
+    function onReady(fn){
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, {once:true});
+        else fn();
     }
 
-    // --- Fluxo iOS/iPadOS: mostrar HINT apenas no iOS quando não instalado ---
-    if (isIOSLike) {
-        // iOS não tem beforeinstallprompt — o fluxo é via menu “Compartilhar”
-        iosHint?.classList.remove('d-none');   // mostra o banner de instrução
-        installBtn?.classList.add('d-none');   // botão nunca aparece no iOS
-        return; // encerra aqui (o restante é Android/desktop)
-    }
+    onReady(() => {
+        const installBtn = document.querySelector('[data-install]'); // começa com d-none no HTML
+        const iosHint    = document.getElementById('ios-a2hs');
 
-    // --- Fluxo Android/Chrome/Edge: mostrar botão só quando o navegador permitir ---
-    let deferred = null;
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferred = e;
-        // Mostra botão **apenas** quando pode instalar
-        installBtn?.classList.remove('d-none');
-        iosHint?.classList.add('d-none');
-    });
-
-    document.addEventListener('click', async (e) => {
-        const btn = e.target.closest('[data-install]');
-        if (!btn || !deferred) return;
-        try {
-            await deferred.prompt();
-            await deferred.userChoice; // opcional: pode inspecionar outcome
-        } finally {
-            deferred = null;
-            btn.classList.add('d-none'); // esconde após a tentativa
-        }
-    });
-
-    // Se o navegador sinalizar que foi instalado por outro caminho, esconda tudo
-    window.addEventListener('appinstalled', () => {
+        // Esconde tudo de cara
         installBtn?.classList.add('d-none');
         iosHint?.classList.add('d-none');
+
+        const ua = navigator.userAgent || '';
+        const platform = navigator.platform || '';
+        const maxTP = navigator.maxTouchPoints || 0;
+
+        const isStandalone =
+            (typeof window.matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches) ||
+            (navigator.standalone === true);
+
+        // iOS/iPadOS robusto: cobre iPhone/iPad clássicos + iPadOS 13+ (MacIntel + touch)
+        const isIOSLike = (/(iPad|iPhone|iPod)/.test(ua) && !window.MSStream) || (platform === 'MacIntel' && maxTP > 1);
+
+        // Android simples
+        const isAndroid = /Android/i.test(ua);
+
+        // DEBUG leve (comente se não quiser)
+        // console.log({isStandalone, isIOSLike, isAndroid, ua, platform, maxTP});
+
+        // Se já está instalado em modo standalone: nada a exibir
+        if (isStandalone) return;
+
+        // iOS/iPadOS não tem beforeinstallprompt → mostra hint
+        if (isIOSLike) {
+            iosHint?.classList.remove('d-none');
+            installBtn?.classList.add('d-none');
+            return;
+        }
+
+        // Android/Chromium: só mostra botão quando o navegador sinaliza que pode instalar
+        let deferred = null;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferred = e;
+            installBtn?.classList.remove('d-none');
+            iosHint?.classList.add('d-none');
+        });
+
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-install]');
+            if (!btn || !deferred) return;
+            try {
+                await deferred.prompt();
+                await deferred.userChoice;
+            } finally {
+                deferred = null;
+                btn.classList.add('d-none');
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBtn?.classList.add('d-none');
+            iosHint?.classList.add('d-none');
+        });
+
+        // Fallback extra: se não é iOSLike nem Android e também não veio beforeinstallprompt,
+        // não mostra nada (desktop normal). Mas se estiver num navegador iOS “diferentão”
+        // que não bateu no isIOSLike, tenta detectar Safari iOS por pistas do UA e
+        // mostra o hint mesmo assim.
+        setTimeout(() => {
+            const ua = navigator.userAgent || '';
+            const isStandalone =
+                (typeof matchMedia==='function' && matchMedia('(display-mode: standalone)').matches) ||
+                (navigator.standalone === true);
+            const isAndroid = /Android/i.test(ua);
+
+            const isPossiblyIOS =
+                /Version\/\d+.*Mobile\/\w+.*Safari/i.test(ua) || // Safari iOS
+                /CriOS\/.*Mobile/i.test(ua);                     // Chrome em iOS
+
+            // só pega o elemento se existir
+            const iosHint = document.getElementById('ios-a2hs');
+            const installBtn = document.querySelector('[data-install]');
+
+            // se já está instalado ou Android (onde teremos o beforeinstallprompt), sai
+            if (isStandalone || isAndroid) return;
+
+            // se o botão não apareceu (sem BIP) e “parece iOS”, mostra o hint
+            const bipSeen = window.__BIP_FIRED__ === true;
+            if (!bipSeen && isPossiblyIOS && iosHint) {
+                iosHint.classList.remove('d-none');
+                installBtn?.classList.add('d-none');
+            }
+        }, 1200);
+
+        window.addEventListener('beforeinstallprompt', () => { window.__BIP_FIRED__ = true; });
     });
-
-    // Em desktop (não iOS, não Android), normalmente nada aparece — ok.
 })();
-

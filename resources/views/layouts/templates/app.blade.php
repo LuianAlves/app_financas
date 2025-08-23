@@ -13,15 +13,6 @@
     @endauth
 
     <main id="app-main" class="content-area scroll-content" data-skeleton="tx-list">
-        <button class="btn bg-color w-100 mb-3" style="letter-spacing: .75px; font-size: 12px; font-weight: 600;"
-                data-install><i class="fa fa-download mx-2"></i>Baixe o aplicativo
-        </button>
-        <div id="ios-a2hs" class="alert alert-light d-none" role="alert" style="margin:8px 0">
-            No iPhone: toque <strong>Compartilhar</strong> → <strong>Adicionar à Tela de Início</strong> para instalar o app.
-        </div>
-
-        <button id="ios-enable-push" class="btn btn-sm btn-primary d-none">Ativar notificações</button>
-
         @yield('content')
 
         @auth

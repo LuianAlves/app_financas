@@ -13,6 +13,10 @@
     @endauth
 
     <main id="app-main" class="content-area scroll-content" data-skeleton="tx-list">
+        <button class="btn bg-color w-100 mb-3" style="letter-spacing: .75px; font-size: 12px; font-weight: 600;"
+                data-install><i class="fa fa-download mx-2"></i>Baixe o aplicativo
+        </button>
+
         @yield('content')
 
         @auth
@@ -48,7 +52,11 @@
 <script src="{{asset('assets/js/cache/app-nav.js')}}"></script>
 <script src="{{asset('assets/js/cache/http.js')}}"></script>
 <script src="{{asset('assets/js/cache/storage.js')}}"></script>
-<div id="net-banner" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:85px;z-index:1200;background:#222;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;">Conexão lenta — exibindo dados em cache…</div>
+<script src="{{asset('assets/js/install.js')}}" defer></script>
+<div id="net-banner"
+     style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:85px;z-index:1200;background:#222;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;">
+    Conexão lenta — exibindo dados em cache…
+</div>
 
 
 @stack('scripts')

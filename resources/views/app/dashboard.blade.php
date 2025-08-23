@@ -4,9 +4,6 @@
         <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
     @endpush
 
-    <button class="btn btn-sm btn-light d-none" data-install>Instalar app</button>
-    <script src="{{asset('assets/js/install.js')}}" defer></script>
-
     <div class="header">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <h1 class="m-0 mb-3">Tela inicial</h1>

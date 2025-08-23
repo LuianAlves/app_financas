@@ -71,12 +71,31 @@
         // que não bateu no isIOSLike, tenta detectar Safari iOS por pistas do UA e
         // mostra o hint mesmo assim.
         setTimeout(() => {
+            const ua = navigator.userAgent || '';
+            const isStandalone =
+                (typeof matchMedia==='function' && matchMedia('(display-mode: standalone)').matches) ||
+                (navigator.standalone === true);
+            const isAndroid = /Android/i.test(ua);
+
             const isPossiblyIOS =
                 /Version\/\d+.*Mobile\/\w+.*Safari/i.test(ua) || // Safari iOS
                 /CriOS\/.*Mobile/i.test(ua);                     // Chrome em iOS
-            if (!isStandalone && !isAndroid && !deferred && isPossiblyIOS) {
-                iosHint?.classList.remove('d-none');
+
+            // só pega o elemento se existir
+            const iosHint = document.getElementById('ios-a2hs');
+            const installBtn = document.querySelector('[data-install]');
+
+            // se já está instalado ou Android (onde teremos o beforeinstallprompt), sai
+            if (isStandalone || isAndroid) return;
+
+            // se o botão não apareceu (sem BIP) e “parece iOS”, mostra o hint
+            const bipSeen = window.__BIP_FIRED__ === true;
+            if (!bipSeen && isPossiblyIOS && iosHint) {
+                iosHint.classList.remove('d-none');
+                installBtn?.classList.add('d-none');
             }
-        }, 600);
+        }, 1200);
+
+        window.addEventListener('beforeinstallprompt', () => { window.__BIP_FIRED__ = true; });
     });
 })();

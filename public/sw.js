@@ -14,17 +14,22 @@ self.addEventListener('push', (event) => {
     const options = {
         body: data.body || '',
         icon: data.icon || '/laravelpwa/icons/icon-192x192.png',
-        data: data.data || {}
+        badge: data.badge || '/laravelpwa/icons/icon-192x192.png',
+        data: data.data || {},
+        actions: data.actions || [{action:'open', title:'Abrir'}]
     };
     event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    event.waitUntil(clients.openWindow(event.notification.data.url || '/'));
+    const url = (event.notification.data && event.notification.data.url) || '/';
+    event.waitUntil(clients.matchAll({ type:'window', includeUncontrolled:true }).then(list => {
+        for (const client of list) { if (client.url.includes(url) && 'focus' in client) return client.focus(); }
+        if (clients.openWindow) return clients.openWindow(url);
+    }));
 });
 
-// opcional: re-assinar quando o browser rotaciona as chaves
 self.addEventListener('pushsubscriptionchange', (event) => {
     // aqui você pode re-obter VAPID e re-assinar, depois POSTar ao backend
 });

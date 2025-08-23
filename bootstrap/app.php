@@ -12,7 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'partial' => \App\Http\Middleware\PartialRender::class,
+            // quando criarmos: 'idempotency' => \App\Http\Middleware\Idempotency::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

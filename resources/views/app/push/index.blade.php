@@ -28,6 +28,6 @@
     </form>
 </div>
 
-<script src="{{ asset('js/push-register.js') }}"></script>
+<script src="{{ asset('assets/js/push-register.js') }}"></script>
 </body>
 </html>

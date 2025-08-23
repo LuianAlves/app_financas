@@ -116,32 +116,29 @@
     }
 
     async function ensurePermissionByGesture() {
-        // iOS precisa de gesto NA TELA DE LOGIN
-        const loginPath = new URL(window.PUSH_CFG.loginPath, location.origin).pathname.replace(/\/+$/, '');
-        const onLogin = location.pathname.replace(/\/+$/, '') === loginPath;
-        const needGesture =
-            window.PUSH_CFG.isIOS &&
-            onLogin &&
-            Notification.permission === 'default' &&
-            !localStorage.getItem('pushGranted');
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        const isiOS = window.PUSH_CFG.isIOS;
 
-        if (needGesture) {
-            const handler = async () => {
+        async function ensurePermissionByGesture() {
+            // iOS só vale em PWA instalado
+            if (isiOS && !isStandalone) {
+                // aqui você pode exibir um banner explicando como instalar (A2HS)
+                return;
+            }
+
+            // fluxo atual:
+            if (Notification.permission === 'granted') {
                 await initializePush();
-                document.removeEventListener('click', handler);
-                document.removeEventListener('touchstart', handler);
-            };
-            document.addEventListener('click', handler, { once: true });
-            document.addEventListener('touchstart', handler, { once: true });
-            return;
-        }
-
-        // não precisa de gesto
-        if (Notification.permission === 'granted') {
-            await initializePush();
-        } else if (Notification.permission === 'default' && !window.PUSH_CFG.isIOS) {
-            // em não-iOS pode pedir direto
-            await initializePush();
+            } else if (Notification.permission === 'default') {
+                // precise de gesto? mantenha seu handler de clique/touch aqui
+                const handler = async () => {
+                    await initializePush();
+                    document.removeEventListener('click', handler);
+                    document.removeEventListener('touchstart', handler);
+                };
+                document.addEventListener('click', handler, { once: true });
+                document.addEventListener('touchstart', handler, { once: true });
+            }
         }
     }
 

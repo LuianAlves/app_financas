@@ -48,72 +48,73 @@ Route::middleware('guest')->group(function () {
 Route::any('/logout', [AuthController::class, 'destroy'])->name('logout');
 
 Route::middleware(['auth', config('jetstream.auth_session')])->group(function () {
-    // Dashboard
-    Route::get('/dashboard', [WebDashboardController::class, 'dashboard'])->name('dashboard');
-    Route::get('/dashboard/kpis', [WebDashboardController::class, 'kpis'])->name('dashboard.kpis');
-    Route::post('/transactions/{transaction}/payment', [WebDashboardController::class, 'paymentTransaction'])->name('transaction-payment');
+    Route::middleware('partial')->group(function () {
+        // Dashboard
+        Route::get('/dashboard', [WebDashboardController::class, 'dashboard'])->name('dashboard');
+        Route::get('/dashboard/kpis', [WebDashboardController::class, 'kpis'])->name('dashboard.kpis');
+        Route::post('/transactions/{transaction}/payment', [WebDashboardController::class, 'paymentTransaction'])->name('transaction-payment');
 
-    // Users
-    Route::get('/user', [WebUserController::class, 'index'])->name('user-view.index');
-    Route::resource('users', ApiUserController::class)->scoped(['user' => 'uuid']);
+        // Users
+        Route::get('/user', [WebUserController::class, 'index'])->name('user-view.index');
+        Route::resource('users', ApiUserController::class)->scoped(['user' => 'uuid']);
 
-    // Accounts
-    Route::get('/account', [WebAccountController::class, 'index'])->name('account-view.index');
-    Route::resource('accounts', ApiAccountController::class)->scoped(['account' => 'uuid']);
+        // Accounts
+        Route::get('/account', [WebAccountController::class, 'index'])->name('account-view.index');
+        Route::resource('accounts', ApiAccountController::class)->scoped(['account' => 'uuid']);
 
-    // Cards
-    Route::get('/card', [WebCardController::class, 'index'])->name('card-view.index');
-    Route::resource('cards', ApiCardController::class)->scoped(['card' => 'uuid']);
+        // Cards
+        Route::get('/card', [WebCardController::class, 'index'])->name('card-view.index');
+        Route::resource('cards', ApiCardController::class)->scoped(['card' => 'uuid']);
 
-    // Transaction Categories
-    Route::get('/transaction-category', [WebTransactionCategoryController::class, 'index'])->name('transactionCategory-view.index');
-    Route::resource('transaction-categories', ApiTransactionCategoryController::class)->scoped(['transactionCategory' => 'uuid']);
+        // Transaction Categories
+        Route::get('/transaction-category', [WebTransactionCategoryController::class, 'index'])->name('transactionCategory-view.index');
+        Route::resource('transaction-categories', ApiTransactionCategoryController::class)->scoped(['transactionCategory' => 'uuid']);
 
-    // Transactions
-    Route::get('/transaction', [WebTransactionController::class, 'index'])->name('transaction-view.index');
-    Route::get('/transaction/custom-item-projections', [WebTransactionController::class, 'custom-item-projections']);
+        // Transactions
+        Route::get('/transaction', [WebTransactionController::class, 'index'])->name('transaction-view.index');
+        Route::get('/transaction/custom-item-projections', [WebTransactionController::class, 'custom-item-projections']);
 
-    Route::resource('transactions', ApiTransactionController::class)->scoped(['transaction' => 'uuid']);
+        Route::resource('transactions', ApiTransactionController::class)->scoped(['transaction' => 'uuid']);
 
 
-    //Savings
-    Route::get('/saving', [WebSavingController::class, 'index'])->name('saving-view.index');
-    Route::resource('savings', ApiSavingController::class)->scoped(['saving' => 'uuid']);
+        //Savings
+        Route::get('/saving', [WebSavingController::class, 'index'])->name('saving-view.index');
+        Route::resource('savings', ApiSavingController::class)->scoped(['saving' => 'uuid']);
 
-    Route::resource('recurrents', ApiRecurrentController::class)->scoped(['recurrent' => 'uuid']);
+        Route::resource('recurrents', ApiRecurrentController::class)->scoped(['recurrent' => 'uuid']);
 
-    //Invoices
-    Route::get('/invoice/{cardId}', [WebInvoiceController::class, 'index'])->name('invoice-view.index');
-    Route::get('/invoice/{cardId}/{ym}', [WebInvoiceController::class,'show'])->name('invoice-view.show'); // ym = 'Y-m'
-    Route::any('/invoice/payment/{cardId}/{ym}', [WebInvoiceController::class,'update'])->name('invoice-payment.update'); // ym = 'Y-m'
+        //Invoices
+        Route::get('/invoice/{cardId}', [WebInvoiceController::class, 'index'])->name('invoice-view.index');
+        Route::get('/invoice/{cardId}/{ym}', [WebInvoiceController::class, 'show'])->name('invoice-view.show'); // ym = 'Y-m'
+        Route::any('/invoice/payment/{cardId}/{ym}', [WebInvoiceController::class, 'update'])->name('invoice-payment.update'); // ym = 'Y-m'
 
-    Route::resource('invoices', ApiInvoiceController::class)->scoped(['invoice' => 'uuid']);
+        Route::resource('invoices', ApiInvoiceController::class)->scoped(['invoice' => 'uuid']);
 
-    //InvoiceItem
-    Route::get('/invoice-item', [WebInvoiceItemController::class, 'index'])->name('invoiceItem-view.index');
-    Route::resource('invoice-items', ApiInvoiceItemController::class)->scoped(['invoiceItem' => 'uuid']);
+        //InvoiceItem
+        Route::get('/invoice-item', [WebInvoiceItemController::class, 'index'])->name('invoiceItem-view.index');
+        Route::resource('invoice-items', ApiInvoiceItemController::class)->scoped(['invoiceItem' => 'uuid']);
 
-    //Investments
-    Route::get('/investment', [WebInvestmentController::class, 'index'])->name('investment-view.index');
-    Route::resource('investments', ApiInvestmentController::class)->scoped(['investment' => 'uuid']);
+        //Investments
+        Route::get('/investment', [WebInvestmentController::class, 'index'])->name('investment-view.index');
+        Route::resource('investments', ApiInvestmentController::class)->scoped(['investment' => 'uuid']);
 
-    // Projection
-    Route::get('/projection', [ProjectionController::class, 'index'])->name('projection-view.index');
-    Route::get('/projection/data', [ProjectionController::class, 'data'])->name('projection.data');
+        // Projection
+        Route::get('/projection', [ProjectionController::class, 'index'])->name('projection-view.index');
+        Route::get('/projection/data', [ProjectionController::class, 'data'])->name('projection.data');
 
-    Route::get('notifications', [WebNotificationController::class, 'index'])->name('notifications.index');
-    Route::patch('notifications/{notification}/read', [WebNotificationController::class, 'markAsRead'])->name('notifications.read');
-    Route::delete('notifications/{notification}', [WebNotificationController::class, 'destroy'])->name('notifications.destroy');
+        Route::get('notifications', [WebNotificationController::class, 'index'])->name('notifications.index');
+        Route::patch('notifications/{notification}/read', [WebNotificationController::class, 'markAsRead'])->name('notifications.read');
+        Route::delete('notifications/{notification}', [WebNotificationController::class, 'destroy'])->name('notifications.destroy');
 
-    Route::post('/push/subscribe', [PushController::class, 'subscribe']);
-    Route::get('/push/teste', [PushController::class, 'showForm'])->name('test.push');
-    Route::post('/push/teste', [PushController::class, 'send']);
+        Route::post('/push/subscribe', [PushController::class, 'subscribe']);
+        Route::get('/push/teste', [PushController::class, 'showForm'])->name('test.push');
+        Route::post('/push/teste', [PushController::class, 'send']);
 
-    Route::get('/calendar/events', [WebDashboardController::class, 'calendarEvents'])->name('calendar.events');
+        Route::get('/calendar/events', [WebDashboardController::class, 'calendarEvents'])->name('calendar.events');
+    });
 });
 
 
 // Push Notifications
-Route::get('/vapid-public-key', fn () =>
-response(trim(env('VAPID_PUBLIC_KEY')), 200, ['Content-Type' => 'text/plain'])
+Route::get('/vapid-public-key', fn() => response(trim(env('VAPID_PUBLIC_KEY')), 200, ['Content-Type' => 'text/plain'])
 );

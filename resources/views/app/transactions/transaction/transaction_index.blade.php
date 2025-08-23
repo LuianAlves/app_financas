@@ -13,15 +13,15 @@
         <i class="fa fa-plus text-white"></i>
     </button>
 
-    <a href="{{route('transactionCategory-view.index')}}" class="create-btn create-other">
+    <a href="{{route('transactionCategory-view.index')}}" class="create-btn create-other" data-nav>
         <i class="fa-solid fa-tags text-white"></i>
     </a>
 
-    <a href="{{route('account-view.index')}}" class="create-btn create-other-2">
+    <a href="{{route('account-view.index')}}" class="create-btn create-other-2" data-nav>
         <i class="fas fa-landmark text-white"></i>
     </a>
 
-    <a href="{{route('card-view.index')}}" class="create-btn create-other-3">
+    <a href="{{route('card-view.index')}}" class="create-btn create-other-3" data-nav>
         <i class="fas fa-credit-card text-white"></i>
     </a>
 
@@ -49,18 +49,62 @@
 
     @push('styles')
         <style>
-            #modalTransaction{ pointer-events:auto; }
-            #formTransaction{ pointer-events:auto; }
+            #modalTransaction {
+                pointer-events: auto;
+            }
+
+            #formTransaction {
+                pointer-events: auto;
+            }
         </style>
     @endpush
 
     @push('scripts')
         <script>
             (() => {
+                if (window.__TX_PAGE_BOUND__) return;
+                window.__TX_PAGE_BOUND__ = true;
+
+                window.store ??= {
+                    set(k, v, ttl = 60) {
+                        const exp = Date.now() + ttl * 1000;
+                        sessionStorage.setItem(k, JSON.stringify({exp, v}));
+                    },
+                    get(k) {
+                        const raw = sessionStorage.getItem(k);
+                        if (!raw) return null;
+                        try {
+                            const {exp, v} = JSON.parse(raw);
+                            if (Date.now() > exp) {
+                                sessionStorage.removeItem(k);
+                                return null;
+                            }
+                            return v;
+                        } catch {
+                            return null;
+                        }
+                    }
+                };
+                window.http ??= {
+                    async get(url, {timeout = 8000, headers = {}} = {}) {
+                        const ctrl = new AbortController();
+                        const t = setTimeout(() => ctrl.abort('timeout'), timeout);
+                        try {
+                            const r = await fetch(url, {headers, signal: ctrl.signal});
+                            if (!r.ok) throw new Error('HTTP ' + r.status);
+                            const ct = r.headers.get('content-type') || '';
+                            return ct.includes('json') ? r.json() : r.text();
+                        } finally {
+                            clearTimeout(t);
+                        }
+                    }
+                };
+
                 const list = document.getElementById('transactionList');
                 const form = document.getElementById('formTransaction');
                 const modalEl = document.getElementById('modalTransaction');
                 const saveBtn = form.querySelector('button[type="submit"]');
+                const CACHE_KEY = 'tx:list:v1';
 
                 function $(sel) {
                     return form.querySelector(sel);
@@ -112,7 +156,10 @@
                 xCancelBtn.forEach(btn => btn.addEventListener('click', closeConfirm));
 
                 xConfirm.addEventListener('click', (e) => {
-                    if (e.target === xConfirm) { closeConfirm() };
+                    if (e.target === xConfirm) {
+                        closeConfirm()
+                    }
+                    ;
 
                 });
 
@@ -126,38 +173,65 @@
                     return n.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
                 }
 
-                function renderTx(tx) {
+                function renderTx(tx) { /* ... use sua função atual ... */
                     const id = tx.id ?? tx.uuid ?? tx._id ?? tx.transaction_id;
                     const date = tx.date ?? tx.created_at ?? '';
                     const type = tx.type ?? 'money';
-                    const color = TYPE_COLOR[type] || '#777';
-                    const label = TYPE_LABEL[type] || type;
+                    const color = ({pix: '#2ecc71', card: '#3498db', money: '#f39c12'})[type] || '#777';
+                    const label = ({pix: 'Pix', card: 'Cartão', money: 'Dinheiro'})[type] || type;
                     return `
-                      <li class="swipe-item" data-id="${id}">
-                        <button class="swipe-edit-btn" type="button">Editar</button>
-                        <div class="swipe-content">
-                          <div class="tx-line">
-                            <div class="d-flex justify-content-between flex-column">
-                              <span class="tx-title">${tx.title ?? 'Sem título'}</span>
-                              <small class="tx-date">Em ${date}</small>
-                            </div>
-                            <div class="text-end">
-                              <span class="tx-amount">${tx.amount}</span><br>
-                              <span class="badge" style="font-size:10px;background:${color};color:#fff">${label}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <button class="swipe-delete-btn" type="button">Excluir</button>
-                      </li>`;
-                }
-
-                function storeTransaction(tx) {
-                    list.insertAdjacentHTML('afterbegin', renderTx(tx));
+    <li class="swipe-item" data-id="${id}">
+      <button class="swipe-edit-btn" type="button">Editar</button>
+      <div class="swipe-content">
+        <div class="tx-line">
+          <div class="d-flex justify-content-between flex-column">
+            <span class="tx-title">${tx.title ?? 'Sem título'}</span>
+            <small class="tx-date">${date}</small>
+          </div>
+          <div class="text-end">
+            <span class="tx-amount">${tx.amount}</span><br>
+            <span class="badge" style="font-size:10px;background:${color};color:#fff">${label}</span>
+          </div>
+        </div>
+      </div>
+      <button class="swipe-delete-btn" type="button">Excluir</button>
+    </li>`;
                 }
 
                 function clearList() {
                     list.innerHTML = '';
                 }
+
+                function renderList(data) {
+                    clearList();
+                    data.forEach(tx => list.insertAdjacentHTML('beforeend', renderTx(tx)));
+                }
+
+                function showSkeleton() {
+                    list.innerHTML = `{!! str_replace("\n","", addslashes(view('partials._skeleton-tx-list')->render())) !!}`;
+                }
+
+                const showUrl = id => `{{ url('/transactions') }}/${id}`;
+                const detailCache = new Map();
+                const io = new IntersectionObserver((entries) => {
+                    entries.forEach(ent => {
+                        if (!ent.isIntersecting) return;
+                        const li = ent.target;
+                        const id = li.dataset.id;
+                        if (!id || detailCache.has(id)) return;
+                        fetch(showUrl(id), {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                            .then(r => r.ok ? r.json() : null).then(json => {
+                            if (json) detailCache.set(id, json);
+                        }).catch(() => {
+                        });
+                        io.unobserve(li);
+                    });
+                }, {rootMargin: '200px 0px'});
 
                 function setFormMode(mode) {
                     currentMode = mode;
@@ -207,9 +281,6 @@
                     });
                 }
 
-                if (list.dataset.bound === '1') return;
-                list.dataset.bound = '1';
-
                 function openTxModal(mode, tx) {
                     setFormMode(mode);
                     if (tx) fillForm(tx); else clearForm();
@@ -223,7 +294,7 @@
                     document.body.classList.remove('modal-open'); // <- remove
                 }
 
-                function closeIfOutside(e){
+                function closeIfOutside(e) {
                     if (!modalEl.classList.contains('show')) return;
 
                     const r = form.getBoundingClientRect();
@@ -231,7 +302,7 @@
                     const x = p.clientX, y = p.clientY;
 
                     const inside = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-                    if (!inside){
+                    if (!inside) {
                         e.preventDefault();
                         e.stopPropagation();
                         closeTxModal();
@@ -239,22 +310,32 @@
                 }
 
                 window.addEventListener('pointerdown', closeIfOutside, true);
-                window.addEventListener('touchstart', closeIfOutside, { capture:true, passive:false });
+                window.addEventListener('touchstart', closeIfOutside, {capture: true, passive: false});
 
                 async function loadTransactions() {
-                    const res = await fetch("{{ route('transactions.index') }}", {
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-                    if (!res.ok) {
-                        alert('Erro ao carregar');
-                        return;
+                    // 1) tenta cache
+                    const cached = store.get(CACHE_KEY);
+
+                    if (cached) {
+                        renderList(cached);
+                        list.querySelectorAll('.swipe-item').forEach(li => io.observe(li));
+                    } else {
+                        showSkeleton();
                     }
-                    const data = await res.json();
-                    clearList();
-                    data.forEach(storeTransaction);
+
+                    try {
+                        const data = await http.get(`{{ route('transactions.index') }}`, {
+                            timeout: 8000,
+                            headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}
+                        });
+                        renderList(data);
+                        store.set(CACHE_KEY, data, 60);
+                        list.querySelectorAll('.swipe-item').forEach(li => io.observe(li));
+                    } catch (e) {
+                        if (!cached) {
+                            list.innerHTML = `<p style="padding:8px;color:#666">Sem conexão. Tente novamente.</p>`;
+                        }
+                    }
                 }
 
                 async function readBodySafe(res) {
@@ -316,7 +397,8 @@
                         return;
                     }
 
-                    // ok (200/201/204) – ignora body
+                    sessionStorage.removeItem(CACHE_KEY);
+
                     closeTxModal();
                     await loadTransactions();
                 });
@@ -326,7 +408,9 @@
                 }
 
                 let suppressShowUntil = 0;
-                const suppressShow = (ms=800) => { suppressShowUntil = Date.now() + ms; };
+                const suppressShow = (ms = 800) => {
+                    suppressShowUntil = Date.now() + ms;
+                };
 
                 function dragTranslate(item, px) {
                     const content = item.querySelector('.swipe-content');
@@ -394,19 +478,19 @@
                 });
 
                 async function handleEdit(id) {
-                    currentId = id;
-                    const res = await fetch(`{{ url('/transactions') }}/${id}`, {
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-                    if (!res.ok) {
-                        alert('Erro ao carregar');
-                        return;
+                    const cached = detailCache.get(id);
+                    if (cached) openTxModal('edit', cached);
+                    try {
+                        const tx = await http.get(showUrl(id), {
+                            timeout: 6000,
+                            headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}
+                        });
+                        openTxModal('edit', tx);
+                        detailCache.set(id, tx);
+                    } catch(e){
+                        if (e.message?.includes('401')) { location.href = '/transaction'; return; }
+                        if (!cached) list.innerHTML = `<p style="padding:8px;color:#666">Sem conexão. Tente novamente.</p>`;
                     }
-                    const tx = await res.json();
-                    openTxModal('edit', tx);
                 }
 
                 function handleAskDelete(id) {
@@ -414,7 +498,7 @@
                     openConfirm();
                 }
 
-                list.addEventListener('touchstart', (e)=>{
+                list.addEventListener('touchstart', (e) => {
                     if (document.body.classList.contains('modal-open')) return;
                     const btn = e.target.closest('.swipe-edit-btn, .swipe-delete-btn');
                     if (!btn) return;
@@ -431,7 +515,7 @@
 
                     if (btn.classList.contains('swipe-edit-btn')) handleEdit(id);
                     else handleAskDelete(id);
-                }, { capture:true, passive:false });
+                }, {capture: true, passive: false});
 
                 list.addEventListener('pointerdown', (e) => {
                     if (document.body.classList.contains('modal-open')) return; // <- aqui
@@ -467,7 +551,7 @@
                 }, true);
 
                 list.addEventListener('click', async (e) => {
-                    if (Date.now() < suppressShowUntil);
+                    if (Date.now() < suppressShowUntil) return;
 
                     const content = e.target.closest('.swipe-content');
 
@@ -485,14 +569,11 @@
                     currentId = id;
 
                     try {
-                        const res = await fetch(`{{ url('/transactions') }}/${id}`, {
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
+                        const tx = await http.get(`{{ url('/transactions') }}/${id}`, {
+                            timeout: 6000,
+                            headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}
                         });
-                        if (!res.ok) throw new Error('Erro ao carregar');
-                        const tx = await res.json();
+
                         openTxModal('show', tx);
                     } catch (err) {
                         alert(err.message);
@@ -501,6 +582,7 @@
 
                 async function doDelete() {
                     if (!pendingDeleteId) return;
+
                     const res = await fetch(`{{ url('/transactions') }}/${pendingDeleteId}`, {
                         method: 'DELETE',
                         headers: {
@@ -509,14 +591,24 @@
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
+
                     if (!res.ok) {
                         alert('Erro ao excluir');
                         return;
                     }
+
                     const li = list.querySelector(`.swipe-item[data-id="${pendingDeleteId}"]`);
+
                     if (li) li.remove();
+                    pendingDeleteId = null;
+
+                    sessionStorage.removeItem(CACHE_KEY);
+                    detailCache.delete(pendingDeleteId);
+
                     const cEl = document.getElementById('confirmDeleteModal');
+
                     if (window.bootstrap && cEl) window.bootstrap.Modal.getInstance(cEl)?.hide();
+
                     pendingDeleteId = null;
                 }
 
@@ -524,14 +616,16 @@
                 if (confirmBtn) confirmBtn.addEventListener('click', doDelete);
 
                 const openBtn = document.getElementById('openModal');
-                if (openBtn) openBtn.addEventListener('click', () => {
+
+                openBtn?.addEventListener('click', () => {
                     currentId = null;
                     openTxModal('create', null);
                 });
+
                 const closeBtn = document.getElementById('closeModal');
                 if (closeBtn) closeBtn.addEventListener('click', closeTxModal);
 
-                window.addEventListener('DOMContentLoaded', loadTransactions);
+                loadTransactions();
             })();
         </script>
     @endpush

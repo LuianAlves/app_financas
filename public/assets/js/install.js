@@ -1,51 +1,71 @@
 (() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-    const installBtn = document.querySelector('[data-install]');
+    // Elementos
+    const installBtn = document.querySelector('[data-install]'); // comece com d-none no HTML
     const iosHint = document.getElementById('ios-a2hs');
 
-    // Sempre começa escondido (d-none já está no HTML)
-    let deferred;
+    // --- Detectores robustos ---
+    const ua = navigator.userAgent || '';
+    const isStandalone =
+        matchMedia('(display-mode: standalone)').matches ||
+        (navigator.standalone === true); // iOS Safari
 
-    // iOS: não existe beforeinstallprompt. Mostre só o hint quando NÃO estiver instalado.
-    if (isIOS) {
-        // botão nunca aparece no iOS
-        installBtn?.classList.add('d-none');
-        if (!standalone) iosHint?.classList.remove('d-none');
-        return; // encerra: o restante é só Android/Chrome
+    // iOS/iPadOS: inclui casos em que o iPadOS reporta "MacIntel" mas tem touch
+    const isIOSLike = (() => {
+        const iOSUA = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+        const iPadOS13Plus = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+        return iOSUA || iPadOS13Plus;
+    })();
+
+    // Desktop (macOS/Windows/Linux) = NÃO iOSLike e não Android
+    const isAndroid = /Android/i.test(ua);
+
+    // Garantia: começa tudo escondido
+    installBtn?.classList.add('d-none');
+    iosHint?.classList.add('d-none');
+
+    // Já instalado? (PWA aberto em standalone)
+    if (isStandalone) {
+        // Nada a exibir em nenhum SO
+        return;
     }
 
-    // Android/Chrome/Edge: mostra o botão quando o navegador realmente permite instalar
+    // --- Fluxo iOS/iPadOS: mostrar HINT apenas no iOS quando não instalado ---
+    if (isIOSLike) {
+        // iOS não tem beforeinstallprompt — o fluxo é via menu “Compartilhar”
+        iosHint?.classList.remove('d-none');   // mostra o banner de instrução
+        installBtn?.classList.add('d-none');   // botão nunca aparece no iOS
+        return; // encerra aqui (o restante é Android/desktop)
+    }
+
+    // --- Fluxo Android/Chrome/Edge: mostrar botão só quando o navegador permitir ---
+    let deferred = null;
+
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferred = e;
-        installBtn?.classList.remove('d-none'); // aparece só quando pode instalar
+        // Mostra botão **apenas** quando pode instalar
+        installBtn?.classList.remove('d-none');
         iosHint?.classList.add('d-none');
     });
 
-    // Se já estiver instalado, mantenha oculto
-    if (standalone) {
-        installBtn?.classList.add('d-none');
-        iosHint?.classList.add('d-none');
-    }
-
-    // Clique do botão
     document.addEventListener('click', async (e) => {
         const btn = e.target.closest('[data-install]');
         if (!btn || !deferred) return;
         try {
             await deferred.prompt();
-            await deferred.userChoice;
+            await deferred.userChoice; // opcional: pode inspecionar outcome
         } finally {
             deferred = null;
             btn.classList.add('d-none'); // esconde após a tentativa
         }
     });
 
-    // Opcional: se o app foi instalado por outro fluxo, esconda também
+    // Se o navegador sinalizar que foi instalado por outro caminho, esconda tudo
     window.addEventListener('appinstalled', () => {
         installBtn?.classList.add('d-none');
         iosHint?.classList.add('d-none');
     });
+
+    // Em desktop (não iOS, não Android), normalmente nada aparece — ok.
 })();
 

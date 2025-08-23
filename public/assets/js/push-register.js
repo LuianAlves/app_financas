@@ -1,4 +1,13 @@
 (function () {
+    const ua = navigator.userAgent || '';
+    window.PUSH_CFG = Object.assign({
+        vapidKeyUrl: '/vapid-public-key',
+        subscribeUrl: '/push/subscribe',
+        swUrl: '/sw.js',
+        loginPath: '/login',
+        isIOS: /iPad|iPhone|iPod/.test(ua) && !window.MSStream
+    }, window.PUSH_CFG || {});
+
     // ==== helpers ====
     function urlBase64ToUint8Array(base64String) {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -85,7 +94,7 @@
             // VAPID
             let vapidKey;
             try {
-                const respKey = await fetch(window.PUSH_CFG.vapidKeyUrl, { cache: 'no-store' });
+                const respKey = await fetch(window.PUSH_CFG.vapidKeyUrl, {cache: 'no-store'});
                 vapidKey = (await respKey.text()).trim();
             } catch (e) {
                 console.error('Falha ao obter VAPID:', e);
@@ -116,13 +125,11 @@
     }
 
     async function ensurePermissionByGesture() {
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
         const isiOS = window.PUSH_CFG.isIOS;
 
         async function ensurePermissionByGesture() {
-            // iOS só vale em PWA instalado
             if (isiOS && !isStandalone) {
-                // aqui você pode exibir um banner explicando como instalar (A2HS)
                 return;
             }
 
@@ -136,8 +143,8 @@
                     document.removeEventListener('click', handler);
                     document.removeEventListener('touchstart', handler);
                 };
-                document.addEventListener('click', handler, { once: true });
-                document.addEventListener('touchstart', handler, { once: true });
+                document.addEventListener('click', handler, {once: true});
+                document.addEventListener('touchstart', handler, {once: true});
             }
         }
     }

@@ -1,5 +1,6 @@
 // public/assets/js/push-register.js
 (function () {
+    // Defaults caso o Blade não injete PUSH_CFG
     const ua = navigator.userAgent || '';
     window.PUSH_CFG = Object.assign({
         vapidKeyUrl: '/vapid-public-key',
@@ -70,7 +71,7 @@
         if (initializing) return;
         initializing = true;
         try {
-            if (!('serviceWorker' in navigator && 'PushManager' in window)) {
+            if (!('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window)) {
                 console.warn('Push não suportado neste navegador');
                 return;
             }
@@ -122,6 +123,9 @@
         }
     }
 
+    // expõe para o botão “Ativar notificações” no iOS (PWA instalado)
+    window.initPush = initializePush;
+
     // === pedir permissão de forma segura (gesto em iOS fora do standalone) ===
     async function ensurePermissionByGesture() {
         const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -129,9 +133,11 @@
 
         // iOS só tem push em PWA instalado; em aba não adianta pedir
         if (isiOS && !isStandalone) {
-            // opcional: mostrar banner “Adicionar à Tela de Início”
+            // aqui você pode exibir seu banner “Adicionar à Tela de Início”
             return;
         }
+
+        if (!('Notification' in window)) return;
 
         if (Notification.permission === 'granted') {
             await initializePush();
@@ -152,8 +158,6 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
-        // debug opcional
-        // console.log('Perm:', Notification.permission, 'SW?', 'serviceWorker' in navigator, 'Push?', 'PushManager' in window);
         await sendPendingIfAny();
         await ensurePermissionByGesture();
     });

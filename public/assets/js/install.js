@@ -30,7 +30,11 @@
         // console.log({isStandalone, isIOSLike, isAndroid, ua, platform, maxTP});
 
         // Se já está instalado em modo standalone: nada a exibir
-        if (isStandalone) return;
+        if (isStandalone) {
+            document.getElementById('ios-a2hs')?.classList.add('d-none');
+            document.querySelector('[data-install]')?.classList.add('d-none');
+            return;
+        }
 
         // iOS/iPadOS não tem beforeinstallprompt → mostra hint
         if (isIOSLike) {
@@ -97,5 +101,31 @@
         }, 1200);
 
         window.addEventListener('beforeinstallprompt', () => { window.__BIP_FIRED__ = true; });
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const iosBtn = document.getElementById('ios-enable-push');
+
+        const isStandalone =
+            (typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches) ||
+            (navigator.standalone === true);
+
+        // iOS/iPadOS robusto: iPhone/iPad clássicos + iPadOS 13+ (MacIntel + touch)
+        const ua = navigator.userAgent || '';
+        const isIOSLike =
+            (/(iPad|iPhone|iPod)/.test(ua) && !window.MSStream) ||
+            (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
+
+        if (isIOSLike && isStandalone) {
+            if ('Notification' in window && Notification.permission !== 'granted') {
+                iosBtn?.classList.remove('d-none');
+                iosBtn?.addEventListener('click', () => window.initPush && window.initPush(), { once: true });
+            } else {
+                iosBtn?.classList.add('d-none');
+            }
+        } else {
+            // Não é iOS standalone → esconde o botão
+            iosBtn?.classList.add('d-none');
+        }
     });
 })();

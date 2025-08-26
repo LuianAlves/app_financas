@@ -53,12 +53,15 @@ class SendDailyDigestJob implements ShouldQueue
                     //     : $tomInv;
 
                     $body = sprintf(
-                        "Hoje: %d entr., %d saídas, %d invest. | Amanhã: %d entr., %d saídas, %d invest.",
-                        $todayIn, $todayOut, $todayInv,
-                        $tomIn, $tomOut, $tomInv
+                        "%d entradas, %d saídas, %d investimentos",
+                        $todayIn, $todayOut, $todayInv
                     );
 
-                    $user->notify(new DailyDigestPush('Lançamentos do dia', $body, url('/lancamentos-do-dia')));
+                    $user->notify(new DailyDigestPush(
+                        'Lançamentos do dia',
+                        $body,
+                        url('/lancamentos-do-dia')
+                    ));
                 }
             });
     }

@@ -12,7 +12,7 @@
         </style>
     @endpush
     <x-card-header
-        prevRoute="{{ url()->previous() }}"
+        prevRoute="{{ route('dashboard') }}"
         iconRight="fa-solid fa-bell"
         title="Lançamentos"
         description="Veja os seus lançamentos de hoje e dos próximos dias!">

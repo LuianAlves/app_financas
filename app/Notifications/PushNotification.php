@@ -33,6 +33,6 @@ class PushNotification extends Notification
             ->body($this->body)
             ->icon('/laravelpwa/icons/icon-192x192.png')
             ->action('Abrir app', '/transaction')
-            ->data(['url' => '/']);
+            ->data(['url' => '/transaction']);
     }
 }

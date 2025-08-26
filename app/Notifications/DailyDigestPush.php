@@ -1,5 +1,4 @@
 <?php
-// app/Notifications/PushNotification.php
 
 namespace App\Notifications;
 
@@ -8,19 +7,15 @@ use Illuminate\Notifications\Notification;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
-class PushNotification extends Notification
+class DailyDigestPush extends Notification
 {
     use Queueable;
 
-    public $title;
-    public $body;
-
-    public function __construct(string $title, string $body, string $url = '/lancamentos-do-dia')
-    {
-        $this->title = $title;
-        $this->body  = $body;
-        $this->url   = $url;
-    }
+    public function __construct(
+        public string $title,
+        public string $body,
+        public string $url = '/lancamentos-do-dia'
+    ) {}
 
     public function via($notifiable): array
     {

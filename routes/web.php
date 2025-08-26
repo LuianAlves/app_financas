@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DailyDigestController;
 use App\Http\Controllers\ProjectionController;
 use App\Http\Controllers\PushController;
 use Illuminate\Support\Facades\Route;
@@ -113,6 +114,9 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
         Route::post('/push/debug/send', [PushController::class, 'sender'])->name('push.debug.send');
 
         Route::get('/calendar/events', [WebDashboardController::class, 'calendarEvents'])->name('calendar.events');
+
+        Route::get('/lancamentos-do-dia', [DailyDigestController::class, 'index'])
+            ->name('digest.index');
     });
 });
 

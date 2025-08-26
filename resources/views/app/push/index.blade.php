@@ -11,6 +11,11 @@
         <p>Notificação enviada com sucesso!</p>
     @endif
 
+        <a href="{{ route('push.debug') }}" class="bottom-nav-link" data-nav>
+            <i class="fa-solid fa-arrow-up-right-dots"></i>
+            <span>DEBUG</span>
+        </a>
+
         <button id="enable-notifications">Ativar Notificações</button>
 
         <h4>Enviar Notificação Push</h4>

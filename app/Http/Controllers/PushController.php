@@ -51,4 +51,56 @@ class PushController extends Controller
 
         return back()->with('success', 'Notificação enviada com sucesso!');
     }
+
+    public function page()
+    {
+        return view('app.push.debug');
+    }
+
+    public function sender(Request $request)
+    {
+        $request->validate([
+            'endpoint' => 'required|url',
+            'p256dh'   => 'required|string',
+            'auth'     => 'required|string',
+            'title'    => 'nullable|string',
+            'body'     => 'nullable|string',
+            'url'      => 'nullable|string',
+        ]);
+
+        $auth = [
+            'VAPID' => [
+                'subject'    => config('webpush.vapid.subject') ?: url('/'),
+                'publicKey'  => config('webpush.vapid.public_key'),
+                'privateKey' => config('webpush.vapid.private_key'),
+            ],
+        ];
+
+        $webPush = new WebPush($auth);
+        $sub = Subscription::create([
+            'endpoint' => $request->endpoint,
+            'keys'     => ['p256dh' => $request->p256dh, 'auth' => $request->auth],
+        ]);
+
+        $payload = json_encode([
+            'title' => $request->input('title', 'Teste do servidor'),
+            'body'  => $request->input('body',  'Enviado só para ESTE dispositivo'),
+            'data'  => ['url' => $request->input('url', '/')],
+            'icon'  => '/laravelpwa/icons/icon-192x192.png',
+        ]);
+
+        $webPush->queueNotification($sub, $payload);
+
+        $reports = [];
+        foreach ($webPush->flush() as $report) {
+            $reports[] = [
+                'endpoint' => $report->getRequest()->getUri()->__toString(),
+                'success'  => $report->isSuccess(),
+                'reason'   => $report->isSuccess() ? null : $report->getReason(),
+                'status'   => $report->getResponse() ? $report->getResponse()->getStatusCode() : null,
+            ];
+        }
+
+        return response()->json(['ok' => true, 'reports' => $reports]);
+    }
 }

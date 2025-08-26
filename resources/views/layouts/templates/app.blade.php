@@ -25,7 +25,7 @@
                     <i class="fa-solid fa-cart-plus"></i>
                     <span>Transações</span>
                 </a>
-                <a href="{{ route('test.push') }}" class="bottom-nav-link" data-nav>
+                <a href="{{ route('push.debug') }}" class="bottom-nav-link" data-nav>
                     <i class="fa-solid fa-arrow-up-right-dots"></i>
                     <span>Projeções</span>
                 </a>

@@ -115,8 +115,7 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
 
         Route::get('/calendar/events', [WebDashboardController::class, 'calendarEvents'])->name('calendar.events');
 
-        Route::get('/lancamentos-do-dia', [DailyDigestController::class, 'index'])
-            ->name('digest.index');
+        Route::get('/lancamentos-do-dia', [DailyDigestController::class, 'index'])->name('digest.index');
     });
 });
 

@@ -25,10 +25,10 @@ class DailyDigestPush extends Notification
     public function toWebPush($notifiable, $notification): WebPushMessage
     {
         return (new WebPushMessage)
-            ->title($this->title)
-            ->body($this->body)
+            ->title($this->title)                 // "Lançamentos do dia"
+            ->body($this->body)                   // "X entradas, X saídas, X investimentos"
             ->icon('/laravelpwa/icons/icon-192x192.png')
-            ->action('Abrir app', $this->url)
-            ->data(['url' => $this->url]);
+            ->action('Abrir', $this->url)         // opcional: botão de ação (onde suportado)
+            ->data(['url' => $this->url]);        // usado pelo sw.js para abrir a tela
     }
 }

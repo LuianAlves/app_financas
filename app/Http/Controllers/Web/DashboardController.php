@@ -395,7 +395,13 @@ class DashboardController extends Controller
             })
             ->get(['recurrents.*']); // pega start_date, interval_value, include_sat/sun, amount, etc.
 
+
         foreach ($recD as $r) {
+
+            $interval = (int)$r->interval_value;
+            if ($interval < 1) $interval = 1; // garante avanço
+
+
             $t = $r->transaction;
             if (!$t) continue;
 

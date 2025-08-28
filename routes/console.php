@@ -8,6 +8,6 @@ use App\Jobs\ProcessRecurrences;
 Schedule::job(new ProcessRecurrences)->dailyAt('03:10');
 
 Schedule::job(new SendDailyDigestJob)->dailyAt('08:00');
-//Schedule::job(new SendEveningReminderJob)->dailyAt('18:00');
-Schedule::job(new SendEveningReminderJob)->dailyAt('16:50');
+Schedule::job(new SendEveningReminderJob)->dailyAt('18:00');
+//Schedule::job(new SendEveningReminderJob)->dailyAt('16:50');
 

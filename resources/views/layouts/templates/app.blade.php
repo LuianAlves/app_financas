@@ -45,10 +45,6 @@
     window.__SPA_LITE__ = true;
 </script>
 
-
-
-
-
 <script src="{{asset('assets/js/cache/app-nav.js')}}"></script>
 <script src="{{asset('assets/js/cache/http.js')}}"></script>
 <script src="{{asset('assets/js/cache/storage.js')}}"></script>
@@ -67,47 +63,6 @@
 
 @stack('scripts')
 
-{{--<script>--}}
-{{--    (() => {--}}
-{{--        function onReady(fn){--}}
-{{--            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, {once:true});--}}
-{{--            else fn();--}}
-{{--        }--}}
-{{--        onReady(() => {--}}
-{{--            const ua = navigator.userAgent || '';--}}
-{{--            const platform = navigator.platform || '';--}}
-{{--            const mtp = navigator.maxTouchPoints || 0;--}}
-{{--            const isStandalone = (typeof matchMedia==='function' && matchMedia('(display-mode: standalone)').matches) || (navigator.standalone === true);--}}
-{{--            const isIOSLike = (/(iPad|iPhone|iPod)/.test(ua) && !window.MSStream) || (platform === 'MacIntel' && mtp > 1);--}}
-{{--            const isAndroid = /Android/i.test(ua);--}}
-
-{{--            const box = document.createElement('div');--}}
-{{--            box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:#111;color:#0f0;font:12px/1.35 monospace;padding:10px;border-radius:8px;opacity:.95;max-height:45vh;overflow:auto';--}}
-{{--            box.innerHTML = `--}}
-{{--<strong>A2HS DEBUG</strong> — toque para fechar<br>--}}
-{{--isStandalone: ${isStandalone}<br>--}}
-{{--isIOSLike: ${isIOSLike}<br>--}}
-{{--isAndroid: ${isAndroid}<br>--}}
-{{--UA: ${ua}<br>--}}
-{{--platform: ${platform}<br>--}}
-{{--maxTouchPoints: ${mtp}<br>--}}
-{{--beforeinstallprompt fired? <span id="a2hs-bip">no</span><br>--}}
-{{--Decision: ${--}}
-{{--                isStandalone ? 'INSTALLED — nada a mostrar' :--}}
-{{--                    isIOSLike ? 'iOS — mostrar banner iOS (Compartilhar → Adicionar à Tela de Início)' :--}}
-{{--                        'Android/desktop — aguardar beforeinstallprompt p/ mostrar botão'--}}
-{{--            }--}}
-{{--`;--}}
-{{--            box.addEventListener('click', () => box.remove());--}}
-{{--            document.body.appendChild(box);--}}
-
-{{--            // Só p/ marcar visualmente quando o evento chegar--}}
-{{--            window.addEventListener('beforeinstallprompt', () => {--}}
-{{--                const s = document.getElementById('a2hs-bip'); if (s) s.textContent = 'yes';--}}
-{{--            });--}}
-{{--        });--}}
-{{--    })();--}}
-{{--</script>--}}
 </body>
 
 </html>

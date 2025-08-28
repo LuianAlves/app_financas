@@ -8,12 +8,6 @@
     </x-select>
 </div>
 
-<!-- Description -->
-<div class="row">
-    <x-input col="12" type="text" title="Descrição" id="description" name="description"
-             placeholder="Detalhes (opcional)"/>
-</div>
-
 <!-- Price/Date -->
 <div class="row">
     <x-input-price col="6" title="Valor" id="amount" name="amount"/>

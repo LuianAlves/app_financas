@@ -17,7 +17,6 @@ class Transaction extends BaseModel
         'account_id',
         'transaction_category_id',
         'title',
-        'description',
         'amount',
         'date',
         'type',

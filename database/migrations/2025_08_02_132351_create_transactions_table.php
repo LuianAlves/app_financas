@@ -19,7 +19,6 @@ return new class extends Migration
                 $table->foreignUuid('transaction_category_id')->constrained('transaction_categories')->onDelete('cascade');
 
                 $table->string('title')->nullable();
-                $table->string('description')->nullable();
                 $table->decimal('amount', 12, 2);
                 $table->date('date');
 

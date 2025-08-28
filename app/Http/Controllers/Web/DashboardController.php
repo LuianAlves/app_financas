@@ -412,18 +412,17 @@ class DashboardController extends Controller
             $cat = $t->transactionCategory;
             $type = in_array($cat?->type, ['entrada', 'despesa', 'investimento'], true) ? $cat->type : 'investimento';
 
-            $start = Carbon::parse($r->start_date)->startOfDay();
+            $start    = Carbon::parse($r->start_date)->startOfDay();
             $interval = max(1, (int)$r->interval_value);
 
-            // primeira >= janela e alinhada ao step
             $cursor = $this->firstAlignedDays($start, $winStart, $interval);
             $cursor = $this->normalizeW($cursor, (bool)$r->include_sat, (bool)$r->include_sun);
 
+            $__guard = 0;
             while ($cursor->lte($winEnd)) {
+                if (++$__guard > 20000) { break; }
 
-                // TROQUE POR
                 if ($this->isOccurrencePaid($paidIndex, (string)$t->id, $cursor)) {
-                    // use SEMPRE o intervalo saneado (>=1)
                     $cursor = $this->normalizeW(
                         $cursor->copy()->addDays($interval),
                         (bool)$r->include_sat, (bool)$r->include_sun
@@ -437,8 +436,7 @@ class DashboardController extends Controller
 
                 $cursor = $this->normalizeW(
                     $cursor->copy()->addDays($interval),
-                    (bool)$r->include_sat,
-                    (bool)$r->include_sun
+                    (bool)$r->include_sat, (bool)$r->include_sun
                 );
             }
         }
@@ -838,9 +836,22 @@ class DashboardController extends Controller
                 }
             }
 
-            if (in_array($transaction->recurrence_type, ['monthly', 'yearly', 'custom'], true)) {
-                $next = Carbon::parse($transaction->date)->addMonthNoOverflow();
-                $transaction->update(['date' => $next]);
+            // Atualizar a data-base da transação conforme o tipo
+            if ($transaction->recurrence_type === 'monthly') {
+                $transaction->update(['date' => Carbon::parse($transaction->date)->addMonthNoOverflow()]);
+            } elseif ($transaction->recurrence_type === 'yearly') {
+                $transaction->update(['date' => Carbon::parse($transaction->date)->addYearNoOverflow()]);
+            } elseif ($transaction->recurrence_type === 'custom') {
+                $rec = Recurrent::where('transaction_id', $transaction->id)->first();
+                if ($rec) {
+                    if ($rec->interval_unit === 'days') {
+                        // NÃO atualiza a transactions.date: cálculo é feito por start_date + interval_value (dias)
+                    } elseif ($rec->interval_unit === 'months') {
+                        $transaction->update(['date' => Carbon::parse($transaction->date)->addMonthNoOverflow()]);
+                    } elseif ($rec->interval_unit === 'years') {
+                        $transaction->update(['date' => Carbon::parse($transaction->date)->addYearNoOverflow()]);
+                    }
+                }
             }
         });
 
@@ -1045,6 +1056,13 @@ class DashboardController extends Controller
             $anchor = Carbon::parse($t->date)->startOfDay();
             $payDay = max(1, (int)$r->payment_day);
 
+            $occ = $monthStart->copy()->day(min((int)$r->payment_day, $monthStart->daysInMonth));
+            if ($occ->betweenIncluded($monthStart, $end) && $occ->gte(Carbon::parse($t->date))) {
+                if (!$this->isOccurrencePaid($paid, (string)$t->id, $occ)) {
+                    if ($type === 'entrada') $sumReceberMes += $amount; else $sumPagarMes += $amount;
+                }
+            }
+
             if ($t->recurrence_type === 'monthly') {
                 $cur = $anchor->copy()->day(min($payDay, $anchor->daysInMonth));
                 while ($cur->lte($limit)) {
@@ -1213,8 +1231,7 @@ class DashboardController extends Controller
             if ($t->recurrence_type === 'monthly') {
                 $occ = $monthStart->copy()->day(min((int)$r->payment_day, $monthStart->daysInMonth));
                 if ($occ->betweenIncluded($monthStart, $end) && $occ->gte(Carbon::parse($t->date))) {
-                    $ym = $occ->format('Y-m');
-                    if (empty($paid[$t->id][$ym])) {
+                    if (!$this->isOccurrencePaid($paid, (string)$t->id, $occ)) {
                         if ($type === 'entrada') $sumReceberMes += $amount; else $sumPagarMes += $amount;
                     }
                 }

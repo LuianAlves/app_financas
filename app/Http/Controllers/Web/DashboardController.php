@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -422,6 +423,8 @@ class DashboardController extends Controller
             while ($cursor->lte($winEnd)) {
                 if (++$__guard > 20000) { break; }
 
+                Log::info('recD start', ['rid' => $r->id, 'tx' => (string)$t->id, 'from' => $cursor->toDateString(), 'to' => $winEnd->toDateString(), 'interval' => $interval]);
+
                 if ($this->isOccurrencePaid($paidIndex, (string)$t->id, $cursor)) {
                     $cursor = $this->normalizeW(
                         $cursor->copy()->addDays($interval),
@@ -438,6 +441,8 @@ class DashboardController extends Controller
                     $cursor->copy()->addDays($interval),
                     (bool)$r->include_sat, (bool)$r->include_sun
                 );
+
+                Log::info('recD end', ['rid' => $r->id, 'iterations' => $__guard]);
             }
         }
 
@@ -1154,6 +1159,7 @@ class DashboardController extends Controller
 
             // conta todas as ocorrências antes do início do mês alvo
             while ($cursor->lt($monthStart)) {
+
                 if (!$this->isOccurrencePaid($paid, (string)$t->id, $cursor)) {
                     $v = abs((float)$r->amount);
                     if ($type === 'entrada') $sumReceberOver += $v;
@@ -1329,6 +1335,8 @@ class DashboardController extends Controller
             $cursor = $this->normalizeW($cursor, (bool)$r->include_sat, (bool)$r->include_sun);
 
             while ($cursor->lte($end)) {
+                Log::info('recD start', ['rid' => $r->id, 'tx' => (string)$t->id, 'from' => $cursor->toDateString(), 'to' => $winEnd->toDateString(), 'interval' => $interval]);
+
                 if ($cursor->lt($monthStart)) {
                     $cursor->addDays($interval);
                     continue;
@@ -1345,6 +1353,8 @@ class DashboardController extends Controller
                     (bool)$r->include_sat,
                     (bool)$r->include_sun
                 );
+
+                Log::info('recD end', ['rid' => $r->id, 'iterations' => $__guard]);
             }
         }
 

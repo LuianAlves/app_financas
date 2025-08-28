@@ -317,7 +317,7 @@ class DashboardController extends Controller
                         continue;
                     }
                     if ($occ->betweenIncluded($winStart, $winEnd) && $occ->gte($startBase)) {
-                        $events->push($this->ev($r->id,'y',$t,$cat,$type,$occ,$amount));
+                        $events->push($this->ev($r->id, 'y', $t, $cat, $type, $occ, $amount));
                     }
                 }
             }
@@ -367,7 +367,7 @@ class DashboardController extends Controller
                     continue;
                 }
                 if (!$occ->betweenIncluded($winStart, $winEnd)) continue;
-                $events->push($this->ev($r->id,'c',$t,$cat,$type,$occ,(float)$ci->amount,$ci->custom_occurrence_number));
+                $events->push($this->ev($r->id, 'c', $t, $cat, $type, $occ, (float)$ci->amount, $ci->custom_occurrence_number));
             }
         }
 
@@ -417,7 +417,11 @@ class DashboardController extends Controller
 
                 // TROQUE POR
                 if ($this->isOccurrencePaid($paidIndex, (string)$t->id, $cursor)) {
-                    $cursor = $this->normalizeW($cursor->copy()->addDays($r->interval_value), (bool)$r->include_sat, (bool)$r->include_sun);
+                    // use SEMPRE o intervalo saneado (>=1)
+                    $cursor = $this->normalizeW(
+                        $cursor->copy()->addDays($interval),
+                        (bool)$r->include_sat, (bool)$r->include_sun
+                    );
                     continue;
                 }
 
@@ -806,13 +810,13 @@ class DashboardController extends Controller
             }
 
             $pt = \App\Models\PaymentTransaction::create([
-                'transaction_id'  => $transaction->id,
-                'title'           => $transaction->title,
-                'amount'          => (float)$data['amount'],
-                'payment_date'    => $occ->toDateString(),               // <- crucial
+                'transaction_id' => $transaction->id,
+                'title' => $transaction->title,
+                'amount' => (float)$data['amount'],
+                'payment_date' => $occ->toDateString(),               // <- crucial
                 'reference_month' => $occ->format('m'),                  // <- do payment_date
-                'reference_year'  => $occ->format('Y'),                  // <- do payment_date
-                'account_id'      => $account?->id ?? null,
+                'reference_year' => $occ->format('Y'),                  // <- do payment_date
+                'account_id' => $account?->id ?? null,
             ]);
 
 
@@ -947,7 +951,7 @@ class DashboardController extends Controller
 
     private function isOccurrencePaid(array $idx, string $txId, \Carbon\Carbon $occ): bool
     {
-        $d  = $occ->format('Y-m-d');
+        $d = $occ->format('Y-m-d');
         $ym = $occ->format('Y-m');
         return !empty($idx[$txId]['D'][$d]) || !empty($idx[$txId]['M'][$ym]); // suporta legado
     }

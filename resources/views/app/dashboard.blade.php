@@ -199,37 +199,37 @@
     <!-- Recent Transactions -->
     <div class="recent-transactions mb-4">
         <h2>Transações recentes</h2>
-        @forelse($recentTransactions as $transaction)
+        @foreach($recentTransactions as $transaction)
             @php
-                $categoryType = optional($transaction->transactionCategory)->type;
-                $categoryName = optional($transaction->transactionCategory)->name;
+                $color = data_get($transaction, 'transactionCategory.color', '#999');
+                $icon  = data_get($transaction, 'transactionCategory.icon', 'fa-regular fa-circle');
+                $categoryName = data_get($transaction, 'transactionCategory.name');
+                $categoryType = data_get($transaction, 'transactionCategory.type');
+                $title = $transaction->title ?? $categoryName ?? 'Transação';
             @endphp
 
             <div class="transaction-card">
                 <div class="transaction-info">
-                    <div class="icon" style="background: {{$transaction->transactionCategory->color}}">
-                        <i class="{{$transaction->transactionCategory->icon}}"></i>
+                    <div class="icon" style="background: {{ $color }}">
+                        <i class="{{ $icon }}"></i>
                     </div>
 
                     <div class="details">
-                        <p class="tx-title m-0 p-0">{{ ucwords($transaction->title) ?? ucwords($categoryName) }}</p>
-                        @if($transaction->type == 'card')
+                        <p class="tx-title m-0 p-0">{{ ucwords($title) }}</p>
+                        @if(data_get($transaction, 'type') === 'card')
                             <small class="text-muted" style="font-size: 10.5px;">No cartão</small>
                         @endif
-                        @if($transaction->date)
-                            <span
-                                class="tx-date mt-2">{{ \Carbon\Carbon::parse($transaction->date)->format('d/m/Y') }}</span>
+                        @if(data_get($transaction, 'date'))
+                            <span class="tx-date mt-2">{{ \Carbon\Carbon::parse(data_get($transaction,'date'))->format('d/m/Y') }}</span>
                         @endif
                     </div>
                 </div>
                 <div class="transaction-amount price-default">
-                    {{ $categoryType === 'despesa' ? '-' : '+' }}
-                    {{ brlPrice($transaction->amount) }}
+                    {{ ($categoryType === 'despesa' ? '-' : '+') }}
+                    {{ brlPrice(data_get($transaction,'amount',0)) }}
                 </div>
             </div>
-        @empty
-            <p class="text-muted">Nenhuma transação encontrada</p>
-        @endforelse
+        @endforeach
     </div>
 
     <h2 class="card-invoice-title">Faturas atuais</h2>

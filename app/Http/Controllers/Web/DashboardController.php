@@ -8,7 +8,6 @@ use App\Models\Account;
 use App\Models\AdditionalUser;
 use App\Models\Card;
 use App\Models\CustomItemRecurrents;
-use App\Models\InvoicePayment;
 use App\Models\PaymentTransaction;
 use App\Models\Recurrent;
 use App\Models\Saving;
@@ -17,7 +16,6 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -116,16 +114,6 @@ class DashboardController extends Controller
             'currentInvoices', 'cardTip',
             'upcomingAny'
         ));
-    }
-
-    private function percentChange(float $current, float $previous): ?float
-    {
-        if ($previous == 0.0) {
-            if ($current == 0.0) return 0.0;
-            return null; // evita “infinito”; na view mostramos "—"
-        }
-
-        return (($current - $previous) / $previous) * 100.0;
     }
 
     public function calendarEvents(Request $request)
@@ -423,8 +411,6 @@ class DashboardController extends Controller
             while ($cursor->lte($winEnd)) {
                 if (++$__guard > 20000) { break; }
 
-                Log::info('recD start', ['rid' => $r->id, 'tx' => (string)$t->id, 'from' => $cursor->toDateString(), 'to' => $winEnd->toDateString(), 'interval' => $interval]);
-
                 if ($this->isOccurrencePaid($paidIndex, (string)$t->id, $cursor)) {
                     $cursor = $this->normalizeW(
                         $cursor->copy()->addDays($interval),
@@ -441,8 +427,6 @@ class DashboardController extends Controller
                     $cursor->copy()->addDays($interval),
                     (bool)$r->include_sat, (bool)$r->include_sun
                 );
-
-                Log::info('recD end', ['rid' => $r->id, 'iterations' => $__guard]);
             }
         }
 
@@ -978,12 +962,6 @@ class DashboardController extends Controller
         return !empty($idx[$txId]['D'][$d]) || !empty($idx[$txId]['M'][$ym]); // suporta legado
     }
 
-
-    private function normType(?string $t): string
-    {
-        return trim(mb_strtolower((string)$t));
-    }
-
     private function sumProjectedEntriesAndExpenses(Collection $userIds, Carbon $start, Carbon $end): array
     {
         $paid = $this->paymentsIndex($userIds);
@@ -1141,30 +1119,32 @@ class DashboardController extends Controller
             })
             ->get(['recurrents.*']);
 
+        // custom (a cada X dias) ATRASADOS (sem itens em custom_item_recurrents)
         foreach ($recDOver as $r) {
-            // se tiver itens custom explícitos, já foi tratado em $recCOver
             if (DB::table('custom_item_recurrents')->where('recurrent_id', $r->id)->exists()) continue;
 
             $t = $r->transaction;
             if (!$t) continue;
-            $type = strtolower(optional($t->transactionCategory)->type ?? '');
-            if (!in_array($type, ['entrada', 'despesa', 'investimento'], true)) $type = 'investimento';
 
-            $start = \Carbon\Carbon::parse($r->start_date)->startOfDay();
+            $type = strtolower(optional($t->transactionCategory)->type ?? '');
+            if (!in_array($type, ['entrada','despesa','investimento'], true)) $type = 'investimento';
+
+            $start = Carbon::parse($r->start_date)->startOfDay();
             $interval = max(1, (int)$r->interval_value);
 
-            // primeira ocorrência alinhada >= start
             $cursor = $this->firstAlignedDays($start, $start, $interval);
             $cursor = $this->normalizeW($cursor, (bool)$r->include_sat, (bool)$r->include_sun);
 
-            // conta todas as ocorrências antes do início do mês alvo
+            $__guard = 0; // <<< ADD
             while ($cursor->lt($monthStart)) {
+                if (++$__guard > 20000) break; // <<< ADD
 
                 if (!$this->isOccurrencePaid($paid, (string)$t->id, $cursor)) {
                     $v = abs((float)$r->amount);
                     if ($type === 'entrada') $sumReceberOver += $v;
-                    else /* despesa/investimento */ $sumPagarOver += $v;
+                    else $sumPagarOver += $v;
                 }
+
                 $cursor = $this->normalizeW(
                     $cursor->copy()->addDays($interval),
                     (bool)$r->include_sat,
@@ -1325,36 +1305,30 @@ class DashboardController extends Controller
 
             $t = $r->transaction;
             if (!$t) continue;
-            $type = strtolower($t->transactionCategory?->type ?? '');
-            if (!in_array($type, ['entrada', 'despesa', 'investimento'], true)) $type = 'investimento';
 
-            $start = Carbon::parse($r->start_date)->startOfDay();
+            $type = strtolower($t->transactionCategory?->type ?? '');
+            if (!in_array($type, ['entrada','despesa','investimento'], true)) $type = 'investimento';
+
+            $start    = \Carbon\Carbon::parse($r->start_date)->startOfDay();
             $interval = max(1, (int)$r->interval_value);
 
             $cursor = $this->firstAlignedDays($start, $monthStart, $interval);
             $cursor = $this->normalizeW($cursor, (bool)$r->include_sat, (bool)$r->include_sun);
 
+            $__guard = 0;
             while ($cursor->lte($end)) {
-                Log::info('recD start', ['rid' => $r->id, 'tx' => (string)$t->id, 'from' => $cursor->toDateString(), 'to' => $winEnd->toDateString(), 'interval' => $interval]);
-
-                if ($cursor->lt($monthStart)) {
-                    $cursor->addDays($interval);
-                    continue;
-                }
+                if (++$__guard > 20000) break;
 
                 if (!$this->isOccurrencePaid($paid, (string)$t->id, $cursor)) {
                     $v = abs((float)$r->amount);
                     if ($type === 'entrada') $sumReceberMes += $v;
-                    else /* despesa ou investimento */ $sumPagarMes += $v;
+                    else $sumPagarMes += $v;
                 }
 
                 $cursor = $this->normalizeW(
                     $cursor->copy()->addDays($interval),
-                    (bool)$r->include_sat,
-                    (bool)$r->include_sun
+                    (bool)$r->include_sat, (bool)$r->include_sun
                 );
-
-                Log::info('recD end', ['rid' => $r->id, 'iterations' => $__guard]);
             }
         }
 
@@ -1376,7 +1350,6 @@ class DashboardController extends Controller
         return $d;
     }
 
-    /** primeira ocorrência alinhada ao intervalo >= $from  */
     private function firstAlignedDays(Carbon $start, Carbon $from, int $interval): Carbon
     {
         $s = $start->copy();

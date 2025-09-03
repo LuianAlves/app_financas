@@ -146,6 +146,9 @@ class DashboardController extends Controller
     {
         $events = collect();
 
+        $paidIdx = $this->paymentsIndex($userIds);
+        $paidByDate = $paidIdx['_byDate'] ?? [];
+
         $paidRows = PaymentTransaction::query()
             ->join('transactions as t', 't.id', '=', 'payment_transactions.transaction_id')
             ->whereIn('t.user_id', $userIds)
@@ -289,10 +292,16 @@ class DashboardController extends Controller
             $paymentDay = max(1, (int) $r->payment_day);
             $amount     = (float) $r->amount;
 
+
+
             if ($t->recurrence_type === 'monthly') {
                 $m = $winStart->copy()->startOfMonth();
                 while ($m->lte($winEnd)) {
                     $occ = $m->copy()->day(min($paymentDay, $m->daysInMonth));
+
+                    $ym = $occ->format('Y-m');
+                    if (!empty($paidIdx[$t->id][$ym])) { $m->addMonth(); continue; }
+
                     if ($occ->gte($startBase)) $events->push($this->ev($r->id,'m',$t,$cat,$type,$occ,$amount));
                     $m->addMonth();
                 }
@@ -301,6 +310,10 @@ class DashboardController extends Controller
                 for ($y = $winStart->year; $y <= $winEnd->year; $y++) {
                     $daysIn = Carbon::create($y, $anchorMonth, 1)->daysInMonth;
                     $occ = Carbon::create($y, $anchorMonth, min($paymentDay, $daysIn));
+
+                    $ym = $occ->format('Y-m');
+                    if (!empty($paidIdx[$t->id][$ym])) { continue; }
+
                     if ($occ->betweenIncluded($winStart, $winEnd) && $occ->gte($startBase)) {
                         $events->push($this->ev($r->id,'y',$t,$cat,$type,$occ,$amount));
                     }
@@ -345,6 +358,10 @@ class DashboardController extends Controller
             foreach ($items as $ci) {
                 $daysIn = \Carbon\Carbon::create($ci->reference_year, $ci->reference_month, 1)->daysInMonth;
                 $occ = \Carbon\Carbon::create($ci->reference_year, $ci->reference_month, min((int)$ci->payment_day, $daysIn));
+
+                $ymd = $occ->toDateString();
+                if (!empty($paidByDate[$t->id][$ymd])) continue;
+
                 if (!$occ->betweenIncluded($winStart, $winEnd)) continue;
 
                 $events->push($this->ev($r->id,'c',$t,$cat,$type,$occ,(float)$ci->amount,$ci->custom_occurrence_number));
@@ -394,6 +411,15 @@ class DashboardController extends Controller
 
             while ($cursor->lte($winEnd)) {
                 if ($cursor->gte($start)) {
+                    $ymd = $cursor->toDateString();
+                    if (!empty($paidByDate[$t->id][$ymd])) {
+                        $cursor = $this->normalizeW(
+                            $cursor->copy()->addDays($interval),
+                            (bool)$r->include_sat,
+                            (bool)$r->include_sun
+                        );
+                        continue; // só essa ocorrência foi paga, não o mês todo
+                    }
                     $events->push($this->ev($r->id, 'd', $t, $cat, $type, $cursor, (float)$r->amount));
                 }
                 $cursor = $this->normalizeW(
@@ -455,7 +481,6 @@ class DashboardController extends Controller
                 ]);
             }
         }
-
         return $events;
     }
 
@@ -766,25 +791,21 @@ class DashboardController extends Controller
                 }
             }
 
-
             $pt = PaymentTransaction::create([
                 'transaction_id'  => $transaction->id,
                 'title'           => $transaction->title,
                 'amount'          => (float)$data['amount'],
                 'payment_date'    => $data['payment_date'],
-                'reference_month' => Carbon::parse($transaction->date)->format('m'),
-                'reference_year'  => Carbon::parse($transaction->date)->format('Y'),
+                'reference_month' => Carbon::parse($data['payment_date'])->format('m'),
+                'reference_year'  => Carbon::parse($data['payment_date'])->format('Y'),
                 'account_id'      => $account?->id,
             ]);
 
             if ($account) {
-                $type = optional($transaction->transactionCategory)->type; // 'despesa' | 'entrada' | 'investimento'...
-
+                $type = optional($transaction->transactionCategory)->type;
                 if ($type === 'despesa') {
-                    // pagar despesa => debita
                     $account->decrement('current_balance', abs((float)$pt->amount));
                 } else {
-                    // receber entrada (ou investimento voltando para conta) => credita
                     $account->increment('current_balance', abs((float)$pt->amount));
                 }
             }
@@ -794,6 +815,24 @@ class DashboardController extends Controller
                 $transaction->update(['date' => $next]);
             }
         });
+
+        $shouldBump = false;
+        if (in_array($transaction->recurrence_type, ['monthly','yearly'], true)) {
+            $rec = \App\Models\Recurrent::where('transaction_id', $transaction->id)->first();
+            $hasCustomItems = $rec
+                ? \Illuminate\Support\Facades\DB::table('custom_item_recurrents')->where('recurrent_id', $rec->id)->exists()
+                : false;
+            $shouldBump = !$hasCustomItems;
+        }
+
+        if ($shouldBump) {
+            $base = Carbon::parse($transaction->date);
+            if ($transaction->recurrence_type === 'monthly') {
+                $transaction->update(['date' => $base->addMonthNoOverflow()]);
+            } else { // yearly
+                $transaction->update(['date' => $base->addYear()]);
+            }
+        }
 
         $ownerId = AdditionalUser::ownerIdFor();
         $userIds = AdditionalUser::where('user_id', $ownerId)
@@ -888,17 +927,26 @@ class DashboardController extends Controller
 
     private function paymentsIndex(Collection $userIds): array
     {
-        // carrega todos os pagamentos das transações do grupo
         $rows = DB::table('payment_transactions as pt')
             ->join('transactions as t', 't.id', '=', 'pt.transaction_id')
             ->whereIn('t.user_id', $userIds)
-            ->get(['pt.transaction_id','pt.reference_year','pt.reference_month']);
+            ->get(['pt.transaction_id','pt.reference_year','pt.reference_month','pt.payment_date']);
 
         $idx = [];
+        $byDate = [];
+
         foreach ($rows as $r) {
-            $ym = sprintf('%04d-%02d', (int)$r->reference_year, (int)$r->reference_month);
-            $idx[$r->transaction_id][$ym] = true; // já pago/recebido naquela competência
+            if ($r->reference_year && $r->reference_month) {
+                $ym = sprintf('%04d-%02d', (int)$r->reference_year, (int)$r->reference_month);
+                $idx[$r->transaction_id][$ym] = true; // mantém compatibilidade (por mês)
+            }
+            if (!empty($r->payment_date)) {
+                $d = \Carbon\Carbon::parse($r->payment_date)->toDateString();
+                $byDate[$r->transaction_id][$d] = true; // novo: por data exata
+            }
         }
+
+        $idx['_byDate'] = $byDate;
         return $idx;
     }
 
@@ -1072,8 +1120,8 @@ class DashboardController extends Controller
 
             // conta todas as ocorrências antes do início do mês alvo
             while ($cursor->lt($monthStart)) {
-                $ym = $cursor->format('Y-m');
-                if (empty($paid[$t->id][$ym])) {
+                $ymd = $cursor->toDateString();
+                if (empty(($paid['_byDate'][$t->id] ?? [])[$ymd])) {
                     $v = abs((float)$r->amount);
                     if ($type === 'entrada') $sumReceberOver += $v;
                     else /* despesa/investimento */ $sumPagarOver += $v;
@@ -1203,8 +1251,8 @@ class DashboardController extends Controller
                 $occ = Carbon::create($ci->reference_year, $ci->reference_month, min((int)$ci->payment_day, $daysIn));
                 if (!$occ->betweenIncluded($monthStart, $end)) continue;
 
-                $ym = $occ->format('Y-m');
-                if (!empty($paid[$t->id][$ym])) continue;
+                $ymd = $occ->toDateString();
+                if (!empty(($paid['_byDate'][$t->id] ?? [])[$ymd])) continue;
 
                 $v = abs((float)$ci->amount);
                 if ($type === 'entrada') $sumReceberMes += $v; else $sumPagarMes += $v;
@@ -1249,9 +1297,9 @@ class DashboardController extends Controller
             while ($cursor->lte($end)) {
                 if ($cursor->lt($monthStart)) { $cursor->addDays($interval); continue; }
 
-                $ym = $cursor->format('Y-m');
-                if (empty($paid[$t->id][$ym])) {
-                    $v = abs((float)$r->amount);
+                $ymd = $cursor->toDateString();
+                if (empty(($paid['_byDate'][$t->id] ?? [])[$ymd])) {
+                $v = abs((float)$r->amount);
                     if ($type === 'entrada') $sumReceberMes += $v;
                     else /* despesa ou investimento */ $sumPagarMes += $v;
                 }

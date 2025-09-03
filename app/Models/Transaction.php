@@ -22,7 +22,8 @@ class Transaction extends BaseModel
         'type',
         'type_card',
         'recurrence_type',
-        'custom_occurrences'
+        'custom_occurrences',
+        'create_date'
     ];
 
     public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo

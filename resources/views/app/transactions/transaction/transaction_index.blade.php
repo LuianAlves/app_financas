@@ -7,6 +7,35 @@
         description="Acompanhe suas transações financeiras organizadas por categoria e tipo.">
     </x-card-header>
 
+    <div class="st-filters mt-4" id="stFilters">
+        <div class="row mt-2">
+            <div class="col-6">
+                <label class="k">Início</label>
+                <input type="date" id="stStart" class="form-control" style="max-width:170px">
+            </div>
+            <div class="col-6">
+                <label class="k">Fim</label>
+                <input type="date" id="stEnd" class="form-control" style="max-width:170px">
+            </div>
+        </div>
+
+
+                <div class="tx-tabs pb-1" id="stTabs">
+                    <button type="button" class="tx-tab active" data-type="all">Todos</button>
+                    <button type="button" class="tx-tab" data-type="entrada">Entradas</button>
+                    <button type="button" class="tx-tab" data-type="despesa">Despesas</button>
+                    <button type="button" class="tx-tab" data-type="investimento">Investimentos</button>
+                </div>
+
+
+        <div id="stSubcats" class="tx-chips mt-2 d-flex flex-wrap gap-2"></div>
+
+        <button id="stApply" class="btn bg-color border-none ms-auto">
+            <i class="fa fa-magnifying-glass me-1" style="font-size:12px;"></i>
+            <span style="letter-spacing:.5px;font-size:14px;margin-left:2.5px;">Aplicar</span>
+        </button>
+    </div>
+
     <ul id="transactionList" class="swipe-list mt-4"></ul>
 
     <button id="openModal" class="create-btn">
@@ -49,12 +78,161 @@
 
     @push('styles')
         <style>
-            #modalTransaction {
-                pointer-events: auto;
+            :root {
+                --bg: #F6F7FA;
+                --card: #FFF;
+                --ink: #1F2937;
+                --muted: #6B7280;
+                --line: #E5E9F0;
+                --soft: #F3F6FA;
+                --pos: #1e00cf;
+                --neg: #980000;
+                --accent: #00BFA6;
             }
 
-            #formTransaction {
-                pointer-events: auto;
+            .st-filters {
+                display: flex;
+                gap: 10px;
+                align-items: flex-start;
+                flex-direction: column;
+                padding: 8px 10px;
+                border-radius: 10px;
+                background: var(--card);
+                border: 1px solid var(--line);
+            }
+
+            .st-filters label.k {
+                font-size: .8rem;
+                color: var(--muted);
+                font-weight: 500;
+                margin: 0 2px
+            }
+
+            .st-filters .form-control {
+                height: 36px;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                font-size: .85rem
+            }
+
+            .sticky-summary > div {
+                min-width: 0;
+                display: flex;
+                justify-content: space-between;
+            }
+
+            #stTabs {
+                display: flex;
+                gap: 8px;
+                padding: 4px;
+                background: #fff;
+                border-radius: 12px;
+            }
+
+            .tx-tabs button {
+                font-size: 12.5px !important;
+                letter-spacing: .75px !important;
+                font-weight: 500 !important;
+                background: none !important;
+                border: none !important;
+                color: var(--muted);
+                padding: 0 !important;
+            }
+
+            .tx-tabs button.active {
+                color: var(--accent) !important;
+            }
+
+            #stTabs, #stSubcats {
+                overflow-x: scroll;
+                max-width: calc(100% - 5%) !important;
+            }
+
+            #stTabs .tx-tab {
+                flex: 1;
+                border: 0;
+                background: transparent;
+                padding: 10px 12px;
+                border-radius: 8px;
+                font-weight: 600;
+                font-size: .9rem;
+                color: var(--muted);
+                transition: background .2s ease, color .2s ease, box-shadow .2s ease, transform .05s;
+            }
+
+            #stTabs .tx-tab:hover {
+                color: var(--ink);
+            }
+
+            #stTabs .tx-tab:active {
+                transform: scale(.98);
+            }
+
+            #stTabs .tx-tab.active {
+                background: var(--accent);
+                color: #fff;
+            }
+
+            /* ——— Subcategory chips ——— */
+            #stSubcats {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-top: 10px;
+                padding-bottom: 2px;
+                overflow-x: auto; /* desliza em telas pequenas */
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #stSubcats::-webkit-scrollbar {
+                height: 6px;
+            }
+
+            #stSubcats::-webkit-scrollbar-thumb {
+                background: rgba(0, 0, 0, .1);
+                border-radius: 10px;
+            }
+
+            #stSubcats .chip {
+                font-size: 12px !important;
+                letter-spacing: .75px !important;
+                font-weight: 500 !important;
+                --ring: rgba(0, 191, 166, .18);
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 3.5px 7.5px;
+                border: 1px solid var(--line);
+                background: #fff;
+                color: #334155;
+                border-radius: 5px;
+                cursor: pointer;
+                user-select: none;
+                transition: border-color .2s, background .2s, color .2s, box-shadow .2s;
+            }
+
+
+            #stSubcats .chip:hover {
+                border-color: var(--accent);
+            }
+
+            #stSubcats .chip:focus-visible {
+                outline: 2px solid var(--accent);
+                outline-offset: 2px;
+            }
+
+            #stSubcats .chip.active {
+                background: rgba(0, 191, 166, .10);
+                color: var(--accent);
+                border-color: var(--accent);
+            }
+
+            #stSubcats .chip .dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 999px;
+                background: currentColor;
+                display: inline-block;
             }
         </style>
     @endpush
@@ -99,6 +277,103 @@
                         }
                     }
                 };
+
+// ====== FILTROS (escopados no segundo card) ======
+                const API_URL = `{{ route('transactions.index') }}`;
+                const ALL_CATS = @json($categories->map(fn($c)=>['id'=>$c->id,'name'=>$c->name,'type'=>$c->type])->values());
+
+// estado
+                const state = {type: 'all', catIds: new Set(), start: '', end: ''};
+
+// pega elementos DENTRO do segundo card
+                const fx = document.getElementById('stFilters');
+                const tabsEl = fx.querySelector('#stTabs');
+                const subcatsEl = fx.querySelector('#stSubcats');
+                const inStart = fx.querySelector('#stStart');
+                const inEnd = fx.querySelector('#stEnd');
+
+// monta querystring a partir do estado
+                function qsFromState() {
+                    const p = new URLSearchParams();
+                    if (state.type !== 'all') p.set('type', state.type);
+                    if (state.start) p.set('start', state.start);
+                    if (state.end) p.set('end', state.end);
+                    if (state.catIds.size) [...state.catIds].forEach(id => p.append('category_ids[]', id));
+                    return p.toString();
+                }
+
+// render dos subfiltros (categorias)
+                function renderSubcats() {
+                    subcatsEl.innerHTML = '';
+                    if (state.type === 'all') return;
+
+                    const cats = ALL_CATS.filter(c => c.type === state.type);
+                    if (!cats.length) {
+                        subcatsEl.innerHTML = '<small class="text-muted">Sem categorias</small>';
+                        return;
+                    }
+
+                    const all = document.createElement('button');
+                    all.className = 'chip ' + (state.catIds.size ? '' : 'active');
+                    all.textContent = 'Todas';
+                    all.addEventListener('click', () => {
+                        state.catIds.clear();
+                        renderSubcats();
+                    });
+                    subcatsEl.appendChild(all);
+
+                    for (const c of cats) {
+                        const b = document.createElement('button');
+                        b.className = 'chip ' + (state.catIds.has(c.id) ? 'active' : '');
+                        b.textContent = c.name;
+                        b.addEventListener('click', () => {
+                            if (state.catIds.has(c.id)) state.catIds.delete(c.id);
+                            else state.catIds.add(c.id);
+                            renderSubcats();
+                        });
+                        subcatsEl.appendChild(b);
+                    }
+                }
+
+// troca de aba
+                tabsEl.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.tx-tab');
+                    if (!btn) return;
+                    tabsEl.querySelectorAll('.tx-tab').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    state.type = btn.dataset.type || 'all';
+                    state.catIds.clear();
+                    renderSubcats();
+                });
+
+// atalhos de período (escopados)
+                fx.querySelectorAll('[data-range]').forEach(b => {
+                    b.addEventListener('click', () => {
+                        const addM = parseInt(b.dataset.range, 10) || 1;
+                        const base = inStart.value ? new Date(inStart.value) : new Date();
+                        const start = new Date(base.getFullYear(), base.getMonth(), 1);
+                        const end = new Date(start.getFullYear(), start.getMonth() + addM, 0);
+                        // NÃO use toISOString() para não “pular” dia
+                        const iso = d => [
+                            d.getFullYear(),
+                            String(d.getMonth() + 1).padStart(2, '0'),
+                            String(d.getDate()).padStart(2, '0')
+                        ].join('-');
+                        inStart.value = iso(start);
+                        inEnd.value = iso(end);
+                    });
+                });
+
+// aplicar filtros
+                fx.querySelector('#stApply').addEventListener('click', () => {
+                    state.start = inStart.value || '';
+                    state.end = inEnd.value || '';
+                    sessionStorage.removeItem(CACHE_KEY);
+                    loadTransactions();
+                });
+
+// render inicial
+                renderSubcats();
 
                 const list = document.getElementById('transactionList');
                 const form = document.getElementById('formTransaction');
@@ -173,9 +448,22 @@
                     return n.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
                 }
 
-                function renderTx(tx) { /* ... use sua função atual ... */
+                function renderTx(tx) {
                     const id = tx.id ?? tx.uuid ?? tx._id ?? tx.transaction_id;
-                    const date = tx.date ?? tx.created_at ?? '';
+
+                    const src = tx.create_date ?? tx.date;
+                    const d = src ? new Date(src) : null;
+
+                    const date = d && !isNaN(d)
+                        ? (() => {
+                            const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+                            const dayPt  = d.toLocaleString('pt-BR', { day: '2-digit', timeZone: 'America/Sao_Paulo' });
+                            const longPt = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', timeZone: 'America/Sao_Paulo' });
+                            const mShort = meses[d.getMonth()];
+                            return `${dayPt} ${mShort}`; // ex: 04 nov (04 de novembro)
+                        })()
+                        : '';
+
                     const type = tx.type ?? 'money';
                     const color = ({pix: '#2ecc71', card: '#3498db', money: '#f39c12'})[type] || '#777';
                     const label = ({pix: 'Pix', card: 'Cartão', money: 'Dinheiro'})[type] || type;
@@ -313,8 +601,8 @@
                 window.addEventListener('touchstart', closeIfOutside, {capture: true, passive: false});
 
                 async function loadTransactions() {
-                    // 1) tenta cache
-                    const cached = store.get(CACHE_KEY);
+                    const cacheKey = CACHE_KEY + (qsFromState() || 'all');
+                    const cached = store.get(cacheKey);
 
                     if (cached) {
                         renderList(cached);
@@ -324,12 +612,18 @@
                     }
 
                     try {
-                        const data = await http.get(`{{ route('transactions.index') }}`, {
+                        const params = qsFromState();
+                        const url = params ? `${API_URL}?${params}` : API_URL;
+
+                        const data = await http.get(url, {
                             timeout: 8000,
                             headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}
                         });
+
                         renderList(data);
-                        store.set(CACHE_KEY, data, 60);
+
+                        store.set(cacheKey, data, 60);
+
                         list.querySelectorAll('.swipe-item').forEach(li => io.observe(li));
                     } catch (e) {
                         if (!cached) {
@@ -487,8 +781,11 @@
                         });
                         openTxModal('edit', tx);
                         detailCache.set(id, tx);
-                    } catch(e){
-                        if (e.message?.includes('401')) { location.href = '/transaction'; return; }
+                    } catch (e) {
+                        if (e.message?.includes('401')) {
+                            location.href = '/transaction';
+                            return;
+                        }
                         if (!cached) list.innerHTML = `<p style="padding:8px;color:#666">Sem conexão. Tente novamente.</p>`;
                     }
                 }

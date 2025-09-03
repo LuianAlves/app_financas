@@ -49,28 +49,52 @@ class TransactionController extends Controller
         $this->customItemRecurrents = $customItemRecurrents;
     }
 
-    public function index()
+    public function index(Request $req)
     {
-        $transactions = $this->transaction->with('transactionCategory')->orderBy('date', 'asc')->get();
+        $q = Transaction::with('transactionCategory')
+            ->where('user_id', Auth::id());
 
-        $transactions->each(function ($transaction) {
-            $transaction->amount = brlPrice($transaction->amount);
-
-            if ($transaction->transactionCategory && $transaction->transactionCategory->type) {
-                switch ($transaction->transactionCategory->type) {
-                    case 'entrada':
-                        $transaction->typeColor = 'success';
-                        break;
-                    case 'despesa':
-                        $transaction->typeColor = 'danger';
-                        break;
-                    case 'investimento':
-                        $transaction->typeColor = 'info';
-                        break;
-                }
+        $norm = function (?string $s): ?string {
+            if (!$s) return null;
+            $s = trim($s);
+            foreach (['Y-m-d','d/m/Y','d-m-Y'] as $fmt) {
+                try { return \Carbon\Carbon::createFromFormat($fmt, $s)->format('Y-m-d'); } catch (\Throwable $e) {}
             }
+            try { return \Carbon\Carbon::parse($s)->toDateString(); } catch (\Throwable $e) { return null; }
+        };
+        $start = $norm($req->query('start'));
+        $end   = $norm($req->query('end'));
+        if ($start && $end && $start > $end) { [$start,$end] = [$end,$start]; }
 
-            $transaction->date = Carbon::parse($transaction->date)->locale('pt_BR')->isoFormat('DD/MMM.');
+        if ($start && $end)      $q->whereBetween('create_date', [$start, $end]);
+        elseif ($start)          $q->whereDate('create_date', '>=', $start);
+        elseif ($end)            $q->whereDate('create_date', '<=', $end);
+
+        $type = $req->query('type');
+        if (in_array($type, ['entrada','despesa','investimento'], true)) {
+            $q->whereHas('transactionCategory', fn($qq) => $qq->where('type', $type));
+        }
+
+        $catIds = $req->query('category_ids', []);
+        if (is_string($catIds)) $catIds = [$catIds];
+        $catIds = array_values(array_filter($catIds));
+        if (!empty($catIds)) {
+            $q->whereIn('transaction_category_id', $catIds);
+        }
+
+        $transactions = $q->orderBy('create_date', 'asc')->get();
+
+        $transactions->each(function ($t) {
+            $t->amount = brlPrice($t->amount);
+            if ($t->transactionCategory && $t->transactionCategory->type) {
+                $t->typeColor = match ($t->transactionCategory->type) {
+                    'entrada'      => 'success',
+                    'despesa'      => 'danger',
+                    'investimento' => 'info',
+                    default        => null,
+                };
+            }
+            $t->date = Carbon::parse($t->date)->locale('pt_BR')->isoFormat('DD/MMM.');
         });
 
         return response()->json($transactions);
@@ -122,12 +146,12 @@ class TransactionController extends Controller
         $typeCard     = $isCard ? $request->type_card : null;
         $installments = (int) ($request->installments ?? 1);
 
-
         if ($isCard && $typeCard === 'credit' && $installments >= 1 && $request->recurrence_type === 'unique') {
             return $this->handleInstallments($request, $txDate, $installments);
         }
 
         $isRecurring = $request->recurrence_type !== 'unique';
+
         if ($isCard && $typeCard === 'credit' && $isRecurring) {
             return $this->handleRecurringCard($request, $txDate);
         }
@@ -183,6 +207,7 @@ class TransactionController extends Controller
             'type_card' => 'credit',
             'recurrence_type' => 'unique',
             'custom_occurrences' => $installments,
+            'create_date' => $txDate,
         ]);
 
         $card  = Card::findOrFail($request->card_id);
@@ -232,6 +257,7 @@ class TransactionController extends Controller
             'type' => 'card',
             'type_card' => 'credit',
             'recurrence_type' => $request->recurrence_type,
+            'create_date' => $txDate,
         ]);
 
         $unit  = $request->recurrence_type === 'yearly' ? 'years' : ($request->recurrence_type === 'custom' ? 'days' : 'months');
@@ -252,7 +278,7 @@ class TransactionController extends Controller
             'include_sun' => $includeSun,
             'next_run_date' => $txDate,
             'active' => true,
-            'alternate_cards' => (bool)$request->alternate_cards,
+            'alternate_cards' => (bool)$request->alternate_cards
         ]);
 
         return $this->generateRecurringInvoices($request, $transaction, $recurrent, $txDate, $unit, $value, $includeSat, $includeSun);
@@ -278,6 +304,7 @@ class TransactionController extends Controller
             'type_card'                => $typeCard,         // credit | debit | null
             'recurrence_type'          => $recurrenceType,   // unique | monthly | yearly | custom
             'custom_occurrences'       => $request->custom_occurrences ?? $request->installments,
+            'create_date' => $txDate
         ]);
 
         if ($cat && $cat->type === 'investimento' && $recurrenceType === 'unique') {
@@ -369,13 +396,13 @@ class TransactionController extends Controller
 
             return response()->json([
                 'message'     => 'Transação recorrente registrada com sucesso',
-                'transaction' => $transaction,
+                'transaction' => $transaction
             ]);
         }
 
         return response()->json([
             'message'     => 'Transação registrada com sucesso',
-            'transaction' => $transaction,
+            'transaction' => $transaction
         ]);
     }
 

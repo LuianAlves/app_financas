@@ -52,7 +52,7 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     Route::middleware('partial')->group(function () {
         // Dashboard
         Route::get('/dashboard', [WebDashboardController::class, 'dashboard'])->name('dashboard');
-        Route::get('/new-dashboard', [WebDashboardController::class, 'newDashboard'])->name('dashboard');
+//        Route::get('/new-dashboard', [WebDashboardController::class, 'newDashboard'])->name('dashboard');
 
         // Dashboard Data
         Route::get('/dashboard/kpis', [WebDashboardController::class, 'kpis'])->name('dashboard.kpis');

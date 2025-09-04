@@ -20,6 +20,103 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    public function newDashboard(Request $request)
+    {
+        $ownerId = AdditionalUser::ownerIdFor();
+        $userIds = AdditionalUser::query()
+            ->where('user_id', $ownerId)
+            ->pluck('linked_user_id')
+            ->push($ownerId)
+            ->unique()
+            ->values();
+
+        $monthParam = $request->query('month');
+        $startOfMonth = $monthParam
+            ? Carbon::createFromFormat('Y-m', $monthParam)->startOfMonth()
+            : Carbon::now()->startOfMonth();
+        $endOfMonth = (clone $startOfMonth)->endOfMonth();
+        $today = Carbon::today();
+
+        $recentTransactions = Transaction::with(['transactionCategory:id,name,type,color,icon', 'card'])
+            ->whereIn('transactions.user_id', $userIds)
+            ->orderByDesc('transactions.date')
+            ->limit(5)
+            ->get(['transactions.id', 'transactions.type', 'transactions.title', 'transactions.amount', 'transactions.date', 'transactions.transaction_category_id']);
+
+        $upcomingPayments = Transaction::with(['transactionCategory:id,name,type,color,icon'])
+            ->leftJoin('payment_transactions as pt', 'pt.transaction_id', '=', 'transactions.id') // novo
+            ->whereIn('transactions.user_id', $userIds)
+            ->whereHas('transactionCategory', fn($q) => $q->where('type', 'despesa'))
+            ->whereNotNull('transactions.date')
+            ->whereDate('transactions.date', '>=', $today)
+            ->whereNull('pt.id') // novo: só as que ainda não foram pagas
+            ->where('type', '!=', 'card')
+            ->orderBy('transactions.date')
+            ->limit(5)
+            ->get(['transactions.id', 'transactions.title', 'transactions.amount', 'transactions.date', 'transactions.transaction_category_id']);
+
+        $upcomingInvoiceCards = $this->buildUpcomingInvoicesForList($userIds, $today, 50);
+
+        $tx = $upcomingPayments->map(function ($t) {
+            return [
+                'kind' => 'tx',
+                'id' => (string)$t->id,
+                'date' => (string)$t->date,
+                'title' => $t->title ?? optional($t->transactionCategory)->name,
+                'amount' => (float)$t->amount,
+                'color' => optional($t->transactionCategory)->color,
+                'icon' => optional($t->transactionCategory)->icon,
+                'modal_id' => (string)$t->id,
+                'modal_amount' => (float)$t->amount,
+                'modal_date' => (string)$t->date,
+            ];
+        });
+
+        $invs = collect($upcomingInvoiceCards)
+            ->filter(fn($r) => \Carbon\Carbon::parse($r['due_date'])->gte($today))
+            ->map(function ($r) {
+                return [
+                    'kind' => 'inv',
+                    'id' => (string)$r['invoice_id'] ?? ($r['card_id'] . '-' . $r['current_month']),
+                    'date' => (string)$r['due_date'],
+                    'title' => (string)$r['title'],
+                    'amount' => (float)$r['total'],
+                    'color' => '#be123c',
+                    'icon' => 'fa-solid fa-credit-card',
+                    'card_id' => (string)$r['card_id'],
+                    'current_month' => (string)$r['current_month'],
+                ];
+            });
+
+        $upcomingAny = $tx
+            ->toBase()
+            ->concat($invs)
+            ->filter(fn($x) => !empty($x['date']))
+            ->sortBy('date')
+            ->take(5)
+            ->values();
+
+        $winStart = (clone $startOfMonth)->startOfMonth();
+        $winEnd = (clone $winStart)->addMonthsNoOverflow(11)->endOfMonth();
+
+        $calendarEvents = $this->buildWindowEvents($userIds, $winStart, $winEnd)->values();
+
+        [$currentInvoices, $cardTip] = $this->buildInvoicesWidget($userIds, $today);
+
+        $kpis = $this->kpisForMonth($userIds, $startOfMonth, $endOfMonth);
+        $accountsBalance = $kpis['accountsBalance'];
+        $savingsBalance = Saving::whereIn('savings.user_id', $userIds)->sum('current_amount');
+        $total = $kpis['saldoPrevisto']; // ou $kpis['saldoReal']
+
+        return view('app.new_dashboard', compact(
+            'accountsBalance', 'savingsBalance', 'total',
+            'recentTransactions', 'calendarEvents',
+            'startOfMonth', 'endOfMonth',
+            'currentInvoices', 'cardTip',
+            'upcomingAny'
+        ));
+    }
+
     public function dashboard(Request $request)
     {
         $ownerId = AdditionalUser::ownerIdFor();

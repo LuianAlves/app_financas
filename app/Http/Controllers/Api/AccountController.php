@@ -9,6 +9,8 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AccountController extends Controller
 {
@@ -109,5 +111,62 @@ class AccountController extends Controller
         $account->delete();
 
         return response()->json(null, 204);
+    }
+
+    public function transfer(Request $request)
+    {
+        $data = $request->validate([
+            'from_id' => 'required|exists:accounts,id',
+            'to_id'   => 'required|different:from_id|exists:accounts,id',
+            'amount' => 'required|numeric|min:0.01',
+        ]);
+
+        // Segurança: garante que as contas são do usuário logado (se aplicável)
+        $userId = Auth::id();
+
+        return DB::transaction(function () use ($data, $userId) {
+            // Locks p/ evitar condição de corrida
+            $from = Account::where('id', $data['from_id'])
+                ->when($userId, fn($q) => $q->where('user_id', $userId))
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $to = Account::where('id', $data['to_id'])
+                ->when($userId, fn($q) => $q->where('user_id', $userId))
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $amount = round((float)$data['amount'], 2);
+
+            if ($amount <= 0) {
+                throw ValidationException::withMessages(['amount' => 'Valor inválido.']);
+            }
+
+            if ((float)$from->current_balance < $amount) {
+                throw ValidationException::withMessages(['amount' => 'Saldo insuficiente na conta de origem.']);
+            }
+
+            // Atualiza saldos
+            $from->current_balance = round(((float)$from->current_balance) - $amount, 2);
+            $to->current_balance = round(((float)$to->current_balance) + $amount, 2);
+
+            $from->save();
+            $to->save();
+
+            // Opcional: retornar resumos
+            return response()->json([
+                'ok' => true,
+                'from' => [
+                    'id' => $from->id,
+                    'bank_name' => $from->bank_name,
+                    'current_balance' => $from->current_balance,
+                ],
+                'to' => [
+                    'id' => $to->id,
+                    'bank_name' => $to->bank_name,
+                    'current_balance' => $to->current_balance,
+                ],
+            ]);
+        });
     }
 }

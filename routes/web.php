@@ -64,6 +64,7 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
 
         // Accounts
         Route::get('/account', [WebAccountController::class, 'index'])->name('account-view.index');
+        Route::post('/accounts/transfer', [ApiAccountController::class, 'transfer'])->name('accounts.transfer');
         Route::resource('accounts', ApiAccountController::class)->scoped(['account' => 'uuid']);
 
         // Cards

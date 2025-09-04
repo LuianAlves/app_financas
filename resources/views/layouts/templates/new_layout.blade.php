@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>UX/UI Demo • Banking Webapp + Dashboard</title>
 
-    <!-- Tailwind (CDN) -->
-    <!-- 0) Aplica tema antes do paint -->
     <script>
         (function () {
             try {
@@ -19,10 +17,8 @@
         })();
     </script>
 
-    <!-- 1) Carrega Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- 2) Configura Tailwind (AGORA com tailwind.config, após o CDN) -->
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -55,7 +51,6 @@
     <link rel="icon"
           href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%233b82f6' d='M16 2l14 8v12l-14 8-14-8V10z'/%3E%3Cpath fill='%23fff' d='M16 7l9 5v8l-9 5-9-5v-8z'/%3E%3C/svg%3E"/>
     <style>
-        /* rolagem suave e redução de animações para acessibilidade */
         html {
             scroll-behavior: smooth;
         }
@@ -83,7 +78,13 @@
 
     @stack('styles')
 </head>
-<body class="min-h-screen text-neutral-900 dark:text-neutral-100 bg-gradient-to-b from-brand-50/60 to-white dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-brand-200 selection:text-neutral-900">
+{{--<body class="min-h-screen text-neutral-900 dark:text-neutral-100
+bg-gradient-to-b from-brand-50/60 to-white
+dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-brand-200 selection:text-neutral-900">--}}
+<body class="min-h-screen text-neutral-900 dark:text-neutral-100
+             bg-white
+             dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-brand-200 selection:text-neutral-900">
+
 <a href="#conteudo"
    class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 bg-white dark:bg-neutral-800 text-sm px-3 py-2 rounded-lg shadow-soft dark:shadow-softDark">Pular
     para o conteúdo</a>
@@ -253,7 +254,7 @@
 
         <!-- Bottom Nav (mobile <768px) → oculta no desktop -->
         <nav aria-label="Navegação inferior"
-             class="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-950/80 backdrop-blur">
+             class="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200/70 dark:border-neutral-800/70 bg-white/70 dark:bg-neutral-950/80 backdrop-blur">
             <ul class="grid grid-cols-4">
                 <li>
                     <a href="{{route('dashboard')}}" data-tab
@@ -352,10 +353,8 @@
     </div>
 </div>
 
-<!-- FAB de Categorias (inserido antes dos scripts) e Modal já estão dentro da seção categorias-page -->
 <!-- Scripts de interação -->
 <script>
-    // Tema: alternância e sincronização de ícones
     const btnTheme = document.getElementById('btnTheme');
     const iconSun = document.getElementById('iconSun');
     const iconMoon = document.getElementById('iconMoon');

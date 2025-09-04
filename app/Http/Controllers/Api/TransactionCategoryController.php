@@ -49,22 +49,22 @@ class TransactionCategoryController extends Controller
         return response()->json($transactionCategory);
     }
 
-    public function show(TransactionCategory $category)
+    public function show(TransactionCategory $id)
     {
-        $this->authorize('view', $category);
+        $category = $this->transactionCategory->where('id', $id)->first();
+
         return response()->json($category);
     }
 
-    public function update(Request $request, TransactionCategory $category)
+    public function update(Request $request, $id)
     {
-        $this->authorize('update', $category);
-
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
             'monthly_limit' => 'nullable|numeric',
             'color' => 'nullable|string|max:50'
         ]);
 
+        $category = $this->transactionCategory->where('id', $id)->first();
         $category->update($data);
 
         return response()->json($category);
@@ -72,7 +72,6 @@ class TransactionCategoryController extends Controller
 
     public function destroy(TransactionCategory $category)
     {
-        $this->authorize('delete', $category);
         $category->delete();
 
         return response()->json(null, 204);

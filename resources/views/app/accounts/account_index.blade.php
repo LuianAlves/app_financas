@@ -353,7 +353,9 @@
                     if (e.key === 'Escape' && !trModal.classList.contains('hidden')) closeTransfer();
                 });
 
+// util
                 async function safeJson(res){ try { return await res.json(); } catch { return null; } }
+
 
                 trForm.addEventListener('submit', async (e) => {
                     e.preventDefault();

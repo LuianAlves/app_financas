@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="pt-br" class="h-full antialiased">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -52,9 +53,6 @@
 
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%233b82f6' d='M16 2l14 8v12l-14 8-14-8V10z'/%3E%3Cpath fill='%23fff' d='M16 7l9 5v8l-9 5-9-5v-8z'/%3E%3C/svg%3E"/>
-
-    @stack('styles')
-
     <style>
         /* rolagem suave e redução de animações para acessibilidade */
         html { scroll-behavior: smooth; }
@@ -64,7 +62,9 @@
         }
     </style>
 </head>
+
 <body class="min-h-screen text-neutral-900 dark:text-neutral-100 bg-gradient-to-b from-brand-50/60 to-white dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-brand-200 selection:text-neutral-900">
+
 <a href="#conteudo" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 bg-white dark:bg-neutral-800 text-sm px-3 py-2 rounded-lg shadow-soft dark:shadow-softDark">Pular para o conteúdo</a>
 
 <!-- Layout geral -->

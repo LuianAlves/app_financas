@@ -1,421 +1,568 @@
-@extends('layouts.templates.app')
-@section('content')
-    <x-card-header
-        prevRoute="{{route('dashboard')}}"
-        iconRight="fa-solid fa-circle-question"
-        title="Contas Bancárias"
-        description="Para uma melhor projeção, cadastre todas as suas contas bancárias atuais.">
-    </x-card-header>
+@extends('layouts.templates.new_layout')
 
-    <!-- Lista -->
-    <div id="accountList" class="swipe-list mt-4"></div>
-
-    <!-- Ações -->
-    <button id="openModal" class="create-btn"><i class="fa fa-plus text-white"></i></button>
-    <a href="{{route('transaction-view.index')}}" class="create-btn create-other" title="Transações">
-        <i class="fas fa-retweet text-white"></i>
-    </a>
-
-    <!-- Modal + Form -->
-    <x-modal modalId="modalAccount" formId="formAccount" pathForm="app.accounts.account_form"></x-modal>
-
-    <!-- Confirm custom -->
-    <div id="confirmDeleteAccount" class="x-confirm" hidden>
-        <div class="x-sheet" role="dialog" aria-modal="true" aria-labelledby="xConfirmTitleAcc">
-            <div class="x-head">
-                <h5 id="xConfirmTitleAcc">Remover conta</h5>
-                <button type="button" class="x-close" data-action="cancel" aria-label="Fechar">×</button>
+@section('new-content')
+    <section id="contas-page" class="mt-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-xl font-semibold">Contas bancárias</h2>
+                <p class="text-sm text-neutral-500 dark:text-neutral-400">Acompanhe saldos por banco e acesse o extrato
+                    de cada conta.</p>
             </div>
-            <div class="x-body">Você deseja remover?</div>
-            <div class="x-actions">
-                <button type="button" class="btn btn-light" data-action="cancel">Cancelar</button>
-                <button type="button" class="btn btn-danger" data-action="confirm">Excluir</button>
+            <div class="hidden md:flex items-center gap-2">
+                <button data-open-modal="acc"
+                        class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    Nova conta
+                </button>
             </div>
         </div>
-    </div>
 
-    <style>
-        .balance-box { padding: 20px !important; margin: 0 !important; }
-        /* Swipe base */
-        .swipe-list{list-style:none;margin:0;padding:0}
-        .swipe-item{position:relative;overflow:hidden;background:#fff;border-bottom:1px solid #eee;touch-action:pan-y;user-select:none}
-        .swipe-content{position:relative;z-index:2;background:#fff;padding:0;transform:translateX(0);transition:transform 160ms ease;will-change:transform}
-        .swipe-delete-btn,.swipe-edit-btn{
-            position:absolute;top:0;bottom:0;width:96px;border:0;color:#fff;font-weight:600;z-index:5;pointer-events:none
-        }
-        .swipe-edit-btn{left:0;background:#3498db;transform:translateX(-100%)}
-        .swipe-delete-btn{right:0;background:#dc3545;transform:translateX(100%)}
-        .swipe-item.open-left  .swipe-content{transform:translateX(-96px)}
-        .swipe-item.open-right .swipe-content{transform:translateX(96px)}
-        .swipe-item.open-left  .swipe-delete-btn{transform:translateX(0); pointer-events:auto;}
-        .swipe-item.open-right .swipe-edit-btn  {transform:translateX(0); pointer-events:auto;}
+        <!-- Lista dinâmica -->
+        <div id="accGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
 
-        .balance-box {background:#fff;border-radius:12px;padding:16px;box-shadow:1px 4px 8px rgba(0,0,0,.08);margin:10px 12px}
-        .tx-title{font-weight:700;font-size:16px;color:#333;display:block}
-        .tx-date{letter-spacing:.5px;color:#9aa0a6;display:block}
-        .tx-amount{font-weight:700;display:block}
-        .tx-line{display:flex;justify-content:space-between;gap:12px}
+        <!-- FAB (mobile) -->
+        <button id="accFab" type="button" data-open-modal="acc"
+                class="md:hidden fixed bottom-20 right-4 z-[80] size-14 rounded-2xl grid place-items-center
+         text-white shadow-lg bg-brand-600 hover:bg-brand-700 active:scale-95 transition"
+                aria-label="Nova conta">
+            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+        </button>
 
-        /* Confirm */
-        .x-confirm{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:1050}
-        .x-confirm[hidden]{display:none}
-        .x-sheet{background:#fff;border-radius:10px;min-width:320px;max-width:90vw;box-shadow:0 10px 30px rgba(0,0,0,.2)}
-        .x-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid #eee}
-        .x-body{padding:14px}
-        .x-actions{display:flex;gap:8px;justify-content:end;padding:10px 14px;border-top:1px solid #eee}
-        .x-close{background:transparent;border:0;font-size:22px;line-height:1}
+        <!-- Modal -->
+        <div id="accModal" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true"
+             aria-labelledby="accModalTitle">
+            <div id="accOverlay" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+            <div
+                class="absolute inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[560px]">
+                <div
+                    class="rounded-t-3xl md:rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 shadow-soft dark:shadow-softDark p-4 md:p-6">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h3 id="accModalTitle" class="text-lg font-semibold">Nova conta bancária</h3>
+                            <p class="text-sm text-neutral-500 dark:text-neutral-400">Informe os detalhes da conta.</p>
+                        </div>
+                        <button id="accClose"
+                                class="size-10 grid place-items-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                aria-label="Fechar">
+                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 6 6 18"/>
+                                <path d="M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
 
-        /* trava scroll quando modal/confirm aberto */
-        .modal-open{overflow:hidden}
-        #modalAccount{ pointer-events:auto; }
-        #formAccount{ pointer-events:auto; }
-    </style>
+                    <form id="accForm" class="mt-4 grid gap-3">
+                        <input type="hidden" id="acc_id" name="id"/>
 
+                        <label class="block">
+                            <span class="text-xs text-neutral-500 dark:text-neutral-400">Nome do banco</span>
+                            <input id="bank_name" name="bank_name" type="text" placeholder="Ex: Banco do Norte"
+                                   class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
+                                   required/>
+                        </label>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label class="block">
+                                <span class="text-xs text-neutral-500 dark:text-neutral-400">Valor em conta (R$)</span>
+                                <input id="current_balance" name="current_balance" inputmode="decimal"
+                                       placeholder="0,00"
+                                       class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
+                                       required/>
+                            </label>
+                            <label class="block">
+                                <span class="text-xs text-neutral-500 dark:text-neutral-400">Tipo de conta</span>
+                                <div
+                                    class="mt-1 inline-flex w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-neutral-50 dark:bg-neutral-800 p-1">
+                                    <input type="radio" name="type" value="1" id="accCorr" class="peer/acc1 hidden"
+                                           checked>
+                                    <label for="accCorr"
+                                           class="flex-1 text-center px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-900 shadow-sm cursor-pointer peer-checked/acc1:font-medium">Corrente</label>
+                                    <input type="radio" name="type" value="2" id="accPoup" class="peer/acc2 hidden">
+                                    <label for="accPoup"
+                                           class="flex-1 text-center px-3 py-1.5 rounded-lg cursor-pointer hover:bg-white/70 dark:hover:bg-neutral-900/70">Poupança</label>
+                                    <input type="radio" name="type" value="3" id="accInv" class="peer/acc3 hidden">
+                                    <label for="accInv"
+                                           class="flex-1 text-center px-3 py-1.5 rounded-lg cursor-pointer hover:bg-white/70 dark:hover:bg-neutral-900/70">Investimento</label>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="mt-2 flex items-center justify-end gap-2">
+                            <button type="button" id="accCancel"
+                                    class="px-3 py-2 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800">
+                                Cancelar
+                            </button>
+                            <button type="submit"
+                                    class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
+                                Salvar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Sheet: ações da conta (mobile) -->
+        <div id="accSheet" class="fixed inset-0 z-[70] hidden" aria-modal="true" role="dialog">
+            <div id="accSheetOv" class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+            <div
+                class="absolute inset-x-0 bottom-0 rounded-t-2xl border border-neutral-200/60 dark:border-neutral-800/60 bg-white dark:bg-neutral-900 shadow-soft p-2">
+                <div class="mx-auto h-1 w-10 rounded-full bg-neutral-300/70 dark:bg-neutral-700/70 mb-2"></div>
+                <div class="grid gap-1 p-1">
+                    <button data-sheet-action="edit"
+                            class="w-full text-left px-4 py-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800">
+                        Editar
+                    </button>
+                    <button data-sheet-action="statement"
+                            class="w-full text-left px-4 py-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800">
+                        Ver extrato
+                    </button>
+                    <button data-sheet-action="delete"
+                            class="w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                        Excluir
+                    </button>
+                </div>
+                <div class="p-1">
+                    <button data-sheet-action="cancel"
+                            class="w-full px-4 py-3 rounded-xl border hover:bg-neutral-50 dark:hover:bg-neutral-800">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </section>
+@endsection
+
+@push('scripts')
     <script>
         (() => {
-            // ===== els/consts =====
-            const list    = document.getElementById('accountList');
-            const modalEl = document.getElementById('modalAccount');
-            const form    = document.getElementById('formAccount');
-            const saveBtn = form.querySelector('button[type="submit"]');
-            const openBtn = document.getElementById('openModal');
-            const closeBtn= document.getElementById('closeModal'); // do x-modal
-
-            const confirmEl = document.getElementById('confirmDeleteAccount');
-            const confirmOk = confirmEl.querySelector('[data-action="confirm"]');
-            const confirmCancel = confirmEl.querySelectorAll('[data-action="cancel"]');
-
-            const CSRF='{{ csrf_token() }}';
-            const ROUTES={
-                index:   "{{ route('accounts.index') }}",
-                store:   "{{ route('accounts.store') }}",
-                show:    "{{ url('/accounts') }}/:id",
-                update:  "{{ url('/accounts') }}/:id",
+            const CSRF = '{{ csrf_token() }}';
+            const ROUTES = {
+                index: "{{ route('accounts.index') }}",
+                store: "{{ route('accounts.store') }}",
+                show: "{{ url('/accounts') }}/:id",
+                update: "{{ url('/accounts') }}/:id",
                 destroy: "{{ url('/accounts') }}/:id",
-                savings: "{{ route('savings.index') }}", // <<--- NOVO: para somar cofrinhos por conta
+                savings: "{{ route('savings.index') }}",
+                tx: "{{ route('transaction-view.index') }}",
+            };
+            const u = (t, id) => t.replace(':id', id);
+
+            const grid = document.getElementById('accGrid');
+            const accFab = document.getElementById('accFab');
+            const modal = document.getElementById('accModal');
+            const overlay = document.getElementById('accOverlay');
+            const btnOpeners = document.querySelectorAll('[data-open-modal="acc"]');
+            const btnClose = document.getElementById('accClose');
+            const btnCancel = document.getElementById('accCancel');
+            const form = document.getElementById('accForm');
+            const title = document.getElementById('accModalTitle');
+
+            let mode = 'create';
+            let currentId = null;
+            let suppressUntil = 0;
+
+            const sheet = document.getElementById('accSheet');
+            const sheetOv = document.getElementById('accSheetOv');
+            let sheetId = null;
+
+            function openSheet(id) {
+                sheetId = id;
+                sheet.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
+            }
+
+            function closeSheet() {
+                sheet.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+                sheetId = null;
+            }
+
+            grid.addEventListener('click', (e) => {
+                const more = e.target.closest('[data-action="more"]');
+                if (!more) return;
+                const card = more.closest('article[data-id]');
+                if (!card) return;
+                openSheet(card.dataset.id);
+            });
+
+            sheet.addEventListener('click', async (e) => {
+                const actBtn = e.target.closest('[data-sheet-action]');
+                if (!actBtn) return;
+                const act = actBtn.dataset.sheetAction;
+                if (act === 'cancel') return closeSheet();
+                if (!sheetId) return;
+
+                if (act === 'statement') {
+                    closeSheet();
+                    window.location.href = ROUTES.tx + '?account=' + encodeURIComponent(sheetId);
+                    return;
+                }
+
+                if (act === 'edit') {
+                    try {
+                        const res = await fetch(u(ROUTES.show, sheetId), {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        if (!res.ok) throw 0;
+                        const acc = await res.json();
+                        closeSheet();
+                        currentId = sheetId;
+                        openModal('edit', acc);
+                    } catch {
+                        alert('Erro ao carregar conta');
+                    }
+                    return;
+                }
+
+                if (act === 'delete') {
+                    const id = sheetId;           // captura ANTES de fechar
+                    closeSheet();
+                    if (!confirm('Excluir esta conta?')) return;
+                    try {
+                        await doDeleteAccount(id);  // usa o id capturado
+                        grid.querySelector(`article[data-id="${id}"]`)?.remove();
+                    } catch { alert('Erro ao excluir'); }
+                    return;
+                }
+            });
+
+// fechar por overlay / Esc
+            sheetOv.addEventListener('click', closeSheet);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !sheet.classList.contains('hidden')) closeSheet();
+            });
+
+
+            // ===== UTILS
+            const moneyToNumber = (v) => {
+                if (v == null) return 0;
+                if (typeof v === 'number') return v;
+                const s = String(v).trim().replace(/[^\d,.-]/g, '');
+                if (s.includes(',') && s.includes('.')) return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+                if (s.includes(',')) return parseFloat(s.replace(',', '.')) || 0;
+                return parseFloat(s) || 0;
             };
 
-            const OPEN_W=96, TH_OPEN=40;
-
-            // ===== state =====
-            let currentMode='create'; // create|edit|show
-            let currentId=null;
-            let swipe={active:null,startX:0,dragging:false};
-            let pendingDeleteId=null;
-            let suppressShowUntil=0;
-
-            // ===== utils =====
-            function u(t,id){ return t.replace(':id', id); }
-            function brl(v){
-                const n = typeof v==='number' ? v : parseFloat(String(v??'').replace(/[^\d.-]/g,''));
-                return isNaN(n) ? 'R$ 0,00' : n.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
-            }
-            function moneyToNumber(v){
-                if (v === null || v === undefined) return 0;
-                if (typeof v === 'number') return v;
-                const s = String(v).trim();
-                const clean = s.replace(/[^\d,.-]/g,'');
-                if (clean.includes(',') && clean.includes('.')) return parseFloat(clean.replace(/\./g,'').replace(',', '.')) || 0;
-                if (clean.includes(',')) return parseFloat(clean.replace(',', '.')) || 0;
-                return parseFloat(clean) || 0;
-            }
-            function ensureArray(data){
-                if (Array.isArray(data)) return data;
-                if (data && Array.isArray(data.data)) return data.data;
-                if (data && typeof data === 'object') return Object.values(data);
-                return [];
-            }
-            function buildSavingsMap(savings){
+            const brl = (n) => (isNaN(n) ? 'R$ 0,00' : Number(n).toLocaleString('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }));
+            const ensureArray = (d) => Array.isArray(d) ? d : (d?.data ?? (typeof d === 'object' ? Object.values(d) : []));
+            const buildSavingsMap = (arr) => {
                 const map = new Map();
-                for (const s of savings){
-                    const accId = s.account_id || (s.account && s.account.id);
-                    if (!accId) continue;
-                    map.set(accId, (map.get(accId) || 0) + moneyToNumber(s.current_amount));
+                for (const s of arr) {
+                    const id = s.account_id || s.account?.id;
+                    if (!id) continue;
+                    map.set(id, (map.get(id) || 0) + moneyToNumber(s.current_amount));
                 }
                 return map;
+            };
+            const typeGradient = (t) => {
+                if (t === 'poupanca') return 'from-emerald-400 to-emerald-600';
+                if (t === 'investimento') return 'from-violet-400 to-violet-600';
+                return 'from-brand-400 to-brand-600';
+            };
+            const typeLabel = (t) => {
+                if (t === 'poupanca') return 'Poupança';
+                if (t === 'investimento') return 'Investimento';
+                return 'Conta corrente';
+            };
+
+            // ===== MODAL
+            function setMode(m) {
+                mode = m;
+                const isShow = m === 'show';
+                title.textContent = m === 'edit' ? 'Editar conta' : (m === 'show' ? 'Detalhes da conta' : 'Nova conta bancária');
+                form.querySelectorAll('input, [type="radio"]').forEach(el => el.disabled = isShow);
+                form.querySelector('button[type="submit"]').classList.toggle('hidden', isShow);
             }
 
-            // ===== modal =====
-            let outsideHandler=null, touchBlocker=null, modalOpenedAt=0;
-            function setFormMode(mode){
-                currentMode = mode;
-                const isShow = (mode==='show');
-                form.querySelectorAll('input,select,textarea,button').forEach(el=>{
-                    if (el.type==='submit') return;
-                    el.disabled = isShow;
-                });
-                saveBtn.classList.toggle('d-none', isShow);
+            function mapTypeIn(acc) {
+                const v = acc.type ?? acc.account_type ?? acc.account_type_id;
+                if (v === 1 || v === '1' || v === 'corrente') return '1';
+                if (v === 2 || v === '2' || v === 'poupanca') return '2';
+                if (v === 3 || v === '3' || v === 'investimento') return '3';
+                return '1';
             }
-            function setVal(id, val){ const el=form.querySelector('#'+id); if(el) el.value=(val??''); }
-            function suppressShow(ms=800){ suppressShowUntil = Date.now()+ms; }
 
-            function fillForm(acc){
-                setVal('bank_name', acc.bank_name);
-                setVal('account_type', acc.account_type);
-                setVal('current_balance', acc.current_balance);
+            function fillForm(acc) {
+                form.bank_name.value = acc.bank_name ?? '';
+                const raw = acc.current_balance;
+                form.current_balance.value = typeof raw === 'number' ? String(raw).replace('.', ',') : String(raw ?? '');
+                form.acc_id.value = acc.id ?? acc.uuid ?? '';
+                const t = mapTypeIn(acc);
+                form.querySelectorAll('input[name="type"]').forEach(i => i.checked = (i.value === t));
             }
-            function openModal(mode, item){
-                setFormMode(mode);
-                if (item) fillForm(item); else form.reset();
 
-                modalEl.classList.add('show');
-                document.body.classList.add('modal-open');
-                modalOpenedAt = Date.now();
-
-                modalEl.addEventListener('click', modalClickCloser, true);
-
-                // clicar fora fecha
-                outsideHandler = (ev)=>{
-                    if (!modalEl.classList.contains('show')) return;
-                    if (Date.now()-modalOpenedAt < 120) return; // anti-bounce
-                    const r = form.getBoundingClientRect();
-                    const p = ev.touches ? ev.touches[0] : ev;
-                    const inside = p.clientX>=r.left && p.clientX<=r.right && p.clientY>=r.top && p.clientY<=r.bottom;
-                    if (!inside){ ev.preventDefault(); ev.stopPropagation(); closeModal(); }
-                };
-                window.addEventListener('pointerdown', outsideHandler, true);
-                window.addEventListener('touchstart',  outsideHandler, {capture:true, passive:false});
-
-                // bloquear scroll bleed
-                touchBlocker = (e)=>{ if (modalEl.classList.contains('show')) e.preventDefault(); };
-                window.addEventListener('touchmove', touchBlocker, {passive:false});
+            function resetForm() {
+                form.reset();
             }
-            function modalClickCloser(e){
-                if (e.target.matches('#closeModal, .btn-close, .x-close, [data-dismiss="modal"], [data-action="cancel"]')) {
-                    e.preventDefault(); closeModal();
-                }
+
+            function openModal(m='create', data=null){
+                setMode(m);
+                if (data) fillForm(data); else { form.reset(); form.acc_id.value=''; }
+                if ((m==='edit' || m==='show') && !form.acc_id.value) form.acc_id.value = currentId ?? '';
+                modal.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
             }
-            function closeModal(){
-                modalEl.classList.remove('show');
-                document.body.classList.remove('modal-open');
-                modalEl.removeEventListener('click', modalClickCloser, true);
-                if(outsideHandler){
-                    window.removeEventListener('pointerdown', outsideHandler, true);
-                    window.removeEventListener('touchstart', outsideHandler, true);
-                    outsideHandler=null;
-                }
-                if(touchBlocker){
-                    window.removeEventListener('touchmove', touchBlocker, true);
-                    touchBlocker=null;
-                }
+
+            function closeModal() {
+                modal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
             }
-            document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && modalEl.classList.contains('show')) closeModal(); });
-            openBtn.addEventListener('click', ()=>{ currentId=null; openModal('create', null); });
-            if (closeBtn) closeBtn.addEventListener('click', closeModal);
 
-            // ===== confirm =====
-            let confirmOpenedAt=0;
-            function openConfirm(){ confirmOpenedAt=Date.now(); confirmEl.hidden=false; confirmEl.classList.add('show'); document.body.classList.add('modal-open'); }
-            function closeConfirm(){ confirmEl.classList.remove('show'); confirmEl.hidden=true; document.body.classList.remove('modal-open'); }
-            confirmOk.addEventListener('click', async ()=>{ try{ await doDelete(); }catch{ alert('Erro ao excluir'); } finally{ closeConfirm(); }});
-            confirmCancel.forEach(b=> b.addEventListener('click', closeConfirm));
-            confirmEl.addEventListener('click', (e)=>{ if(e.target===confirmEl){ if(Date.now()-confirmOpenedAt<150) return; closeConfirm(); } });
+            function openCreate(e){
+                e?.preventDefault();
+                e?.stopPropagation();
+                currentId = null;
+                // se o bottom sheet estiver aberto, fecha antes
+                if (!sheet.classList.contains('hidden')) closeSheet();
+                openModal('create');
+            }
 
-            // ===== render =====
-            function renderAccount(acc, savingsMap){
-                const id    = acc.id ?? acc.uuid;
-                const color = acc.color || '#666';
+// adiciona nos dois botões
+            btnOpeners.forEach(b => b.addEventListener('click', openCreate));
+// reforço específico pro FAB no mobile (alguns WebViews só disparam touchend)
+            accFab?.addEventListener('click', openCreate, {passive:false});
+            accFab?.addEventListener('touchend', openCreate, {passive:false});
 
-                // Saldo da conta (pode vir "R$ 500,00" ou número)
-                const balanceNum     = moneyToNumber(acc.current_balance);
-                const balanceDisplay = (typeof acc.current_balance === 'string')
-                    ? acc.current_balance
-                    : brl(balanceNum);
 
-                // Total de cofrinhos: usa o mapa (somado por account_id) ou fallback do backend
-                const mapValue   = savingsMap ? savingsMap.get(id) : undefined;
-                const savingsNum = (mapValue !== undefined) ? mapValue : moneyToNumber(acc.saving_amount);
-                const savingsDisplay = brl(savingsNum);
+            btnOpeners.forEach(b => b.addEventListener('click', () => {
+                currentId = null;
+                openModal('create');
+            }));
+            btnClose.addEventListener('click', closeModal);
+            btnCancel.addEventListener('click', closeModal);
+            overlay.addEventListener('click', closeModal);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+            });
 
-                // Topo do card deve exibir APENAS o saldo da conta
-                const totalDisplay = balanceDisplay;
+            // ===== RENDER
+            function cardTemplate(acc, savingsMap) {
+                const id = acc.id ?? acc.uuid ?? acc.account_id;
+                const t = (acc.type ?? '1');
+                const g = typeGradient(t);
+                const label = typeLabel(t);
+                const inAccNum = moneyToNumber(acc.current_balance);
+                const cofrNum = (savingsMap?.get(id) != null) ? savingsMap.get(id) : moneyToNumber(acc.saving_amount);
+                const totalNum = inAccNum + cofrNum;
 
                 return `
-    <div class="swipe-item" data-id="${id}">
-      <button class="swipe-edit-btn" type="button">Editar</button>
-      <div class="swipe-content">
-        <div class="balance-box">
-          <div class="tx-line">
-            <div class="d-flex justify-content-between flex-column">
-              <span class="tx-title">${(acc.bank_name ?? 'Sem título').toString().toUpperCase()}</span>
-            </div>
-            <div class="text-end">
-              <span class="tx-amount" style="color:${color}">${totalDisplay}</span><br>
-            </div>
-          </div>
-
-          <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
-            <small>
-              <b class="text-muted">Na conta </b>
-              <div class="d-flex align-items-center">
-                <span>${balanceDisplay}</span>
-              </div>
-            </small>
-            <small>
-              <b class="text-muted">Cofrinhos</b>
-              <div class="d-flex align-items-center">
-                <span>${savingsDisplay}</span>
-              </div>
-            </small>
-          </div>
-
-          <a href="#" class="text-color fw-bold" style="text-decoration:none;font-size:13px;">Ver Extrato</a>
-        </div>
+<article data-id="${id}"
+  class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft dark:shadow-softDark group">
+  <div class="flex items-start justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <span class="size-12 grid place-items-center rounded-xl bg-gradient-to-br ${g} text-white shadow-soft">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 3h18v6H3z"/><path d="M5 9v11h14V9"/>
+        </svg>
+      </span>
+      <div>
+        <p class="font-semibold">${(acc.bank_name ?? 'Sem título')}</p>
+        <p class="text-xs text-neutral-500 dark:text-neutral-400">${label}</p>
       </div>
-      <button class="swipe-delete-btn" type="button">Excluir</button>
     </div>
-  `;
+   <div class="flex items-center gap-2">
+  <button data-action="statement"
+    class="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg border border-brand-200/70 text-brand-700 hover:bg-brand-50 dark:border-brand-800/70 dark:text-brand-300 dark:hover:bg-brand-900/30">
+    Ver extrato
+  </button>
+
+  <!-- Desktop -->
+  <button data-action="edit" class="hidden md:inline-flex text-xs px-2 py-1.5 rounded-lg border hover:bg-neutral-50 dark:hover:bg-neutral-800">Editar</button>
+  <button data-action="delete" class="hidden md:inline-flex text-xs px-2 py-1.5 rounded-lg border border-red-200/70 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/20">Excluir</button>
+
+  <!-- Mobile -->
+  <button data-action="more" class="md:hidden inline-grid size-10 place-items-center rounded-lg border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800" aria-label="Mais ações">
+    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+  </button>
+</div>
+
+  </div>
+
+  <div class="mt-4">
+    <p class="text-xs text-neutral-500 dark:text-neutral-400">Saldo total</p>
+    <p class="text-3xl font-semibold tracking-tight">${brl(totalNum)}</p>
+  </div>
+
+  <div class="mt-3 grid grid-cols-2 gap-3">
+    <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
+      <p class="text-xs text-neutral-500 dark:text-neutral-400">Em conta</p>
+      <p class="text-lg font-medium">${(typeof acc.current_balance === 'string') ? acc.current_balance : brl(inAccNum)}</p>
+    </div>
+    <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
+      <p class="text-xs text-neutral-500 dark:text-neutral-400">Cofrinhos</p>
+      <p class="text-lg font-medium">${brl(cofrNum)}</p>
+    </div>
+  </div>
+</article>`;
             }
 
+            async function loadAccounts() {
+                const [resAcc, resSav] = await Promise.all([
+                    fetch(ROUTES.index, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    }),
+                    fetch(ROUTES.savings, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                ]);
+                if (!resAcc.ok) throw new Error('Falha ao carregar contas');
+                const accounts = ensureArray(await resAcc.json());
+                const savings = resSav.ok ? ensureArray(await resSav.json()) : [];
+                const map = buildSavingsMap(savings);
+                grid.innerHTML = accounts.map(a => cardTemplate(a, map)).join('') || `<div class="text-sm text-neutral-500">Nenhuma conta cadastrada.</div>`;
+            }
 
-            function storeAccount(acc, savingsMap){ list.insertAdjacentHTML('beforeend', renderAccount(acc, savingsMap)); }
+            // ===== AÇÕES (delegação)
+            grid.addEventListener('click', async (e) => {
+                const card = e.target.closest('article[data-id]');
+                if (!card) return;
+                const id = card.dataset.id;
 
-            async function loadAccounts(){
-                try{
-                    const [resAcc, resSav] = await Promise.all([
-                        fetch(ROUTES.index,  { headers:{ 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' }}),
-                        fetch(ROUTES.savings,{ headers:{ 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' }})
-                    ]);
+                // Evita abrir SHOW ao clicar nos botões
+                const btn = e.target.closest('[data-action]');
+                if (btn) {
+                    e.preventDefault();
+                    suppressUntil = Date.now() + 400;
 
-                    if(!resAcc.ok) throw new Error('Erro ao carregar contas.');
-
-                    const accPayload = await resAcc.json();
-                    const savPayload = resSav.ok ? await resSav.json() : [];
-
-                    const accounts = ensureArray(accPayload);
-                    const savings  = ensureArray(savPayload);
-                    const map = buildSavingsMap(savings); // account_id => soma(current_amount)
-
-                    list.innerHTML='';
-                    accounts.forEach(a => list.insertAdjacentHTML('beforeend', renderAccount(a, map)));
-                }catch(err){
-                    alert(err.message);
+                    if (btn.dataset.action === 'statement') {
+                        // ajuste se quiser filtrar por conta: ?account=id
+                        window.location.href = ROUTES.tx + '?account=' + encodeURIComponent(id);
+                        return;
+                    }
+                    if (btn.dataset.action === 'edit') {
+                        const res = await fetch(u(ROUTES.show, id), {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        if (!res.ok) return alert('Erro ao carregar conta');
+                        const acc = await res.json();
+                        currentId = id;
+                        openModal('edit', acc);
+                        return;
+                    }
+                    if (btn.dataset.action === 'delete') {
+                        if (!confirm('Excluir esta conta?')) return;
+                        try {
+                            await doDeleteAccount(id);
+                            card.remove();
+                        } catch { alert('Erro ao excluir'); }
+                        return;
+                    }
+                    return;
                 }
-            }
 
-
-            // ===== submit create/edit =====
-            form.addEventListener('submit', async (e)=>{
-                e.preventDefault();
-                if (currentMode==='edit') form.querySelectorAll('[disabled]').forEach(el=>el.disabled=false);
-
-                const fd = new FormData(form);
-                const n = fd.get('opening_balance'); if (n!=null) fd.set('opening_balance', String(n).replace(',','.'));
-
-                let url = ROUTES.store, method='POST';
-                if (currentMode==='edit' && currentId){ url = u(ROUTES.update, currentId); fd.append('_method','PUT'); }
-
-                try{
-                    const res = await fetch(url, { method, headers:{ 'X-CSRF-TOKEN': CSRF, 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' }, body: fd });
-                    if(!res.ok) throw new Error('Erro ao salvar conta.');
-                    await res.json().catch(()=>{});
-                    closeModal(); await loadAccounts();
-                }catch(err){ alert(err.message); }
-            });
-
-            // ===== swipe =====
-            function closeAll(){ list.querySelectorAll('.swipe-item.open-left,.swipe-item.open-right').forEach(li=>li.classList.remove('open-left','open-right')); }
-            function drag(li, px){ const c=li.querySelector('.swipe-content'); c.style.transition='none'; const clamp=Math.max(-OPEN_W,Math.min(OPEN_W,px)); c.style.transform=`translateX(${clamp}px)`; }
-            function restore(li){ const c=li.querySelector('.swipe-content'); requestAnimationFrame(()=> c.style.transition='transform 160ms ease'); }
-
-            function onStart(e){
-                if (document.body.classList.contains('modal-open')) return;
-                const li = e.target.closest('.swipe-item'); if(!li) return;
-                closeAll(); swipe.active=li; swipe.dragging=true; swipe.startX=(e.touches?e.touches[0].clientX:e.clientX);
-                li.querySelector('.swipe-content').style.transition='none';
-            }
-            function onMove(e){
-                if (document.body.classList.contains('modal-open')) return;
-                if(!swipe.dragging || !swipe.active) return;
-                const x=(e.touches?e.touches[0].clientX:e.clientX); const dx=x-swipe.startX; let base=0;
-                if(swipe.active.classList.contains('open-left')) base=-OPEN_W;
-                if(swipe.active.classList.contains('open-right')) base=OPEN_W;
-                const move=base+dx; if(move<0) drag(swipe.active, Math.max(move,-OPEN_W)); else drag(swipe.active, Math.min(move,OPEN_W));
-            }
-            function onEnd(){
-                if (document.body.classList.contains('modal-open')) return;
-                if(!swipe.dragging || !swipe.active) return;
-                const c=swipe.active.querySelector('.swipe-content'); restore(swipe.active);
-                const m=new WebKitCSSMatrix(getComputedStyle(c).transform); const finalX=m.m41;
-                swipe.active.classList.remove('open-left','open-right');
-                if(finalX<=-TH_OPEN) swipe.active.classList.add('open-left'); else if(finalX>=TH_OPEN) swipe.active.classList.add('open-right');
-                c.style.transform=''; swipe.dragging=false; swipe.active=null;
-            }
-            list.addEventListener('touchstart', onStart, {passive:true});
-            list.addEventListener('mousedown', onStart);
-            window.addEventListener('touchmove', onMove, {passive:false});
-            window.addEventListener('mousemove', onMove);
-            window.addEventListener('touchend', onEnd);
-            window.addEventListener('mouseup', onEnd);
-            document.addEventListener('click', (e)=>{ if(!e.target.closest('.swipe-item')) closeAll(); });
-
-            // ===== editar/excluir (captura + supressor) =====
-            async function handleEdit(id){
-                currentId = id;
-                const res = await fetch(u(ROUTES.show, id), { headers:{ 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' }});
-                if(!res.ok){ alert('Erro ao carregar conta.'); return; }
-                const acc = await res.json();
-                openModal('edit', acc);
-            }
-            function handleAskDelete(id){ pendingDeleteId = id; openConfirm(); }
-
-            const actionHandler = (e)=>{
-                if (document.body.classList.contains('modal-open')) return;
-                const btn = e.target.closest('.swipe-edit-btn, .swipe-delete-btn');
-                if (!btn) return;
-
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-
-                suppressShow(); // evita cair no SHOW depois
-
-                const li = btn.closest('.swipe-item');
-                const id = li?.dataset.id;
-                if (!id) return;
-
-                if (btn.classList.contains('swipe-edit-btn')) handleEdit(id);
-                else handleAskDelete(id);
-            };
-            list.addEventListener('touchstart', actionHandler, {capture:true, passive:false});
-            list.addEventListener('pointerdown', actionHandler, true);
-            list.addEventListener('click', (e)=>{
-                if (e.target.closest('.swipe-edit-btn, .swipe-delete-btn')) {
-                    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-                }
-            }, true);
-
-            // ===== tap = show (retorna cedo se suprimido) =====
-            list.addEventListener('click', async (e)=>{
-                if (Date.now() < suppressShowUntil) return;
-
-                const content = e.target.closest('.swipe-content'); if(!content) return;
-                const li = content.closest('.swipe-item'); if(!li) return;
-
-                if (li.classList.contains('open-left') || li.classList.contains('open-right')) { closeAll(); return; }
-
-                const id = li.dataset.id; currentId=id;
-                try{
-                    const res = await fetch(u(ROUTES.show, id), { headers:{ 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' }});
-                    if(!res.ok) throw new Error('Erro ao carregar conta.');
+                // Clique no card abre SHOW
+                if (Date.now() < suppressUntil) return;
+                try {
+                    const res = await fetch(u(ROUTES.show, id), {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    if (!res.ok) throw 0;
                     const acc = await res.json();
+                    currentId = id;
                     openModal('show', acc);
-                }catch(err){ alert(err.message); }
+                } catch {
+                    alert('Erro ao carregar detalhes');
+                }
             });
 
-            // ===== delete =====
-            async function doDelete(){
-                if(!pendingDeleteId) return;
-                const res = await fetch(u(ROUTES.destroy, pendingDeleteId), {
-                    method:'DELETE', headers:{ 'X-CSRF-TOKEN': CSRF, 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' }
+            async function doDeleteAccount(rawId){
+                const id = (rawId ?? '').toString().trim()
+                    || form.acc_id?.value?.trim()
+                    || currentId
+                    || sheetId;
+                if (!id) { alert('ID inválido'); return; }
+
+                const url = u(ROUTES.destroy, encodeURIComponent(id));
+
+                // usa POST + _method=DELETE (Laravel-friendly)
+                const fd = new FormData();
+                fd.append('_method', 'DELETE');
+                fd.append('id', id);
+
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': CSRF,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: fd
                 });
-                if(!res.ok){ alert('Erro ao excluir'); return; }
-                list.querySelector(`.swipe-item[data-id="${pendingDeleteId}"]`)?.remove();
-                pendingDeleteId=null;
+                if (!res.ok) throw new Error('Falha ao excluir');
             }
 
-            // ===== start =====
-            window.addEventListener('DOMContentLoaded', loadAccounts);
-        })();
+            // ===== SUBMIT
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const fd = new FormData(form);
+
+                // normaliza número (remove R$, pontos, mantém sinal; troca vírgula por ponto)
+                const val = fd.get('current_balance');
+                if (val != null) {
+                    const cleaned = String(val).replace(/[^\d,.,-]/g,'').replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',', '.');
+                    fd.set('current_balance', cleaned);
+                }
+
+                // garante ambos os campos se o backend ainda usa account_type string
+                const t = fd.get('type') || '1';
+                fd.set('type', t); // 1|2|3
+                fd.set('account_type', t==='2' ? 'poupanca' : t==='3' ? 'investimento' : 'corrente');
+
+                const id = form.acc_id.value?.trim();
+                const isEdit = !!id;
+
+                let url = isEdit ? u(ROUTES.update, id) : ROUTES.store;
+                const method = 'POST';
+                if (isEdit) fd.append('_method','PUT');
+
+                try{
+                    const res = await fetch(url, {
+                        method,
+                        headers:{ 'X-CSRF-TOKEN': CSRF, 'Accept':'application/json','X-Requested-With':'XMLHttpRequest' },
+                        body: fd
+                    });
+                    if (!res.ok) throw 0;
+                    closeModal();
+                    form.acc_id.value = '';
+                    await loadAccounts();
+                } catch { alert('Erro ao salvar'); }
+            });
+
+
+            // ===== START
+            window.addEventListener('DOMContentLoaded', () => {
+                accFab?.classList.remove('hidden');
+                loadAccounts().catch(() => grid.innerHTML = `<div class="text-sm text-red-600">Erro ao carregar contas.</div>`);
+            });
+        })
+            ();
     </script>
-@endsection
+@endpush

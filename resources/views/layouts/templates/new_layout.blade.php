@@ -70,6 +70,15 @@
                 transition: none !important;
             }
         }
+
+         #accFab { z-index: 80; }
+
+        body.ui-modal-open #accFab,
+        body.ui-sheet-open #accFab {
+            z-index: 40;
+            pointer-events: none;
+        }
+
     </style>
 
     @stack('styles')

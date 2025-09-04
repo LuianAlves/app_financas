@@ -175,16 +175,15 @@
             const sheetOv = document.getElementById('accSheetOv');
             let sheetId = null;
 
-            function openSheet(id) {
+            function openSheet(id){
                 sheetId = id;
                 sheet.classList.remove('hidden');
-                document.body.classList.add('overflow-hidden');
+                document.body.classList.add('overflow-hidden', 'ui-sheet-open'); // << add
             }
 
-            function closeSheet() {
+            function closeSheet(){
                 sheet.classList.add('hidden');
-                document.body.classList.remove('overflow-hidden');
-                sheetId = null;
+                document.body.classList.remove('overflow-hidden', 'ui-sheet-open'); // << add
             }
 
             grid.addEventListener('click', (e) => {
@@ -316,26 +315,23 @@
                 if (data) fillForm(data); else { form.reset(); form.acc_id.value=''; }
                 if ((m==='edit' || m==='show') && !form.acc_id.value) form.acc_id.value = currentId ?? '';
                 modal.classList.remove('hidden');
-                document.body.classList.add('overflow-hidden');
+                document.body.classList.add('overflow-hidden', 'ui-modal-open');
             }
 
-            function closeModal() {
+            function closeModal(){
                 modal.classList.add('hidden');
-                document.body.classList.remove('overflow-hidden');
+                document.body.classList.remove('overflow-hidden', 'ui-modal-open');
             }
 
             function openCreate(e){
                 e?.preventDefault();
                 e?.stopPropagation();
                 currentId = null;
-                // se o bottom sheet estiver aberto, fecha antes
                 if (!sheet.classList.contains('hidden')) closeSheet();
                 openModal('create');
             }
 
-// adiciona nos dois botões
             btnOpeners.forEach(b => b.addEventListener('click', openCreate));
-// reforço específico pro FAB no mobile (alguns WebViews só disparam touchend)
             accFab?.addEventListener('click', openCreate, {passive:false});
             accFab?.addEventListener('touchend', openCreate, {passive:false});
 

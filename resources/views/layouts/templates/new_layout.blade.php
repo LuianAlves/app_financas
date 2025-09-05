@@ -103,7 +103,7 @@ dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-bra
             </span>
                 Visão geral
             </a>
-            <a href="#transacoes-page" data-nav
+            <a href="{{route('transaction-view.index')}}" data-nav
                class="group flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">
             <span class="grid place-items-center size-8 rounded-lg bg-white/70 dark:bg-neutral-900/70 shadow-soft">
               <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -248,11 +248,11 @@ dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-bra
                              stroke-linejoin="round">
                             <path d="M3 12l2-2 4 4 8-8 4 4"></path>
                         </svg>
-                        Início
+                        Home
                     </a>
                 </li>
                 <li>
-                    <a href="#transacoes-page" data-tab
+                    <a href="{{route('transaction-view.index')}}" data-tab
                        class="group flex flex-col items-center gap-1 py-3 text-xs font-medium">
                         <svg class="size-5 opacity-70 group-aria-[current=page]:opacity-100" viewBox="0 0 24 24"
                              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -264,7 +264,7 @@ dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-bra
                     </a>
                 </li>
                 <li>
-                    <a href="#projecoes-page" data-tab
+                    <a href="{{route('projection-view.index')}}" data-tab
                        class="group flex flex-col items-center gap-1 py-3 text-xs font-medium">
                         <svg class="size-5 opacity-70 group-aria-[current=page]:opacity-100" viewBox="0 0 24 24"
                              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -276,7 +276,7 @@ dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-bra
                     </a>
                 </li>
                 <li>
-                    <a href="#perfil" data-tab class="group flex flex-col items-center gap-1 py-3 text-xs font-medium">
+                    <a href="{{route('user-view.index')}}" data-tab class="group flex flex-col items-center gap-1 py-3 text-xs font-medium">
                         <svg class="size-5 opacity-70 group-aria-[current=page]:opacity-100" viewBox="0 0 24 24"
                              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                              stroke-linejoin="round">

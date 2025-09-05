@@ -3,42 +3,23 @@
 @section('new-content')
     @push('styles')
         <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
-
         <style>
-            .skel{position:relative;overflow:hidden;border-radius:.5rem;background:#e5e7eb}
-            .dark .skel{background:#262626}
-            .skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
-                background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:skel 1.1s infinite}
-            @keyframes skel{100%{transform:translateX(100%)}}
-
             .shimmer.is-loading{position:relative}
-            .shimmer.is-loading::after{content:"";position:absolute;inset:0;
-                background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:skel 1.1s infinite;opacity:.35;pointer-events:none}
+            .shimmer.is-loading::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:skel 1.1s infinite;opacity:.35;pointer-events:none}
             .dark .shimmer.is-loading::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);opacity:.6}
             .shimmer.is-loaded::after{display:none}
-
+            @keyframes skel{100%{transform:translateX(100%)}}
             .nav-link-atalho{display:flex;flex-direction:column;align-items:center;gap:.35rem;text-decoration:none;color:inherit;font-size:.8rem;font-weight:600}
             .icons-carousel{display:flex;gap:1rem;overflow-x:auto;padding:.5rem .25rem}
             .icon-button{min-width:88px;display:flex;justify-content:center}
             .icon-button i{font-size:20px}
-
-            .transaction-card{display:flex;align-items:center;justify-content:space-between;gap:.75rem;
-                border:1px solid rgba(0,0,0,.08);border-radius:1rem;background:#fff;color:#0b0b0b;
-                padding:.9rem 1rem}
-            .dark .transaction-card{background:#0a0a0a;border-color:#272727;color:#e5e5e5}
-            .transaction-info{display:flex;align-items:center;gap:.75rem}
-            .transaction-info .icon{display:grid;place-items:center;width:36px;height:36px;border-radius:.75rem;background:#eef2ff;color:#1f2937}
-            .transaction-amount{font-weight:600}
             .price-default{font-variant-numeric:tabular-nums}
             .late{color:#dc2626}
-
-            .balance-box{border:1px solid rgba(0,0,0,.08);border-radius:1rem;background:#fff;padding:1rem}
-            .dark .balance-box{background:#0a0a0a;border-color:#272727}
-            .dash-amounts{font-size:.8rem}
         </style>
     @endpush
 
     <section class="mt-6 space-y-4">
+
         <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
             <button class="w-full mb-3 hidden items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white px-3 py-2"
                     style="letter-spacing:.75px;font-size:12px;font-weight:600" data-install>
@@ -72,182 +53,202 @@
             </form>
         </div>
 
-        <div class="balance-box">
-            <div class="flex items-center justify-between">
-                <span>Projeção do mês</span>
-                <i class="fa fa-eye"></i>
-            </div>
+        {{-- === HERO / SALDO (template novo) === --}}
+        <section id="saldo" class="mt-4 md:mt-0">
+            <div class="relative overflow-hidden rounded-2xl p-5 pb-0 md:p-6 bg-gradient-to-br from-brand-400 to-brand-600 dark:from-neutral-900 dark:to-neutral-800 text-white shadow-soft dark:shadow-softDark">
+                <div class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/15 dark:bg-neutral-800/80 blur-2xl"></div>
 
-            <div class="shimmer is-loading mt-1">
-                <strong id="kpi-balanco" class="block" style="font-size:36px"></strong>
-            </div>
-
-            <div class="mt-3">
-                <div class="grid grid-cols-1 gap-2">
+                <div class="flex items-start justify-between gap-3">
                     <div>
-                        <b class="text-blue-600 dash-amounts">Saldo contas</b>
-                        <div class="h-[15px] flex items-center">
-                            <div class="shimmer is-loading">
-                                <span id="kpi-contas" class="price-default"></span>
-                            </div>
+                        <p class="text-white/80 text-sm">Saldo total</p>
+                        <p id="kpi-balanco" class="mt-1 text-3xl md:text-4xl font-semibold tracking-tight" aria-live="polite">—</p>
+                    </div>
+{{--                    <div class="grid gap-2 text-right">--}}
+{{--                        <p class="text-xs/none text-white/80">Última atualização agora</p>--}}
+{{--                        <button id="btnRefreshKpis"--}}
+{{--                                class="self-end inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 active:bg-white/15 dark:bg-neutral-800/80 transition px-3 py-1.5 rounded-xl backdrop-blur-md">--}}
+{{--                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"--}}
+{{--                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">--}}
+{{--                                <path d="M21 12a9 9 0 1 1-9-9"/>--}}
+{{--                                <path d="M21 3v6h-6"/>--}}
+{{--                            </svg>--}}
+{{--                            Atualizar--}}
+{{--                        </button>--}}
+{{--                    </div>--}}
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 gap-3 text-sm/5">
+                    <div class="rounded-xl bg-white/10 p-3">
+                        <p class="text-white/80">Saldo em contas</p>
+                        <div class="shimmer is-loading">
+                            <p id="kpi-contas" class="font-medium"></p>
                         </div>
                     </div>
-
-                    <div>
-                        <b class="text-brand-600 dash-amounts">A receber</b>
-                        <div class="h-[15px] flex items-center">
-                            <div class="shimmer is-loading">
-                                <span id="kpi-receber" class="price-default"></span>
-                            </div>
+                    <div class="rounded-xl bg-white/10 p-3">
+                        <p class="text-white/80">A receber</p>
+                        <div class="shimmer is-loading">
+                            <span id="kpi-receber" class="font-medium"></span>
                         </div>
                     </div>
-
-                    <div>
-                        <b class="text-red-600 dash-amounts">A pagar</b>
-                        <div class="h-[15px] flex items-center">
-                            <div class="shimmer is-loading">
-                                <span id="kpi-pagar" class="price-default"></span>
-                            </div>
+                    <div class="rounded-xl bg-white/10 p-3">
+                        <p class="text-white/80">A pagar</p>
+                        <div class="shimmer is-loading">
+                            <span id="kpi-pagar" class="font-medium"></span>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="flex justify-end items-center mt-3">
-                <a href="{{ url()->current() . '?month=' . $startOfMonth->format('Y-m') }}"
-                   class="text-brand-600 font-semibold text-[13px]">Extrato do mês</a>
+                <svg class="w-full h-16 md:h-20 opacity-90" viewBox="0 0 400 80" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="grad" x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stop-color="rgba(255,255,255,0.9)"/>
+                            <stop offset="100%" stop-color="rgba(255,255,255,0.1)"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="M0 50 C 40 20, 80 70, 120 40 S 200 20, 240 45 S 320 60, 360 35 S 400 70, 400 70"
+                          stroke="white" stroke-width="2" fill="url(#grad)"></path>
+                </svg>
             </div>
+        </section>
+
+        {{-- atalhos do hero --}}
+        <div id="atalhos" class="mt-5 grid grid-cols-4 gap-2 md:gap-3">
+            <a href="{{ route('transaction-view.index') }}" class="group flex flex-col items-center gap-2 p-3 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                        <span class="grid place-items-center size-10 rounded-xl bg-white/80 text-brand-600">
+                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                        </span>
+                <span class="text-xs">Adicionar</span>
+            </a>
+            <a href="{{ route('account-view.index') }}" class="group flex flex-col items-center gap-2 p-3 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                        <span class="grid place-items-center size-10 rounded-xl bg-white/80 text-brand-600">
+                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12H2"/><path d="m15 5-7 7 7 7"/></svg>
+                        </span>
+                <span class="text-xs">Transferir</span>
+            </a>
+            <a href="{{ route('transaction-view.index') }}" class="group flex flex-col items-center gap-2 p-3 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                        <span class="grid place-items-center size-10 rounded-xl bg-white/80 text-brand-600">
+                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                        </span>
+                <span class="text-xs">Pagar</span>
+            </a>
+            <a href="{{ url()->current() . '?month=' . $startOfMonth->format('Y-m') }}"
+               class="group flex flex-col items-center gap-2 p-3 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                        <span class="grid place-items-center size-10 rounded-xl bg-white/80 text-brand-600">
+                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4"/><path d="M20 11H8"/><path d="M20 15H4"/><path d="M20 19H8"/></svg>
+                        </span>
+                <span class="text-xs">Extrato</span>
+            </a>
         </div>
 
-        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3">
-            <div class="icons-carousel">
-                <div class="icon-button">
-                    <a href="{{ route('account-view.index') }}" class="nav-link-atalho">
-                        <i class="fas fa-landmark"></i> Bancos
-                    </a>
-                </div>
-                <div class="icon-button">
-                    <a href="{{ route('transaction-view.index') }}" class="nav-link-atalho">
-                        <i class="fa-solid fa-cart-plus"></i> Transações
-                    </a>
-                </div>
-                <div class="icon-button">
-                    <a href="{{ route('card-view.index') }}" class="nav-link-atalho">
-                        <i class="fas fa-credit-card"></i> Cartões
-                    </a>
-                </div>
-                <div class="icon-button">
-                    <a href="{{ route('investment-view.index') }}" class="nav-link-atalho">
-                        <i class="fas fa-chart-line"></i> Investimentos
-                    </a>
-                </div>
-                <div class="icon-button">
-                    <a href="{{ route('saving-view.index') }}" class="nav-link-atalho">
-                        <i class="fas fa-piggy-bank"></i> Cofrinhos
-                    </a>
-                </div>
-                <div class="icon-button">
-                    <a href="{{ route('projection-view.index') }}" class="nav-link-atalho">
-                        <i class="fas fa-calendar"></i> Projeção
-                    </a>
-                </div>
-            </div>
-        </div>
-
+        {{-- Calendário --}}
         <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3">
             <div id="calendar"></div>
             <div id="calendar-results" class="py-3"></div>
         </div>
 
-        <div class="space-y-2">
-            <h2 class="text-lg font-semibold">Próximos pagamentos</h2>
-            @forelse($upcomingAny as $item)
-                <div class="transaction-card" data-invoice-card>
-                    <div class="transaction-info">
-                        <div class="icon text-white" style="background: {{ $item['color'] }};">
+        {{-- Próximos pagamentos (card/list do template) --}}
+        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
+            <div class="flex items-center justify-between">
+                <p class="font-medium">Próximos pagamentos</p>
+            </div>
+            <ul class="mt-3 divide-y divide-neutral-200/70 dark:divide-neutral-800/70">
+                @forelse($upcomingAny as $item)
+                    <li class="group grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card" data-invoice-card>
+                        <span class="size-10 grid place-items-center rounded-xl text-white" style="background: {{ $item['color'] }}">
                             <i class="{{ $item['icon'] }}"></i>
+                        </span>
+                        <div>
+                            <p class="text-sm font-medium">{{ $item['title'] }}</p>
+                            <p class="text-xs text-neutral-500 dark:text-neutral-400">{{ \Carbon\Carbon::parse($item['date'])->format('d/m/Y') }}</p>
                         </div>
-                        <div class="details">
-                            {{ $item['title'] }}<br>
-                            <span class="text-neutral-500 text-sm">{{ \Carbon\Carbon::parse($item['date'])->format('d/m/Y') }}</span>
-                        </div>
-                    </div>
+                        <div class="text-right flex items-center gap-3">
+                            <p class="text-sm font-semibold text-red-600 dark:text-red-400">- {{ brlPrice($item['amount']) }}</p>
 
-                    <div class="flex items-center">
-                        <div class="transaction-amount price-default mx-3">
-                            - {{ brlPrice($item['amount']) }}
+                            @if($item['kind'] === 'tx')
+                                <button type="button"
+                                        class="bg-transparent border-0"
+                                        data-open-payment
+                                        data-id="{{ $item['modal_id'] }}"
+                                        data-amount="{{ $item['modal_amount'] }}"
+                                        data-date="{{ \Carbon\Carbon::parse($item['modal_date'])->format('Y-m-d') }}"
+                                        data-title="{{ e($item['title']) }}">
+                                    <i class="fa-solid fa-check-to-slot text-green-600"></i>
+                                </button>
+                            @else
+                                <button type="button"
+                                        class="bg-transparent border-0"
+                                        data-pay-invoice
+                                        data-card="{{ $item['card_id'] }}"
+                                        data-month="{{ $item['current_month'] }}"
+                                        data-amount="{{ $item['amount'] }}"
+                                        data-title="{{ e($item['title']) }}">
+                                    <i class="fa-solid fa-check text-green-600"></i>
+                                </button>
+                            @endif
                         </div>
-
-                        @if($item['kind'] === 'tx')
-                            <button type="button"
-                                    class="bg-transparent border-0"
-                                    data-open-payment
-                                    data-id="{{ $item['modal_id'] }}"
-                                    data-amount="{{ $item['modal_amount'] }}"
-                                    data-date="{{ \Carbon\Carbon::parse($item['modal_date'])->format('Y-m-d') }}"
-                                    data-title="{{ e($item['title']) }}">
-                                <i class="fa-solid fa-check-to-slot text-green-600"></i>
-                            </button>
-                        @else
-                            <button type="button"
-                                    class="bg-transparent border-0"
-                                    data-pay-invoice
-                                    data-card="{{ $item['card_id'] }}"
-                                    data-month="{{ $item['current_month'] }}"
-                                    data-amount="{{ $item['amount'] }}"
-                                    data-title="{{ e($item['title']) }}">
-                                <i class="fa-solid fa-check text-green-600"></i>
-                            </button>
-                        @endif
-                    </div>
-                </div>
-            @empty
-                <div class="transaction-card">
-                    <div class="transaction-info">
-                        <div class="icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
-                        <div class="details">Nenhum pagamento.</div>
-                    </div>
-                </div>
-            @endforelse
+                    </li>
+                @empty
+                    <li class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3">
+                        <span class="size-10 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                        </span>
+                        <div class="text-sm">Nenhum pagamento.</div>
+                        <div></div>
+                    </li>
+                @endforelse
+            </ul>
         </div>
 
-        <div class="space-y-2">
-            <h2 class="text-lg font-semibold">Transações recentes</h2>
-            @forelse($recentTransactions as $transaction)
-                @php
-                    $categoryType = optional($transaction->transactionCategory)->type;
-                    $categoryName = optional($transaction->transactionCategory)->name;
-                @endphp
+        {{-- Transações recentes (card/list do template) --}}
+        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
+            <div class="flex items-center justify-between">
+                <p class="font-medium">Transações recentes</p>
+            </div>
 
-                <div class="transaction-card">
-                    <div class="transaction-info">
-                        <div class="icon text-white" style="background: {{$transaction->transactionCategory->color}}">
-                            <i class="{{$transaction->transactionCategory->icon}}"></i>
-                        </div>
+            <ul class="mt-3 divide-y divide-neutral-200/70 dark:divide-neutral-800/70">
+                @forelse($recentTransactions as $transaction)
+                    @php
+                        $categoryType = optional($transaction->transactionCategory)->type;
+                        $categoryName = optional($transaction->transactionCategory)->name;
+                        $icon = optional($transaction->transactionCategory)->icon;
+                        $color = optional($transaction->transactionCategory)->color;
+                    @endphp
 
-                        <div class="details">
-                            <p class="m-0 p-0 font-medium">{{ ucwords($transaction->title) ?? ucwords($categoryName) }}</p>
+                    <li class="group grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card">
+                        <span class="size-10 grid place-items-center rounded-xl text-white" style="background: {{ $color }}">
+                            <i class="{{ $icon }}"></i>
+                        </span>
+                        <div>
+                            <p class="text-sm font-medium">{{ ucwords($transaction->title) ?? ucwords($categoryName) }}</p>
                             @if($transaction->type == 'card')
-                                <small class="text-neutral-500" style="font-size: 10.5px;">No cartão</small>
+                                <p class="text-[11px] text-neutral-500 dark:text-neutral-400">No cartão</p>
                             @endif
                             @if($transaction->date)
-                                <span class="mt-1 block text-neutral-500 text-sm">
+                                <p class="text-xs text-neutral-500 dark:text-neutral-400">
                                     {{ \Carbon\Carbon::parse($transaction->date)->format('d/m/Y') }}
-                                </span>
+                                </p>
                             @endif
                         </div>
-                    </div>
-                    <div class="transaction-amount price-default">
-                        {{ $categoryType === 'despesa' ? '-' : '+' }} {{ brlPrice($transaction->amount) }}
-                    </div>
-                </div>
-            @empty
-                <p class="text-neutral-500">Nenhuma transação encontrada</p>
-            @endforelse
+                        <div class="text-right">
+                            <p class="text-sm font-semibold {{ $categoryType === 'despesa' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400' }}">
+                                {{ $categoryType === 'despesa' ? '-' : '+' }} {{ brlPrice($transaction->amount) }}
+                            </p>
+                        </div>
+                    </li>
+                @empty
+                    <li class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3">
+                        <span class="size-10 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800">
+                            <i class="fa-solid fa-sack-dollar"></i>
+                        </span>
+                        <div class="text-sm text-neutral-500">Nenhuma transação encontrada</div>
+                        <div></div>
+                    </li>
+                @endforelse
+            </ul>
         </div>
 
         <h2 class="text-lg font-semibold">Faturas atuais</h2>
-        <div class="balance-box">
+        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
             @if($cardTip)
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-credit-card" style="color: {{ $cardTip['color'] }}"></i>
@@ -257,26 +258,28 @@
         </div>
 
         @foreach($currentInvoices as $inv)
-            <div class="balance-box mt-2">
+            <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
                 <div class="flex items-center justify-between">
                     <span>{{ $inv['title'] }}</span>
                 </div>
                 <strong class="text-lg">{{ $inv['total_brl'] }}</strong>
 
                 @if(!is_null($inv['available_limit']))
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between mt-1">
                         <span>Limite disponível <b>{{ brlPrice($inv['available_limit']) }}</b></span>
                     </div>
                 @endif
 
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between mt-1">
                     <span>Vence em <b>{{ $inv['due_label'] }}.</b></span>
                 </div>
             </div>
         @endforeach
     </section>
 
+    {{-- Modal padrão para dar check no pagamento de transação --}}
     <x-modal id="paymentModal" titleCreate="Registrar pagamento" titleEdit="Registrar pagamento" titleShow="Registrar pagamento" submitLabel="Salvar">
+        @csrf
         <input type="hidden" name="transaction_id" id="payment_transaction_id">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label class="block">
@@ -377,8 +380,13 @@
                 renderSaldoCofrinhos('kpi-contas', k.accountsBalance_brl, k.savingsBalance_brl);
                 renderBreakdown('kpi-receber', k, 'aReceber', 'pendentes');
                 renderBreakdown('kpi-pagar',   k, 'aPagar',   'atrasados');
-                const el = document.getElementById('kpi-balanco');
-                if (el) el.textContent = (k.saldoPrevisto_brl || k.saldoMes_brl || k.saldoReal_brl || '');
+
+                const total = (k.saldoPrevisto_brl || k.saldoMes_brl || k.saldoReal_brl || '');
+                const saldoEl = document.getElementById('saldoValor');
+                if (saldoEl) saldoEl.textContent = total;
+
+                const bal = document.getElementById('kpi-balanco');
+                if (bal) bal.textContent = total; // compat se existir
             }
 
             document.addEventListener('click', (e) => {
@@ -565,6 +573,14 @@
                 }
             });
 
+            document.getElementById('btnRefreshKpis')?.addEventListener('click', async ()=>{
+                const ym = document.getElementById('monthPicker')?.value || '';
+                if (ym) {
+                    const r = await fetch(`{{ route('dashboard.kpis') }}?month=${ym}&cumulative=1`, {headers:{Accept:'application/json'}});
+                    if (r.ok) applyKpis(await r.json());
+                }
+            });
+
             (function calendarBoot(){
                 const routeUrl = "{{ route('calendar.events') }}";
                 const ym = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -621,7 +637,10 @@
 
                     let html = `<h2 class="mt-3 text-lg font-semibold">Lançamentos do dia ${br(dateStr)}</h2>`;
                     if (!eventos.length){
-                        html += `<div class="transaction-card"><div class="transaction-info"><div class="icon"><i class="fa-solid fa-sack-dollar"></i></div><div class="details">Nenhum lançamento.</div></div></div>`;
+                        html += `<div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card">
+                                    <span class="size-10 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800"><i class="fa-solid fa-sack-dollar"></i></span>
+                                    <div class="text-sm">Nenhum lançamento.</div><div></div>
+                                 </div>`;
                         c.innerHTML = html; return;
                     }
 
@@ -651,13 +670,14 @@
                         }
 
                         html += `
-                        <div class="transaction-card">
-                            <div class="transaction-info">
-                                <div class="icon text-white" style="background-color:${bgColor}"><i class="${iconCls}"></i></div>
-                                <div class="details">${ev.descricao}<br><span class="text-neutral-500 text-sm">${br(dateStr)}</span></div>
+                        <div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card">
+                            <span class="size-10 grid place-items-center rounded-xl text-white" style="background-color:${bgColor}"><i class="${iconCls}"></i></span>
+                            <div>
+                                <p class="text-sm font-medium">${ev.descricao}</p>
+                                <p class="text-xs text-neutral-500 dark:text-neutral-400">${br(dateStr)}</p>
                             </div>
-                            <div class="flex items-center">
-                                <div class="transaction-amount price-default mx-3">${sinal} ${amountHtml}</div>
+                            <div class="text-right flex items-center gap-3">
+                                <p class="text-sm font-semibold ${isPaidInv ? 'text-sky-500' : (ev.tipo==='despesa'?'text-red-600 dark:text-red-400':'text-emerald-600 dark:text-emerald-400')}">${sinal} ${amountHtml}</p>
                                 ${action}
                             </div>
                         </div>`;
@@ -730,7 +750,7 @@
                 });
 
                 async function atualizarKpisDoMes(ymStr){
-                    startLoading('kpi-contas','kpi-receber','kpi-pagar','kpi-balanco');
+                    startLoading('kpi-contas','kpi-receber','kpi-pagar','kpi-balanco','saldoValor');
                     try {
                         const url = `{{ route('dashboard.kpis') }}?month=${encodeURIComponent(ymStr)}&cumulative=1`;
                         const r = await fetch(url, {headers:{Accept:'application/json'}});
@@ -739,9 +759,12 @@
                         renderSaldoCofrinhos('kpi-contas', k.accountsBalance_brl, k.savingsBalance_brl);
                         renderBreakdown('kpi-receber', k, 'aReceber', 'pendentes');
                         renderBreakdown('kpi-pagar',   k, 'aPagar',   'atrasados');
-                        document.getElementById('kpi-balanco').textContent = k.saldoPrevisto_brl;
+                        const total = (k.saldoPrevisto_brl || k.saldoMes_brl);
+                        const saldoEl = document.getElementById('saldoValor');
+                        if (saldoEl) saldoEl.textContent = total || '—';
+                        const bal = document.getElementById('kpi-balanco'); if (bal) bal.textContent = total || '—';
                     } catch(e){ console.error(e); }
-                    finally { finishLoading('kpi-contas','kpi-receber','kpi-pagar','kpi-balanco'); }
+                    finally { finishLoading('kpi-contas','kpi-receber','kpi-pagar','kpi-balanco','saldoValor'); }
                 }
 
                 async function syncMonthUI(ymStr){

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Account;
+use App\Models\AdditionalUser;
 use App\Models\Card;
 use App\Models\Saving;
 use Carbon\Carbon;
@@ -10,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class AccountController extends Controller
@@ -115,24 +117,42 @@ class AccountController extends Controller
 
     public function transfer(Request $request)
     {
+        // dono do grupo (se o logado for adicional, retorna o owner)
+        $ownerId = AdditionalUser::ownerIdFor(); // ou ownerIdFor(Auth::id())
+        $userIds = AdditionalUser::query()
+            ->where('user_id', $ownerId)
+            ->pluck('linked_user_id')
+            ->push($ownerId)
+            ->unique()
+            ->values()
+            ->all(); // array puro para whereIn/Rule::exists
+
         $data = $request->validate([
-            'from_id' => 'required|exists:accounts,id',
-            'to_id'   => 'required|different:from_id|exists:accounts,id',
-            'amount' => 'required|numeric|min:0.01',
+            'from_id' => [
+                'required',
+                Rule::exists('accounts', 'id')->where(function ($q) use ($userIds) {
+                    $q->whereIn('user_id', $userIds);
+                }),
+            ],
+            'to_id' => [
+                'required',
+                'different:from_id',
+                Rule::exists('accounts', 'id')->where(function ($q) use ($userIds) {
+                    $q->whereIn('user_id', $userIds);
+                }),
+            ],
+            'amount' => ['required', 'numeric', 'min:0.01'],
         ]);
 
-        // Segurança: garante que as contas são do usuário logado (se aplicável)
-        $userId = Auth::id();
-
-        return DB::transaction(function () use ($data, $userId) {
-            // Locks p/ evitar condição de corrida
-            $from = Account::where('id', $data['from_id'])
-                ->when($userId, fn($q) => $q->where('user_id', $userId))
+        return DB::transaction(function () use ($data, $userIds) {
+            // trava linhas e garante que são do mesmo grupo (owner + adicionais)
+            $from = Account::whereKey($data['from_id'])
+                ->whereIn('user_id', $userIds)
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $to = Account::where('id', $data['to_id'])
-                ->when($userId, fn($q) => $q->where('user_id', $userId))
+            $to = Account::whereKey($data['to_id'])
+                ->whereIn('user_id', $userIds)
                 ->lockForUpdate()
                 ->firstOrFail();
 
@@ -146,14 +166,13 @@ class AccountController extends Controller
                 throw ValidationException::withMessages(['amount' => 'Saldo insuficiente na conta de origem.']);
             }
 
-            // Atualiza saldos
+            // atualiza saldos (2 casas)
             $from->current_balance = round(((float)$from->current_balance) - $amount, 2);
-            $to->current_balance = round(((float)$to->current_balance) + $amount, 2);
+            $to->current_balance   = round(((float)$to->current_balance)   + $amount, 2);
 
             $from->save();
             $to->save();
 
-            // Opcional: retornar resumos
             return response()->json([
                 'ok' => true,
                 'from' => [

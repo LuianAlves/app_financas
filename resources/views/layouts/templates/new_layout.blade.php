@@ -566,6 +566,9 @@ dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-bra
     });
 </script>
 
+<!-- Include:scripts -->
+@include('layouts.partials.scripts')
+
 <script>
     window.__SPA_LITE__ = true;
 </script>

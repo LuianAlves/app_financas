@@ -93,9 +93,12 @@ class DashboardController extends Controller
                 ];
             });
 
+        $upcomingRec = $this->buildUpcomingRecurrences($userIds, $today, 50);
+
         $upcomingAny = $tx
             ->toBase()
             ->concat($invs)
+            ->concat($upcomingRec)
             ->filter(fn ($x) => !empty($x['date']))
             ->sortBy('date')
             ->take(5)
@@ -684,6 +687,54 @@ class DashboardController extends Controller
                 'next_close' => $switch['next_close']->toDateString(),
             ] : null,
         ];
+    }
+
+    private function buildUpcomingRecurrences(Collection $userIds, Carbon $today, int $limit=5): \Illuminate\Support\Collection {
+        $paid = $this->paymentsIndex($userIds);
+
+        $rows = Recurrent::withoutGlobalScopes()
+            ->with(['transaction.transactionCategory:id,name,type,color,icon'])
+            ->whereIn('recurrents.user_id', $userIds)
+            ->whereHas('transaction', function ($q) {
+                $q->whereIn('recurrence_type', ['monthly','yearly'])
+                    ->where(function ($q2) {
+                        $q2->where('transactions.type','!=','card')
+                            ->orWhereNull('transactions.type')
+                            ->orWhere(fn($qq)=>$qq->where('transactions.type','card')->where('transactions.type_card','!=','credit'));
+                    });
+            })
+            ->get(['id','transaction_id','payment_day','amount']);
+
+        $list = collect();
+        foreach ($rows as $r) {
+            $t = $r->transaction; if (!$t) continue;
+            $cat = $t->transactionCategory;
+            $start = \Carbon\Carbon::parse($t->date);
+            $payday = max(1,(int)$r->payment_day);
+
+            $occ = $t->recurrence_type==='monthly'
+                ? $today->copy()->day(min($payday,$today->daysInMonth))
+                : \Carbon\Carbon::create($today->year, $start->month, 1)->day(min($payday, \Carbon\Carbon::create($today->year,$start->month,1)->daysInMonth));
+
+            if ($occ->lt($today)) $occ = $t->recurrence_type==='monthly' ? $occ->addMonthNoOverflow() : $occ->addYear();
+
+            $ym = $occ->format('Y-m');
+            if (!empty($paid[$t->id][$ym])) continue;
+
+            $list->push([
+                'kind'         => 'tx',
+                'id'           => (string)$t->id,
+                'date'         => $occ->toDateString(),
+                'title'        => $t->title ?? $cat?->name,
+                'amount'       => (float)$r->amount,
+                'color'        => $cat?->color,
+                'icon'         => $cat?->icon,
+                'modal_id'     => (string)$t->id,
+                'modal_amount' => (float)$r->amount,
+                'modal_date'   => $occ->toDateString(),
+            ]);
+        }
+        return $list->sortBy('date')->take($limit)->values();
     }
 
     private function buildUpcomingInvoicesForList(Collection $userIds, Carbon $today, int $limit = 5): \Illuminate\Support\Collection

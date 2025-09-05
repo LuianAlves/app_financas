@@ -48,7 +48,7 @@
 
         <!-- Filtros -->
         <div id="stFilters" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-6">
                 <label class="block">
                     <span class="text-xs text-neutral-500 dark:text-neutral-400">Início</span>
                     <input type="date" id="stStart"

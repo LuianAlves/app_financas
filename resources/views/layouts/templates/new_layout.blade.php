@@ -262,7 +262,7 @@ dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-bra
         <!-- Bottom Nav (mobile <768px) → oculta no desktop -->
         <nav aria-label="Navegação inferior"
              class="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200/70 dark:border-neutral-800/70 bg-white/70 dark:bg-neutral-950/80 backdrop-blur">
-            <ul class="grid grid-cols-4">
+            <ul class="grid grid-cols-4 pb-2">
                 <li>
                     <a href="{{route('dashboard')}}" data-tab
                        class="group flex flex-col items-center gap-1 py-3 text-xs font-medium aria-[current=page]:text-brand-600">

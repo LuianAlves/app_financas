@@ -631,40 +631,51 @@
                 const limitTxt = limitNum ? (typeof cat.monthly_limit==='string' ? cat.monthly_limit : brl(limitNum)) : '—';
                 const fa = normalizeIconForRuntime(cat.icon || 'fa-solid fa-tags');
 
-                return `
-<article data-id="${id}" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft dark:shadow-softDark group">
-  <div class="flex items-start justify-between gap-3">
-    <div class="flex items-center gap-3">
-      <span class="size-12 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200">
-<i class="${fa} fa-fw" style="color: ${color};"></i>
-      </span>
-      <div>
-        <p class="font-semibold">${name}</p>
-        <p class="text-xs text-neutral-500 dark:text-neutral-400">${typeLabel}</p>
-      </div>
-    </div>
-    <div class="flex items-center gap-2">
-      <span class="inline-flex items-center h-8 px-2 rounded-lg text-[11px] font-medium" style="color:${color};border:1px solid ${color};background:${bg}">${typeLabel}</span>
-      <button data-action="more" class="inline-grid size-10 place-items-center rounded-lg border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800" aria-label="Mais ações">
-        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
-      </button>
-    </div>
-  </div>
+                if(typeLabel == 'Entrada') {
+                    colorType = '#00d679';
+                    bgType = '#00d6791a';
+                } else if(typeLabel == 'Despesa') {
+                    colorType = '#e46c6c';
+                    bgType = '#e46c6c1a';
+                } else {
+                    colorType = '#d6c400';
+                    bgType = '#d6c4001a';
+                }
 
-  <div class="mt-4 grid grid-cols-2 gap-3">
-    <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
-      <p class="text-xs text-neutral-500 dark:text-neutral-400">Limite mensal</p>
-      <p class="text-lg font-medium">${limitNum ? limitTxt : '—'}</p>
-    </div>
-    <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
-      <p class="text-xs text-neutral-500 dark:text-neutral-400">Cor</p>
-      <div class="mt-1 flex items-center gap-2">
-        <span class="inline-block size-4 rounded" style="background:${color};border:1px solid #00000014;"></span>
-        <span class="text-sm">${color}</span>
-      </div>
-    </div>
-  </div>
-</article>`;
+                return `
+                    <article data-id="${id}" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft dark:shadow-softDark group">
+                          <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                              <span class="size-12 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200">
+                                <i class="${fa} fa-fw" style="color: ${color};"></i>
+                              </span>
+                              <div>
+                                <p class="font-semibold">${name}</p>
+                                <p class="text-xs text-neutral-500 dark:text-neutral-400">${typeLabel}</p>
+                              </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                              <span class="inline-flex items-center h-8 px-2 rounded-lg text-[11px] font-medium" style="color:${colorType};border:1px solid ${colorType};background:${bgType}">${typeLabel}</span>
+                              <button data-action="more" class="inline-grid size-10 place-items-center rounded-lg border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800" aria-label="Mais ações">
+                                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div class="mt-4 grid grid-cols-2 gap-3">
+                            <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
+                              <p class="text-xs text-neutral-500 dark:text-neutral-400">Limite mensal</p>
+                              <p class="text-lg font-medium">${limitNum ? limitTxt : '—'}</p>
+                            </div>
+                            <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
+                              <p class="text-xs text-neutral-500 dark:text-neutral-400">Cor</p>
+                              <div class="mt-1 flex items-center gap-2">
+                                <span class="inline-block size-4 rounded" style="background:${color};border:1px solid #00000014;"></span>
+                                <span class="text-sm">${color}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </article>`;
             }
 
             // ===== Prime from cache

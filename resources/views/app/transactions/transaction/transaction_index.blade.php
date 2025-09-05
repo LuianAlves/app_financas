@@ -3,7 +3,6 @@
 @section('new-content')
     @push('styles')
         <style>
-            /* ===== Skeleton + overlay ===== */
             .skel{position:relative;overflow:hidden;border-radius:.5rem;background:#e5e7eb}
             .dark .skel{background:#262626}
             .skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
@@ -14,53 +13,30 @@
                 background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:skel 1.1s infinite;opacity:.35}
             .dark .grid-loading::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);opacity:.6}
 
-            /* ===== filtros / tabs / chips ===== */
             :root{--ink:#1F2937;--muted:#6B7280;--line:rgba(0,0,0,.08);--accent:#00BFA6}
             .tx-tab{font-size:.78rem;letter-spacing:.02em;font-weight:600;color:var(--muted);padding:.5rem .75rem;border-radius:.5rem}
-            .tx-tab.active{background: #2563eb;color:#fff}
+            .tx-tab.active{background:#2563eb;color:#fff}
             #stSubcats{display:flex;gap:.5rem;flex-wrap:wrap}
             #stSubcats .chip{font-size:.75rem;letter-spacing:.02em;font-weight:600;display:inline-flex;align-items:center;gap:.4rem;
                 padding:.35rem .6rem;border:1px solid var(--line);border-radius:.45rem;background:#fff;color:#334155}
             #stSubcats .chip.active{background:#2563eb1a;color:#2563eb;border-color:#2563eb}
             #stSubcats .dot{width:.5rem;height:.5rem;border-radius:999px;background:currentColor;display:inline-block}
-            #txModal [data-crud-body]{
-                max-height: 70vh;
-                overflow: auto;
-            }
+            #txModal [data-crud-body]{max-height:70vh;overflow:auto}
 
-            .tx-chip{
-                --chip-border: rgba(0,0,0,.10);
-                display:inline-flex; align-items:center; gap:.5rem;
-                padding:.55rem .8rem; border:1px solid var(--chip-border);
-                border-radius:.9rem; background:transparent; color:inherit;
-                transition:background .18s ease,color .18s ease,border-color .18s ease,box-shadow .18s ease;
-            }
-
-            /* bolinha à esquerda */
-            .tx-chip .size-4{ width:1rem; height:1rem; border-radius:999px; border:2px solid currentColor; }
-
-            /* estado checked => “botão azul” */
-            .tx-chip:has(input:checked){
-                background:#2563eb;               /* brand-600 do Tailwind */
-                color:#fff; border-color:transparent;
-                box-shadow:0 6px 16px rgba(37,99,235,.25);
-            }
-            .tx-chip:has(input:checked) .size-4{ border-color:#fff; background:#fff; }
-
-            /* foco acessível */
-            .tx-chip:has(input:focus-visible){ outline:2px solid #2563eb; outline-offset:2px; }
-
-            /* opcional: borda ainda mais discreta no estado normal */
-            .tx-chip.tx-chip--thin{ --chip-border: rgba(0,0,0,.06); }
-            .dark .tx-chip.tx-chip--thin{ --chip-border: rgba(255,255,255,.10); }
-
-            /* opcional: sem borda no estado normal */
-            .tx-chip.tx-chip--noborder{ border-color:transparent; }
+            .tx-chip{--chip-border:rgba(0,0,0,.10);display:inline-flex;align-items:center;gap:.5rem;
+                padding:.55rem .8rem;border:1px solid var(--chip-border);border-radius:.9rem;background:transparent;color:inherit;
+                transition:background .18s ease,color .18s ease,border-color .18s ease,box-shadow .18s ease}
+            .tx-chip .size-4{width:1rem;height:1rem;border-radius:999px;border:2px solid currentColor}
+            .tx-chip:has(input:checked){background:#2563eb;color:#fff;border-color:transparent;box-shadow:0 6px 16px rgba(37,99,235,.25)}
+            .tx-chip:has(input:checked) .size-4{border-color:#fff;background:#fff}
+            .tx-chip:has(input:focus-visible){outline:2px solid #2563eb;outline-offset:2px}
+            .tx-chip.tx-chip--thin{--chip-border:rgba(0,0,0,.06)}
+            .dark .tx-chip.tx-chip--thin{--chip-border:rgba(255,255,255,.10)}
+            .tx-chip.tx-chip--noborder{border-color:transparent}
         </style>
     @endpush
 
     <section class="mt-6">
-        <!-- Header -->
         <div class="flex items-center justify-between mb-4">
             <div>
                 <h2 class="text-xl font-semibold">Transações</h2>
@@ -75,7 +51,6 @@
             </div>
         </div>
 
-        <!-- Filtros -->
         <div id="stFilters" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
             <div class="grid grid-cols-2 gap-6">
                 <label class="block">
@@ -100,28 +75,23 @@
             <div id="stSubcats" class="mt-2"></div>
 
             <div class="mt-3 flex justify-end">
-                <button id="stApply"
-                        class="inline-flex items-center p-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
+                <button id="stApply" class="inline-flex items-center p-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
                     <i class="fa fa-magnifying-glass text-[12px]"></i>
                     <span class="text-[14px] tracking-wide"></span>
                 </button>
             </div>
         </div>
 
-        <!-- Grid -->
         <div id="txGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"></div>
 
-        <!-- FAB -->
         <x-fab id="txFab" target="tx" />
 
-        {{-- Menu (mesmo padrão) --}}
         <div id="txMenu" class="hidden fixed z-[75] min-w-40 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 shadow-soft p-1">
             <button data-menu-action="edit" class="w-full text-left px-4 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800">Editar</button>
             <button data-menu-action="show" class="w-full text-left px-4 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800">Ver detalhes</button>
             <button data-menu-action="delete" class="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Excluir</button>
         </div>
 
-        {{-- Modal CRUD (igual Category, mas com os campos de Transaction) --}}
         <x-modal id="txModal" titleCreate="Nova transação" titleEdit="Editar transação" titleShow="Detalhes da transação" submitLabel="Salvar">
             <input type="hidden" name="id"/>
 
@@ -313,6 +283,18 @@
                 </label>
             </div>
         </x-modal>
+
+        <div id="txSheet" class="fixed inset-0 z-[70] hidden" aria-modal="true" role="dialog">
+            <div id="txSheetOv" class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+            <div class="absolute inset-x-0 bottom-0 rounded-t-2xl border border-neutral-200/60 dark:border-neutral-800/60 bg-white dark:bg-neutral-900 shadow-soft p-2">
+                <div class="mx-auto h-1 w-10 rounded-full bg-neutral-300/70 dark:bg-neutral-700/70 mb-2"></div>
+                <div class="grid gap-1 p-1">
+                    <button data-sheet-action="edit" class="w-full text-left px-4 py-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800">Editar</button>
+                    <button data-sheet-action="show" class="w-full text-left px-4 py-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800">Ver detalhes</button>
+                    <button data-sheet-action="delete" class="w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Excluir</button>
+                </div>
+            </div>
+        </div>
     </section>
 
     @push('scripts')
@@ -359,7 +341,7 @@
                 function reloadWithFilters(){
                     const q = buildQS();
                     ROUTES.index = q ? `${BASE_INDEX}?${q}` : BASE_INDEX;
-                    txCrud.reload();     // <- método público do CrudLite
+                    txCrud.reload();
                 }
 
                 function renderSubcats(){
@@ -415,7 +397,7 @@
                     const catName = tx.category?.name ?? tx.transaction_category?.name ?? tx.category_name ?? '';
 
                     return `
-                            <article data-id="${id}" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft">
+<article data-id="${id}" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft">
   <div class="flex items-start justify-between gap-3">
     <div class="flex items-center gap-3">
       <span class="size-12 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800">
@@ -461,18 +443,17 @@
                         openers: '[data-open-modal="tx"]',
                         btnClose:'#txModal [data-crud-close]',
                         btnCancel:'#txModal [data-crud-cancel]',
-                        menu:    '#txMenu',
-                        formError:'#txModal [data-form-error]'
+                        menu:    '#txMenu'
                     },
                     template: cardTemplate,
                     parseIndex: (json) => {
                         if (Array.isArray(json)) return json;
-                        if (Array.isArray(json?.data)) return json.data;                           // paginator padrão
+                        if (Array.isArray(json?.data)) return json.data;
                         if (Array.isArray(json?.transactions?.data)) return json.transactions.data;
                         if (Array.isArray(json?.transactions)) return json.transactions;
                         if (Array.isArray(json?.items)) return json.items;
                         if (Array.isArray(json?.results)) return json.results;
-                        if (Array.isArray(json?.data?.data)) return json.data.data;               // data dentro de data
+                        if (Array.isArray(json?.data?.data)) return json.data.data;
                         return [];
                     },
                     parseShow: (json) => json?.data ?? json?.transaction ?? json,
@@ -481,7 +462,6 @@
                         form.querySelectorAll('input,select,textarea,[type="radio"]').forEach(el => el.disabled = (m==='show'));
                         const submit = form.querySelector('button[type="submit"]');
                         if (submit) submit.classList.toggle('hidden', m==='show');
-                        // sincroniza UI condicional ao entrar no modal
                         requestAnimationFrame(()=>toggleUI(form));
                     },
                     fillForm: (form, tx)=>{
@@ -489,7 +469,6 @@
                         const setC= (id,on)=>{ const el=form.querySelector('#'+id); if(el){ el.checked=!!on; el.dispatchEvent(new Event('change')); } };
 
                         form.querySelector('[name="id"]')?.setAttribute('value', tx.id ?? tx.uuid ?? '');
-
                         set('title', tx.title);
                         set('description', tx.description);
                         set('amount', tx.amount);
@@ -515,12 +494,10 @@
                         setC('custom',  rec==='custom');
 
                         if (tx.custom_occurrences) set('custom_occurrences', tx.custom_occurrences);
-                        if (tx.installments)       set('installments', tx.installments);
                         if (tx.interval_value)     set('interval_value', tx.interval_value);
                         if (tx.include_sat != null) form.querySelector('#include_sat').checked = !!+tx.include_sat;
                         if (tx.include_sun != null) form.querySelector('#include_sun').checked = !!+tx.include_sun;
 
-                        // abre/fecha campos dependentes
                         toggleUI(form);
                     },
                     clearForm: (form)=>{
@@ -532,7 +509,6 @@
                         toggleUI(form);
                     },
                     onBeforeSubmit: (fd)=>{
-                        // normaliza amount (1.234,56 -> 1234.56)
                         const raw = fd.get('amount');
                         if (raw != null){
                             const cleaned = String(raw).replace(/[^\d,.,-]/g,'').replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',', '.');
@@ -542,7 +518,6 @@
                     },
                 });
 
-                // ===== UI condicional do modal (mesmo comportamento do form antigo)
                 function toggleUI(scope){
                     const $ = (sel)=> scope.querySelector(sel);
                     const pay = $('#pix')?.checked ? 'pix' : ($('#card')?.checked ? 'card' : ($('#money')?.checked ? 'money' : null));
@@ -554,7 +529,6 @@
                     const cardType  = document.getElementById('tx_card_type');
                     const pixAcc    = document.getElementById('tx_pix_acc');
                     const cardSel   = document.getElementById('tx_card_select');
-                    const instCon   = document.getElementById('installments'); // pode não existir
                     const altRow    = document.getElementById('tx_alt_row');
                     const altSel    = document.getElementById('tx_alt_select');
                     const savingW   = document.getElementById('tx_saving_wrap');
@@ -564,7 +538,6 @@
                     const credit = document.getElementById('credit');
                     const debit  = document.getElementById('debit');
 
-                    // investimento não permite crédito
                     if (credit){
                         credit.disabled = invest;
                         if (invest && credit.checked){ credit.checked=false; if (debit) debit.checked=true; }
@@ -576,75 +549,177 @@
 
                     cardType?.classList.toggle('hidden', !isCard);
                     pixAcc?.classList.toggle('hidden', !(pay==='pix' || pay==='money'));
-                    // card select aparece se cartão e NÃO alternando
+
                     const showAlt  = !!(isCred && isRec);
                     const altOn    = document.getElementById('alternate_cards')?.checked;
                     altRow?.classList.toggle('hidden', !showAlt);
                     altSel?.classList.toggle('hidden', !(showAlt && altOn));
                     cardSel?.classList.toggle('hidden', !(isCard && !(showAlt && altOn)));
 
-                    // parcelas: só crédito + única (se você quiser, crie o input com id="installments")
-                    if (instCon){
-                        const showInst = !!(isCred && !isRec);
-                        instCon.closest('.row, .grid, div')?.classList?.toggle('hidden', !showInst);
-                    }
-
-                    // recorrência/termino/ocorrências
                     termRow?.classList.toggle('hidden', rec==='unique');
                     const hasEnd = document.getElementById('has_end')?.checked;
                     occWrap?.classList.toggle('hidden', !(hasEnd && rec!=='unique'));
 
-                    // recorrência custom
                     document.getElementById('tx_custom_rec')?.classList.toggle('hidden', rec!=='custom');
-
-                    // cofrinho: só investimento
                     savingW?.classList.toggle('hidden', !invest);
                 }
 
-                // binds de mudança dentro do modal
-                (function bindModalUI(){
-                    const modal = document.querySelector('#txModal');
-                    if (!modal) return;
-                    modal.addEventListener('change', (e)=> {
-                        const t = e.target;
-                        // exclusividade das "checkbox" de opção única
-                        if (['pix','card','money'].includes(t.id) && t.checked){
-                            ['pix','card','money'].forEach(id => { if (id!==t.id) { const el=document.getElementById(id); if(el) el.checked=false; }});
-                        }
-                        if (['unique','monthly','yearly','custom'].includes(t.id) && t.checked){
-                            ['unique','monthly','yearly','custom'].forEach(id => { if (id!==t.id) { const el=document.getElementById(id); if(el) el.checked=false; }});
-                        }
-                        if (['credit','debit'].includes(t.id) && t.checked){
-                            ['credit','debit'].forEach(id => { if (id!==t.id) { const el=document.getElementById(id); if(el) el.checked=false; }});
-                        }
-                        toggleUI(modal);
-                    });
-                    modal.querySelector('#tx_cat')?.addEventListener('change', ()=>toggleUI(modal));
-                    modal.querySelector('#alternate_cards')?.addEventListener('change', ()=>toggleUI(modal));
-                })();
+                const CSRF = '{{ csrf_token() }}';
+                const u = (t, id) => t.replace(':id', id);
+                const txGrid = document.getElementById('txGrid');
 
-                // ===== Boot com skeleton e primeira carga
+                const isMobile = () => window.matchMedia('(max-width: 767px)').matches;
+
+                txGrid.addEventListener('click', async (e) => {
+                    const btn = e.target.closest('[data-action="more"]');
+                    if (!btn) return;
+                    if (isMobile()){
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+                        const card = btn.closest('article[data-id]');
+                        if (!card) return;
+                        openTxSheet(card.dataset.id);
+                    }
+                }, true);
+
+                const txSheet   = document.getElementById('txSheet');
+                const txSheetOv = document.getElementById('txSheetOv');
+                let txSheetId   = null;
+
+                function openTxSheet(id){
+                    txSheetId = id;
+                    txSheet.classList.remove('hidden');
+                    document.body.classList.add('overflow-hidden','ui-sheet-open');
+                }
+                function closeTxSheet(){
+                    txSheet.classList.add('hidden');
+                    document.body.classList.remove('overflow-hidden','ui-sheet-open');
+                }
+                async function fetchTx(id){
+                    const res = await fetch(u(ROUTES.show, id), {headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});
+                    if (!res.ok) throw new Error('Erro ao carregar');
+                    const json = await res.json();
+                    return (json?.data ?? json?.transaction ?? json);
+                }
+                async function deleteTx(id){
+                    const fd = new FormData(); fd.append('_method','DELETE'); fd.append('id', id);
+                    const res = await fetch(u(ROUTES.destroy, encodeURIComponent(id)), {
+                        method:'POST',
+                        headers:{'X-CSRF-TOKEN':CSRF,'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
+                        body: fd
+                    });
+                    if (!res.ok) throw new Error('Falha ao excluir');
+                }
+
+                txSheet.addEventListener('click', async (e)=>{
+                    const b = e.target.closest('[data-sheet-action]'); if(!b) return;
+                    if (!txSheetId) return;
+                    const act = b.dataset.sheetAction;
+
+                    if (act === 'edit'){
+                        try{
+                            const data = await fetchTx(txSheetId);
+                            closeTxSheet();
+                            openTxModal('edit', data);
+                        }catch{ alert('Erro ao carregar transação'); }
+                        return;
+                    }
+                    if (act === 'show'){
+                        try{
+                            const data = await fetchTx(txSheetId);
+                            closeTxSheet();
+                            openTxModal('show', data);
+                        }catch{ alert('Erro ao carregar transação'); }
+                        return;
+                    }
+                    if (act === 'delete'){
+                        closeTxSheet();
+                        if (!confirm('Excluir esta transação?')) return;
+                        try{
+                            await deleteTx(txSheetId);
+                            txCrud.reload();
+                        }catch{ alert('Erro ao excluir'); }
+                        return;
+                    }
+                });
+
+                function openTxModal(mode, tx){
+                    const modal  = document.getElementById('txModal');
+                    const form   = modal.querySelector('form');
+                    const title  = modal.querySelector('[data-crud-title]');
+                    const submit = form.querySelector('button[type="submit"]');
+
+                    const isShow = mode === 'show';
+                    if (title)  title.textContent = mode === 'edit' ? 'Editar transação' : 'Detalhes da transação';
+                    form.querySelectorAll('input,select,textarea,[type="radio"]').forEach(el => el.disabled = isShow);
+                    if (submit) submit.classList.toggle('hidden', isShow);
+
+                    fillTxForm(form, tx);
+                    modal.classList.remove('hidden');
+                    document.body.classList.add('overflow-hidden','ui-modal-open');
+                }
+
+                function fillTxForm(form, tx){
+                    const set = (name,val)=>{ const el=form.querySelector(`[name="${name}"]`); if (el) el.value=(val??''); };
+                    const setC= (id,on)=>{ const el=form.querySelector('#'+id); if(el){ el.checked=!!on; el.dispatchEvent(new Event('change')); } };
+
+                    form.querySelector('[name="id"]')?.setAttribute('value', tx.id ?? tx.uuid ?? '');
+                    set('title', tx.title);
+                    set('description', tx.description);
+                    set('amount', tx.amount);
+                    set('date', String(tx.date ?? '').slice(0,10));
+                    set('transaction_category_id', tx.transaction_category_id ?? tx.category_id);
+                    if (tx.account_id) set('account_id', tx.account_id);
+                    if (tx.card_id)    set('card_id',    tx.card_id);
+
+                    const type = tx.type || 'pix';
+                    setC('pix',   type==='pix');
+                    setC('card',  type==='card');
+                    setC('money', type==='money');
+
+                    if (tx.type_card){
+                        setC('credit', tx.type_card==='credit');
+                        setC('debit',  tx.type_card==='debit');
+                    }
+
+                    const rec = tx.recurrence_type || 'unique';
+                    setC('unique',  rec==='unique');
+                    setC('monthly', rec==='monthly');
+                    setC('yearly',  rec==='yearly');
+                    setC('custom',  rec==='custom');
+
+                    if (tx.custom_occurrences) set('custom_occurrences', tx.custom_occurrences);
+                    if (tx.interval_value)     set('interval_value', tx.interval_value);
+                    if (tx.include_sat != null) form.querySelector('#include_sat').checked = !!+tx.include_sat;
+                    if (tx.include_sun != null) form.querySelector('#include_sun').checked = !!+tx.include_sun;
+
+                    toggleUI(form);
+                }
+
+                txSheetOv.addEventListener('click', closeTxSheet);
+                document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !txSheet.classList.contains('hidden')) closeTxSheet(); });
+
                 (function boot(){
                     const g = document.getElementById('txGrid');
                     const sk = `
-                        <article class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft">
-                          <div class="flex items-start justify-between gap-3">
-                            <div class="flex items-center gap-3">
-                              <span class="size-12 rounded-xl skel"></span>
-                              <div class="w-40 space-y-2">
-                                <div class="h-4 skel"></div>
-                                <div class="h-3 w-24 skel"></div>
-                              </div>
-                            </div>
-                            <div class="h-8 w-24 rounded-lg skel"></div>
-                          </div>
-                          <div class="mt-4 grid grid-cols-2 gap-3">
-                            <div class="h-16 rounded-xl skel"></div>
-                            <div class="h-16 rounded-xl skel"></div>
-                          </div>
-                        </article>`;
+<article class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft">
+  <div class="flex items-start justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <span class="size-12 rounded-xl skel"></span>
+      <div class="w-40 space-y-2">
+        <div class="h-4 skel"></div>
+        <div class="h-3 w-24 skel"></div>
+      </div>
+    </div>
+    <div class="h-8 w-24 rounded-lg skel"></div>
+  </div>
+  <div class="mt-4 grid grid-cols-2 gap-3">
+    <div class="h-16 rounded-xl skel"></div>
+    <div class="h-16 rounded-xl skel"></div>
+  </div>
+</article>`;
                     g.innerHTML = sk + sk + sk + sk;
-
                     reloadWithFilters();
                 })();
             })();

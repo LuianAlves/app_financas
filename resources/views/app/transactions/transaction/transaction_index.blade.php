@@ -27,6 +27,35 @@
                 max-height: 70vh;
                 overflow: auto;
             }
+
+            .tx-chip{
+                --chip-border: rgba(0,0,0,.10);
+                display:inline-flex; align-items:center; gap:.5rem;
+                padding:.55rem .8rem; border:1px solid var(--chip-border);
+                border-radius:.9rem; background:transparent; color:inherit;
+                transition:background .18s ease,color .18s ease,border-color .18s ease,box-shadow .18s ease;
+            }
+
+            /* bolinha à esquerda */
+            .tx-chip .size-4{ width:1rem; height:1rem; border-radius:999px; border:2px solid currentColor; }
+
+            /* estado checked => “botão azul” */
+            .tx-chip:has(input:checked){
+                background:#2563eb;               /* brand-600 do Tailwind */
+                color:#fff; border-color:transparent;
+                box-shadow:0 6px 16px rgba(37,99,235,.25);
+            }
+            .tx-chip:has(input:checked) .size-4{ border-color:#fff; background:#fff; }
+
+            /* foco acessível */
+            .tx-chip:has(input:focus-visible){ outline:2px solid #2563eb; outline-offset:2px; }
+
+            /* opcional: borda ainda mais discreta no estado normal */
+            .tx-chip.tx-chip--thin{ --chip-border: rgba(0,0,0,.06); }
+            .dark .tx-chip.tx-chip--thin{ --chip-border: rgba(255,255,255,.10); }
+
+            /* opcional: sem borda no estado normal */
+            .tx-chip.tx-chip--noborder{ border-color:transparent; }
         </style>
     @endpush
 
@@ -147,15 +176,15 @@
             <div class="mt-3">
                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Forma de pagamento</span>
                 <div class="mt-1 grid grid-cols-3 gap-2">
-                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
                         <input id="pix" type="checkbox" name="type" value="pix" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Pix</span>
                     </label>
-                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
                         <input id="card" type="checkbox" name="type" value="card" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Cartão</span>
                     </label>
-                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
                         <input id="money" type="checkbox" name="type" value="money" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Dinheiro</span>
                     </label>
@@ -165,11 +194,11 @@
             <div id="tx_card_type" class="mt-3 hidden">
                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Tipo de cartão</span>
                 <div class="mt-1 grid grid-cols-2 gap-2">
-                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
                         <input id="credit" type="checkbox" name="type_card" value="credit" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Crédito</span>
                     </label>
-                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
                         <input id="debit" type="checkbox" name="type_card" value="debit" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Débito</span>
                     </label>
@@ -223,22 +252,22 @@
 
             <div class="mt-3">
                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Recorrência</span>
-                <div class="mt-1 grid grid-cols-4 gap-2">
-                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                <div class="mt-1 grid grid-cols-2 gap-2">
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
                         <input id="unique" type="checkbox" name="recurrence_type" value="unique" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Única</span>
                     </label>
-                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
                         <input id="monthly" type="checkbox" name="recurrence_type" value="monthly" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Mensal</span>
                     </label>
-                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
                         <input id="yearly" type="checkbox" name="recurrence_type" value="yearly" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Anual</span>
                     </label>
-                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
                         <input id="custom" type="checkbox" name="recurrence_type" value="custom" class="hidden">
-                        <span class="size-4 rounded-full border"></span><span>A cada X dias</span>
+                        <span class="size-4 rounded-full border"></span><span>Personalizado</span>
                     </label>
                 </div>
             </div>
@@ -264,12 +293,12 @@
             <div id="tx_term_row" class="mt-3 hidden">
                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Término</span>
                 <div class="mt-1 grid grid-cols-2 gap-2">
-                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
-                        <input id="no_end" type="checkbox" name="termination" value="no_end" class="hidden">
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
+                        <input id="no_end" type="radio" name="termination" value="no_end" class="hidden" checked>
                         <span class="size-4 rounded-full border"></span><span>Sem término</span>
                     </label>
-                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
-                        <input id="has_end" type="checkbox" name="termination" value="has_end" class="hidden">
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
+                        <input id="has_end" type="radio" name="termination" value="has_end" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Com término</span>
                     </label>
                 </div>

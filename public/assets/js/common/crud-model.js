@@ -225,12 +225,9 @@
                     }
                 });
 
-                console.log(res)
-
                 if (!res.ok) throw new Error('Falha ao carregar');
                 const arr = parseIndex(await res.json());
 
-                console.log(arr);
                 grid.innerHTML = arr.length ? arr.map(card).join('') : (cfg.emptyHtml || `<div class="text-sm text-neutral-500">Nenhum registro.</div>`);
                 writeCache(arr);
                 onAfterRender(arr, false);

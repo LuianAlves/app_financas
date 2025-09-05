@@ -17,6 +17,7 @@
             .dark .grid-loading::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);opacity:.6}
 
             /* Icon picker dropdown */
+            #iconPickerWrap{position:relative}
             .icon-dd{position:absolute;z-index:11000;inset:auto 0 auto 0;
                 background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:12px;
                 box-shadow:0 10px 24px rgba(0,0,0,.10);padding:10px;max-height:260px;overflow:auto}
@@ -26,25 +27,17 @@
             .icon-item:hover{background:rgba(0,0,0,.06)}
             .dark .icon-item:hover{background:rgba(255,255,255,.06)}
 
-            :root{
-                --brand-600: #82a8fa;
-                --brand-700: #1d4ed8;
-            }
+            :root{ --brand-600:#82a8fa; --brand-700:#1d4ed8; }
 
             .icon-item,
             .icon-item i { color: var(--brand-600) !important; }
-
-            .icon-item:hover{ background: rgba(37, 99, 235, .08); }
-            .dark .icon-item:hover{ background: rgba(37, 99, 235, .15); }
-
+            .icon-item:hover{ background: rgba(37,99,235,.08); }
+            .dark .icon-item:hover{ background: rgba(37,99,235,.15); }
             #iconBtn i{ color: var(--brand-600) !important; }
-
             .tcat-icon { color: var(--brand-600) !important; }
 
             .ui-modal-open #tcatFab{
-                opacity:.0;
-                transform: translateY(8px);
-                pointer-events:none;
+                opacity:0; transform: translateY(8px); pointer-events:none;
             }
         </style>
     @endpush
@@ -95,7 +88,7 @@
                         </button>
                     </div>
 
-                    <form id="tcatForm" class="mt-4 grid gap-3">
+                    <form id="tcatForm" class="mt-4 grid gap-3" novalidate>
                         <div id="trFormErr" class="hidden mb-2 rounded-lg bg-red-50 text-red-700 text-sm px-3 py-2"></div>
 
                         <input type="hidden" id="cat_id" name="id"/>
@@ -162,7 +155,7 @@
                         </div>
 
                         <!-- Ícone -->
-                        <div class="relative" id="iconPickerWrap">
+                        <div id="iconPickerWrap">
                             <span class="text-xs text-neutral-500 dark:text-neutral-400">Ícone</span>
                             <div class="mt-1 flex items-center gap-2">
                                 <input id="iconInput" type="text" readonly value="fa-solid fa-tags"
@@ -216,8 +209,6 @@
             };
             const u = (t, id) => t.replace(':id', id);
 
-            const catIdInp = document.getElementById('cat_id');
-
             const grid = document.getElementById('tcatGrid');
             const fab = document.getElementById('tcatFab');
             const modal = document.getElementById('tcatModal');
@@ -227,15 +218,19 @@
             const btnCancel = document.getElementById('tcatCancel');
             const form = document.getElementById('tcatForm');
             const title = document.getElementById('tcatTitle');
-            const color = document.getElementById('color');
-            const colorHex = document.getElementById('color_hex');
+
+            const catIdInp   = document.getElementById('cat_id');
+            const nameInput  = document.getElementById('name');
+            const color      = document.getElementById('color');
+            const colorHex   = document.getElementById('color_hex');
 
             // limite
-            const limitSwitch = document.getElementById('limitSwitch');
-            const limitField  = document.getElementById('limitField');
-            const hasLimitInp = document.getElementById('has_limit');
+            const limitSwitch   = document.getElementById('limitSwitch');
+            const limitField    = document.getElementById('limitField');
+            const hasLimitInp   = document.getElementById('has_limit');
+            const monthlyLimit  = document.getElementById('monthly_limit');
 
-            // icon picker
+            // ícone
             const iconHidden = document.getElementById('icon');
             const iconInput  = document.getElementById('iconInput');
             const iconBtn    = document.getElementById('iconBtn');
@@ -243,6 +238,9 @@
             const iconGrid   = document.getElementById('iconGrid');
             const iconSearch = document.getElementById('iconSearch');
             const pickerWrap = document.getElementById('iconPickerWrap');
+
+            // Erro global do form
+            const formErr = document.getElementById('trFormErr');
 
             let mode = 'create';          // 'create' | 'edit' | 'show'
             let currentId = null;
@@ -252,14 +250,11 @@
             const menu = document.getElementById('tcatMenu');
             let menuForId = null;
 
-            // ADD: radios de tipo
+            // radios de tipo
             const typeRadios = form.querySelectorAll('input[name="type"]');
             typeRadios.forEach(r=>{
                 r.addEventListener('change', ()=>{
-                    const t = getTypeVal();
-                    setLimitUIByType(t);      // habilita/desabilita o switch conforme tipo
-                    // Não força checar o switch; só re-renderiza a visibilidade do campo:
-                    limitField.classList.toggle('hidden', !limitSwitch.checked);
+                    refreshLimitUI();
                 });
             });
 
@@ -267,11 +262,9 @@
             const CAT_CACHE_KEY = 'tcat_cache_v1';
 
             // ===== Utils
-            // ADD: unwrap para respostas { data: {...} }
             function unwrap(obj){ return (obj && typeof obj==='object' && 'data' in obj) ? obj.data : obj; }
-
-            const ensureArray = (d) => Array.isArray(d) ? d : (d?.data ?? (typeof d === 'object' ? Object.values(d) : []));
-            const brl = (n) => (isNaN(n) ? 'R$ 0,00' : Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}));
+            function ensureArray(d){ return Array.isArray(d) ? d : (d?.data ?? (typeof d==='object' ? Object.values(d) : [])); }
+            const brl = n => (isNaN(n) ? 'R$ 0,00' : Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}));
             const moneyToNumber = (v) => {
                 if (v == null) return 0;
                 if (typeof v === 'number') return v;
@@ -280,40 +273,11 @@
                 if (s.includes(',')) return parseFloat(s.replace(',','.')) || 0;
                 return parseFloat(s) || 0;
             };
-
-            function clearFormErrors(){
-                clearFieldError(trTo, 'trToErr');
-                clearFieldError(trAmount, 'trAmountErr');
-
-                const g = document.getElementById('formError');
-                if (g){ g.classList.add('hidden'); g.textContent=''; }
-            }
-
-            function showFormError(msg){
-                const g = document.getElementById('formError');
-                if (g){ g.textContent = msg || 'Erro ao enviar'; g.classList.remove('hidden'); }
-            }
-
             function readCache(){ try{ return JSON.parse(localStorage.getItem(CAT_CACHE_KEY)) || null; }catch{ return null; } }
             function writeCache(categories){ try{ localStorage.setItem(CAT_CACHE_KEY, JSON.stringify({categories, t: Date.now()})); }catch{} }
             function showGridOverlay(){ grid.classList.add('grid-loading'); }
             function hideGridOverlay(){ grid.classList.remove('grid-loading'); }
-
-            function toHexOrDefault(v){
-                const s = String(v||'').trim();
-                if (/^#[0-9a-fA-F]{6}$/.test(s)) return s.toLowerCase();
-                return '#3b82f6';
-            }
-
-            function detectFaClass(val){
-                const s = String(val||'').trim();
-                if (!s) return 'fa-solid fa-tags';
-                // aceita "fas fa-tags" ou "fa-solid fa-tags"
-                const parts = s.split(/\s+/);
-                if (parts.length >= 2 && parts[0].startsWith('fa')) return parts.slice(0,2).join(' ');
-                if (parts.length >= 1 && parts[0].startsWith('fa-')) return 'fa-solid ' + parts[0];
-                return 'fa-solid fa-tags';
-            }
+            function toHexOrDefault(v){ const s=String(v||'').trim(); return /^#[0-9a-fA-F]{6}$/.test(s)?s.toLowerCase():'#3b82f6'; }
 
             // ===== Skeletons
             function renderSkeletons(n=6){
@@ -346,14 +310,8 @@
                 form.querySelector('button[type="submit"]').classList.toggle('hidden', isShow);
                 iconBtn.disabled = isShow;
                 if (isShow) iconDD.classList.add('hidden');
-            }
-
-
-            function mapTypeIn(cat){
-                const v = (cat.type ?? '').toString().toLowerCase();
-                if (v==='entrada' || v==='1') return 'entrada';
-                if (v==='investimento' || v==='3') return 'investimento';
-                return 'despesa';
+                // limpa erro global ao mudar de modo
+                formErr.classList.add('hidden'); formErr.textContent='';
             }
 
             function getTypeVal(){
@@ -365,35 +323,37 @@
                 const t = getTypeVal();
                 const allow = (t === 'despesa' || t === 'investimento');
 
-                // habilita/desabilita o switch
                 limitSwitch.disabled = !allow;
 
-                // se não permitir, zera e esconde
                 if (!allow){
                     limitSwitch.checked = false;
-                    hasLimitInp.value = '0';
+                    hasLimitInp.value   = '0';
+                    monthlyLimit.value  = '';
                 }
-
-                // mostra/esconde o campo conforme o switch
                 limitField.classList.toggle('hidden', !limitSwitch.checked);
             }
 
             function setLimitUIByType(typeVal){
                 const allow = (typeVal === 'despesa' || typeVal === 'investimento');
-
-                // habilita/desabilita o switch
                 limitSwitch.disabled = !allow;
-
-                // se não permitir, apaga e esconde tudo
                 if (!allow){
                     limitSwitch.checked = false;
                     hasLimitInp.value   = '0';
                     limitField.classList.add('hidden');
+                    monthlyLimit.value  = '';
                 }
             }
 
+            function detectFaClass(val){
+                const s = String(val||'').trim();
+                if (!s) return 'fa-solid fa-tags';
+                const parts = s.split(/\s+/);
+                if (parts.length >= 2 && parts[0].startsWith('fa')) return parts.slice(0,2).join(' ');
+                if (parts.length >= 1 && parts[0].startsWith('fa-')) return 'fa-solid ' + parts[0];
+                return 'fa-solid fa-tags';
+            }
+
             function fillForm(cat){
-                // nomes alternativos comuns
                 const id     = cat.id ?? cat.uuid ?? cat.category_id ?? '';
                 const name   = cat.name ?? cat.title ?? '';
                 const colorV = cat.color ?? cat.color_hex ?? '#3b82f6';
@@ -401,7 +361,7 @@
                 const mlRaw  = cat.monthly_limit ?? cat.limit ?? cat.monthlyLimit ?? '';
 
                 // nome
-                form.name.value = name;
+                nameInput.value = name;
 
                 // tipo
                 const tIn = (cat.type ?? cat.type_id ?? cat.category_type ?? '').toString().toLowerCase();
@@ -416,11 +376,10 @@
                 colorHex.value = cc;
 
                 // limite
-                if (typeof mlRaw === 'number') form.monthly_limit.value = String(mlRaw).replace('.',',');
-                else if (typeof mlRaw === 'string') form.monthly_limit.value = mlRaw;
-                else form.monthly_limit.value = '';
+                if (typeof mlRaw === 'number') monthlyLimit.value = String(mlRaw).replace('.',',');
+                else if (typeof mlRaw === 'string') monthlyLimit.value = mlRaw;
+                else monthlyLimit.value = '';
 
-                // decide se tem limite
                 const hasLim = !!moneyToNumber(mlRaw) && (t !== 'entrada');
                 limitSwitch.checked = hasLim;
                 hasLimitInp.value   = hasLim ? '1' : '0';
@@ -437,9 +396,12 @@
             }
 
             function openModal(m='create', data=null){
+                refreshLimitUI();
+
                 setMode(m);
-                if (data) fillForm(data); else {
-                    // CHANGE dentro do else de openModal (create)
+                if (data) {
+                    fillForm(data);
+                } else {
                     form.reset();
                     catIdInp.value='';
                     color.value='#3b82f6'; colorHex.value='#3b82f6';
@@ -447,15 +409,14 @@
                     const def = normalizeIconForRuntime('fa-solid fa-tags');
                     iconHidden.value = def; iconInput.value = def; iconBtn.querySelector('i').className = def;
 
-// Tipo default = entrada
+                    // Tipo default = entrada
                     form.querySelector('#ctEnt').checked = true;
 
-// Aplica regras do tipo atual e esconde limite
-                    setLimitUIByType(getTypeVal()); // desabilita o switch pq é "entrada"
+                    // Regras iniciais
+                    setLimitUIByType(getTypeVal());
                     limitSwitch.checked = false;
                     hasLimitInp.value = '0';
                     limitField.classList.add('hidden');
-
                 }
                 if ((m==='edit' || m==='show') && !catIdInp.value) catIdInp.value = currentId ?? '';
                 modal.classList.remove('hidden');
@@ -482,15 +443,14 @@
             color.addEventListener('input', ()=>{ colorHex.value = color.value; });
             colorHex.addEventListener('input', ()=>{ if (/^#[0-9a-fA-F]{6}$/.test(colorHex.value)) color.value = colorHex.value; });
 
-            // KEEP (e remova o outro duplicado)
+            // switch limite
             limitSwitch.addEventListener('change', ()=>{
                 hasLimitInp.value = limitSwitch.checked ? '1' : '0';
                 limitField.classList.toggle('hidden', !limitSwitch.checked);
-                if (!limitSwitch.checked) form.monthly_limit.value = '';
+                if (!limitSwitch.checked) monthlyLimit.value = '';
             });
 
-            // ===== Ícones
-            // ===== Ícones (FA v5/v6 compat)
+            // ===== Ícones FA5/FA6
             function detectFA(){
                 const t6 = document.createElement('i');
                 t6.className = 'fa-solid fa-tags'; t6.style.position='absolute'; t6.style.opacity=0;
@@ -508,7 +468,6 @@
             }
             const FA = detectFA();
 
-            /* mapeia alguns nomes que mudaram do v6 -> v5 */
             const MAP_V6_TO_V5 = {
                 'cart-shopping':'shopping-cart',
                 'bag-shopping':'shopping-bag',
@@ -528,7 +487,6 @@
                 return `fa-solid fa-${name}`;
             }
 
-            /* listas (v6 e v5) — só o que usamos no picker */
             const ICONS_V6 = [
                 'tags','wallet','cart-shopping','bag-shopping','basket-shopping','money-bill','sack-dollar',
                 'arrow-trend-up','arrow-trend-down','chart-line','piggy-bank','utensils','house','wifi','bolt',
@@ -548,7 +506,6 @@
                 'wine-glass','beer','umbrella','fan','pizza-slice','hamburger','coffee','seedling','tree','user-cog',
                 'user-graduate','child','smile','meh','frown','magnet','spray-can','wrench','flask'
             ];
-
             const ICONS_V5 = [
                 'tags','wallet','shopping-cart','shopping-bag','shopping-basket','money-bill','sack-dollar',
                 'chart-line','piggy-bank','utensils','home','wifi','bolt','car','gas-pump','ticket-alt','hospital',
@@ -567,10 +524,8 @@
                 'wine-glass','beer','umbrella','fan','pizza-slice','hamburger','coffee','seedling','tree','user-cog',
                 'user-graduate','child','smile','meh','frown','magnet','spray-can','wrench','flask'
             ];
-
             const ICONS = (FA.v===5) ? ICONS_V5 : ICONS_V6;
 
-            /* render + eventos */
             function renderIcons(list){
                 iconGrid.innerHTML = '';
                 list.forEach(n=>{
@@ -597,6 +552,7 @@
                 const r = pickerWrap.getBoundingClientRect();
                 const spaceBelow = window.innerHeight - r.bottom;
                 iconDD.style.top = ''; iconDD.style.bottom = '';
+                iconDD.style.marginTop = ''; iconDD.style.marginBottom='';
                 if (spaceBelow < 280){ iconDD.style.bottom = '100%'; iconDD.style.marginBottom = '6px'; }
                 else { iconDD.style.top = '100%'; iconDD.style.marginTop = '6px'; }
             }
@@ -608,7 +564,6 @@
             document.addEventListener('click', (e)=>{ if (!pickerWrap.contains(e.target)) closeIconDD(); });
             document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeIconDD(); });
 
-            /* normaliza o ícone default já presente no hidden/input/botão */
             (function syncDefaultIcon(){
                 const ic = normalizeIconForRuntime(iconHidden.value || 'fa-solid fa-tags');
                 iconHidden.value = ic; iconInput.value = ic; iconBtn.querySelector('i').className = ic;
@@ -624,58 +579,55 @@
             function cardTemplate(cat){
                 const id = cat.id ?? cat.uuid ?? cat.category_id;
                 const name = cat.name ?? 'Sem nome';
-                const color = toHexOrDefault(cat.color);
-                const bg = `${color}1a`;
+                const colorHex = toHexOrDefault(cat.color);
                 const typeLabel = typeBadgeLabel(cat.type);
                 const limitNum = moneyToNumber(cat.monthly_limit);
                 const limitTxt = limitNum ? (typeof cat.monthly_limit==='string' ? cat.monthly_limit : brl(limitNum)) : '—';
                 const fa = normalizeIconForRuntime(cat.icon || 'fa-solid fa-tags');
 
-                if(typeLabel == 'Entrada') {
-                    colorType = '#00d679';
-                    bgType = '#00d6791a';
-                } else if(typeLabel == 'Despesa') {
-                    colorType = '#e46c6c';
-                    bgType = '#e46c6c1a';
+                let colorType, bgType;
+                if(typeLabel === 'Entrada') {
+                    colorType = '#00d679'; bgType = '#00d6791a';
+                } else if(typeLabel === 'Despesa') {
+                    colorType = '#e46c6c'; bgType = '#e46c6c1a';
                 } else {
-                    colorType = '#d6c400';
-                    bgType = '#d6c4001a';
+                    colorType = '#d6c400'; bgType = '#d6c4001a';
                 }
 
                 return `
-                    <article data-id="${id}" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft dark:shadow-softDark group">
-                          <div class="flex items-start justify-between gap-3">
-                            <div class="flex items-center gap-3">
-                              <span class="size-12 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200">
-                                <i class="${fa} fa-fw" style="color: ${color};"></i>
-                              </span>
-                              <div>
-                                <p class="font-semibold">${name}</p>
-                                <p class="text-xs text-neutral-500 dark:text-neutral-400">${typeLabel}</p>
-                              </div>
-                            </div>
-                            <div class="flex items-center gap-2">
-                              <span class="inline-flex items-center h-8 px-2 rounded-lg text-[11px] font-medium" style="color:${colorType};border:1px solid ${colorType};background:${bgType}">${typeLabel}</span>
-                              <button data-action="more" class="inline-grid size-10 place-items-center rounded-lg border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800" aria-label="Mais ações">
-                                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
-                              </button>
-                            </div>
-                          </div>
+<article data-id="${id}" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft dark:shadow-softDark group">
+  <div class="flex items-start justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <span class="size-12 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200">
+        <i class="${fa} fa-fw" style="color:${colorHex};"></i>
+      </span>
+      <div>
+        <p class="font-semibold">${name}</p>
+        <p class="text-xs text-neutral-500 dark:text-neutral-400">${typeLabel}</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center h-8 px-2 rounded-lg text-[11px] font-medium" style="color:${colorType};border:1px solid ${colorType};background:${bgType}">${typeLabel}</span>
+      <button data-action="more" class="inline-grid size-10 place-items-center rounded-lg border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800" aria-label="Mais ações">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+      </button>
+    </div>
+  </div>
 
-                          <div class="mt-4 grid grid-cols-2 gap-3">
-                            <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
-                              <p class="text-xs text-neutral-500 dark:text-neutral-400">Limite mensal</p>
-                              <p class="text-lg font-medium">${limitNum ? limitTxt : '—'}</p>
-                            </div>
-                            <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
-                              <p class="text-xs text-neutral-500 dark:text-neutral-400">Cor</p>
-                              <div class="mt-1 flex items-center gap-2">
-                                <span class="inline-block size-4 rounded" style="background:${color};border:1px solid #00000014;"></span>
-                                <span class="text-sm">${color}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </article>`;
+  <div class="mt-4 grid grid-cols-2 gap-3">
+    <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
+      <p class="text-xs text-neutral-500 dark:text-neutral-400">Limite mensal</p>
+      <p class="text-lg font-medium">${limitNum ? limitTxt : '—'}</p>
+    </div>
+    <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
+      <p class="text-xs text-neutral-500 dark:text-neutral-400">Cor</p>
+      <div class="mt-1 flex items-center gap-2">
+        <span class="inline-block size-4 rounded" style="background:${colorHex};border:1px solid #00000014;"></span>
+        <span class="text-sm">${colorHex}</span>
+      </div>
+    </div>
+  </div>
+</article>`;
             }
 
             // ===== Prime from cache
@@ -730,7 +682,7 @@
                     try{
                         const res = await fetch(u(ROUTES.show, id), { headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'} });
                         if (!res.ok) throw 0;
-                        const cat = unwrap(await res.json());   // <= AQUI
+                        const cat = unwrap(await res.json());
                         currentId = id;
                         openModal(act === 'edit' ? 'edit' : 'show', cat);
                     } catch { alert('Erro ao carregar categoria'); }
@@ -763,10 +715,9 @@
 
                 if (Date.now() < suppressUntil) return;
                 try{
-                    // CHANGE dentro de grid.addEventListener('click', ...)
                     const res = await fetch(u(ROUTES.show, id), { headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'} });
                     if (!res.ok) throw 0;
-                    const cat = unwrap(await res.json());   // <= AQUI
+                    const cat = unwrap(await res.json());
                     currentId = id;
                     openModal('show', cat);
                 } catch { alert('Erro ao carregar detalhes'); }
@@ -775,6 +726,12 @@
             // ===== Submit
             form.addEventListener('submit', async (e)=>{
                 e.preventDefault();
+
+                // limpa erros anteriores
+                formErr.classList.add('hidden'); formErr.textContent='';
+                form.querySelectorAll('.field-error').forEach(el=>{ el.textContent=''; el.classList.add('hidden'); });
+                form.querySelectorAll('input,select,textarea').forEach(el=> el.classList.remove('ring-2','ring-red-500/40','border-red-500'));
+
                 const fd = new FormData(form);
 
                 // normaliza limite
@@ -790,8 +747,6 @@
                 // garante cor
                 const cHex = (colorHex.value || color.value || '').trim();
                 if (cHex) fd.set('color', cHex);
-
-                // ícone já está em fd via hidden
 
                 const id = catIdInp.value?.trim();
                 const isEdit = !!id;
@@ -815,8 +770,10 @@
                                 if (errEl){ errEl.textContent = msgs?.[0] || 'Campo inválido'; errEl.classList.remove('hidden'); }
                                 input?.classList.add('ring-2','ring-red-500/40','border-red-500');
                             }
+                            if (data?.message){ formErr.textContent = data.message; formErr.classList.remove('hidden'); }
                             return;
                         }
+                        if (data?.message){ formErr.textContent = data.message; formErr.classList.remove('hidden'); }
                         throw new Error(data?.message || 'Erro ao salvar');
                     }
 
@@ -830,7 +787,7 @@
                 }
             });
 
-            // limpar erro inline
+            // limpar erro inline ao digitar
             form.addEventListener('input', (e)=>{
                 const el = e.target.closest('input,select,textarea');
                 if (!el) return;

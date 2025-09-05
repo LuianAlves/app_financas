@@ -55,35 +55,12 @@
 
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
-    <style>
-        html {
-            scroll-behavior: smooth;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            html {
-                scroll-behavior: auto;
-            }
-
-            * {
-                animation: none !important;
-                transition: none !important;
-            }
-        }
-
-        #accFab {
-            z-index: 80;
-        }
-
-        body.ui-modal-open #accFab,
-        body.ui-sheet-open #accFab {
-            z-index: 40;
-            pointer-events: none;
-        }
-
-    </style>
-
     @stack('styles')
+
+    @php
+        $styleCssPath = public_path('assets/css/new_style.css');
+    @endphp
+    <link href="{{ asset('assets/css/new_style.css') }}?v={{ file_exists($styleCssPath) ? filemtime($styleCssPath) : time() }}" rel="stylesheet">
 </head>
 {{--<body class="min-h-screen text-neutral-900 dark:text-neutral-100
 bg-gradient-to-b from-brand-50/60 to-white
@@ -588,6 +565,25 @@ dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-bra
         closeAccModal();
     });
 </script>
+
+<script>
+    window.__SPA_LITE__ = true;
+</script>
+
+<script src="{{asset('assets/js/cache/app-nav.js')}}"></script>
+<script src="{{asset('assets/js/cache/http.js')}}"></script>
+<script src="{{asset('assets/js/cache/storage.js')}}"></script>
+
+@php
+    $installPath = public_path('assets/js/install.js');
+@endphp
+
+<script src="{{ asset('assets/js/install.js') }}?v={{ file_exists($installPath) ? filemtime($installPath) : time() }}" defer></script>
+
+<div id="net-banner"
+     style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:85px;z-index:1200;background:#222;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;">
+    Conexão lenta — exibindo dados em cache…
+</div>
 
 @stack('scripts')
 </body>

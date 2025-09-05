@@ -189,7 +189,7 @@
                     </div>
 
                     <form id="trForm" class="mt-4 grid gap-3">
-                        <div id="trFormErr" class="hidden mb-2 rounded-lg bg-red-50 text-red-700 text-sm px-3 py-2"></div>
+                        <div id="formError" class="hidden mb-2 rounded-lg bg-red-50 text-red-700 text-sm px-3 py-2"></div>
 
                         <input type="hidden" id="trFrom" name="from_id"/>
                         <label class="block">
@@ -426,12 +426,12 @@
                     // campos do modal de transferência
                     clearFieldError(trTo, 'trToErr');
                     clearFieldError(trAmount, 'trAmountErr');
-                    const g = document.getElementById('trFormErr');
+                    const g = document.getElementById('formError');
                     if (g){ g.classList.add('hidden'); g.textContent=''; }
                 }
 
                 function showFormError(msg){
-                    const g = document.getElementById('trFormErr');
+                    const g = document.getElementById('formError');
                     if (g){ g.textContent = msg || 'Erro ao enviar'; g.classList.remove('hidden'); }
                 }
 

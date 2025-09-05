@@ -632,11 +632,23 @@
 
                 function addEventToCache(ev) {
                     const day = String(ev.start).slice(0, 10);
-                    const id = ev.id ?? `${ev.title}-${ev.start}`;
                     const xp = ev.extendedProps || {};
+
+                    // chave base vinda do backend
+                    let key = ev.id ?? `${ev.title}-${ev.start}`;
+
+                    // DEDUPE: para lançamentos de transação (entrada/despesa),
+                    // use tx_id+dia como chave para impedir duplicados da mesma transação no mesmo dia
+                    const tipo = (xp.type || '').toLowerCase().trim();
+                    const isTxLaunch = (tipo === 'entrada' || tipo === 'despesa') && xp.transaction_id;
+
+                    if (isTxLaunch) {
+                        key = `tx_${xp.transaction_id}_${day}`;
+                    }
+
                     const item = {
-                        id,
-                        tipo: (xp.type || '').toLowerCase().trim(),
+                        id: key,
+                        tipo,
                         color: ev.bg,
                         icon: ev.icon,
                         descricao: ev.title ?? xp.category_name ?? 'Sem descrição',
@@ -649,8 +661,9 @@
                         invoice_id: xp.invoice_id || null,
                         tx_id: xp.transaction_id || null,
                     };
+
                     const map = eventosCache[day] ?? (eventosCache[day] = new Map());
-                    if (!map.has(id)) map.set(id, item);
+                    if (!map.has(key)) map.set(key, item);
                 }
 
                 async function loadWindow(ymStr, months = 2) {

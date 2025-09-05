@@ -1,930 +1,624 @@
-@extends('layouts.templates.app')
-@section('content')
-    <x-card-header
-        prevRoute="{{ route('dashboard') }}"
-        iconRight="fa-solid fa-money-bill-transfer"
-        title="Transações"
-        description="Acompanhe suas transações financeiras organizadas por categoria e tipo.">
-    </x-card-header>
+@extends('layouts.templates.new_layout')
 
-    <div class="st-filters mt-4" id="stFilters">
-        <div class="row mt-2">
-            <div class="col-6">
-                <label class="k">Início</label>
-                <input type="date" id="stStart" class="form-control" style="max-width:170px">
-            </div>
-            <div class="col-6">
-                <label class="k">Fim</label>
-                <input type="date" id="stEnd" class="form-control" style="max-width:170px">
-            </div>
-        </div>
-
-
-                <div class="tx-tabs pb-1" id="stTabs">
-                    <button type="button" class="tx-tab active" data-type="all">Todos</button>
-                    <button type="button" class="tx-tab" data-type="entrada">Entradas</button>
-                    <button type="button" class="tx-tab" data-type="despesa">Despesas</button>
-                    <button type="button" class="tx-tab" data-type="investimento">Investimentos</button>
-                </div>
-
-
-        <div id="stSubcats" class="tx-chips mt-2 d-flex flex-wrap gap-2"></div>
-
-        <button id="stApply" class="btn bg-color border-none ms-auto">
-            <i class="fa fa-magnifying-glass me-1" style="font-size:12px;"></i>
-            <span style="letter-spacing:.5px;font-size:14px;margin-left:2.5px;">Aplicar</span>
-        </button>
-    </div>
-
-    <ul id="transactionList" class="swipe-list mt-4"></ul>
-
-    <button id="openModal" class="create-btn">
-        <i class="fa fa-plus text-white"></i>
-    </button>
-
-    <a href="{{route('transactionCategory-view.index')}}" class="create-btn create-other" data-nav>
-        <i class="fa-solid fa-tags text-white"></i>
-    </a>
-
-    <a href="{{route('account-view.index')}}" class="create-btn create-other-2" data-nav>
-        <i class="fas fa-landmark text-white"></i>
-    </a>
-
-    <a href="{{route('card-view.index')}}" class="create-btn create-other-3" data-nav>
-        <i class="fas fa-credit-card text-white"></i>
-    </a>
-
-    <x-modal
-        modalId="modalTransaction"
-        formId="formTransaction"
-        pathForm="app.transactions.transaction.transaction_form"
-        :data="['cards' => $cards, 'categories' => $categories, 'accounts' => $accounts, 'savings' => $savings]"
-    />
-
-    <!-- CONFIRM CUSTOM -->
-    <div id="confirmDelete" class="x-confirm" hidden>
-        <div class="x-sheet" role="dialog" aria-modal="true" aria-labelledby="xConfirmTitle">
-            <div class="x-head">
-                <h5 id="xConfirmTitle">Remover</h5>
-                <button type="button" class="x-close" data-action="cancel" aria-label="Fechar">×</button>
-            </div>
-            <div class="x-body">Você deseja remover?</div>
-            <div class="x-actions">
-                <button type="button" class="btn btn-light" data-action="cancel">Cancelar</button>
-                <button type="button" class="btn btn-danger" data-action="confirm">Excluir</button>
-            </div>
-        </div>
-    </div>
-
+@section('new-content')
     @push('styles')
         <style>
-            :root {
-                --bg: #F6F7FA;
-                --card: #FFF;
-                --ink: #1F2937;
-                --muted: #6B7280;
-                --line: #E5E9F0;
-                --soft: #F3F6FA;
-                --pos: #1e00cf;
-                --neg: #980000;
-                --accent: #00BFA6;
-            }
+            /* ===== Skeleton + overlay ===== */
+            .skel{position:relative;overflow:hidden;border-radius:.5rem;background:#e5e7eb}
+            .dark .skel{background:#262626}
+            .skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
+                background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:skel 1.1s infinite}
+            @keyframes skel{100%{transform:translateX(100%)}}
+            .grid-loading{position:relative}
+            .grid-loading::after{content:"";position:absolute;inset:0;pointer-events:none;
+                background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:skel 1.1s infinite;opacity:.35}
+            .dark .grid-loading::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);opacity:.6}
 
-            .st-filters {
-                display: flex;
-                gap: 10px;
-                align-items: flex-start;
-                flex-direction: column;
-                padding: 8px 10px;
-                border-radius: 10px;
-                background: var(--card);
-                border: 1px solid var(--line);
-            }
-
-            .st-filters label.k {
-                font-size: .8rem;
-                color: var(--muted);
-                font-weight: 500;
-                margin: 0 2px
-            }
-
-            .st-filters .form-control {
-                height: 36px;
-                border: 1px solid var(--line);
-                border-radius: 8px;
-                font-size: .85rem
-            }
-
-            .sticky-summary > div {
-                min-width: 0;
-                display: flex;
-                justify-content: space-between;
-            }
-
-            #stTabs {
-                display: flex;
-                gap: 8px;
-                padding: 4px;
-                background: #fff;
-                border-radius: 12px;
-            }
-
-            .tx-tabs button {
-                font-size: 12.5px !important;
-                letter-spacing: .75px !important;
-                font-weight: 500 !important;
-                background: none !important;
-                border: none !important;
-                color: var(--muted);
-                padding: 0 !important;
-            }
-
-            .tx-tabs button.active {
-                color: var(--accent) !important;
-            }
-
-            #stTabs, #stSubcats {
-                overflow-x: scroll;
-                max-width: calc(100% - 5%) !important;
-            }
-
-            #stTabs .tx-tab {
-                flex: 1;
-                border: 0;
-                background: transparent;
-                padding: 10px 12px;
-                border-radius: 8px;
-                font-weight: 600;
-                font-size: .9rem;
-                color: var(--muted);
-                transition: background .2s ease, color .2s ease, box-shadow .2s ease, transform .05s;
-            }
-
-            #stTabs .tx-tab:hover {
-                color: var(--ink);
-            }
-
-            #stTabs .tx-tab:active {
-                transform: scale(.98);
-            }
-
-            #stTabs .tx-tab.active {
-                background: var(--accent);
-                color: #fff;
-            }
-
-            /* ——— Subcategory chips ——— */
-            #stSubcats {
-                display: flex;
-                gap: 8px;
-                flex-wrap: wrap;
-                margin-top: 10px;
-                padding-bottom: 2px;
-                overflow-x: auto; /* desliza em telas pequenas */
-                -webkit-overflow-scrolling: touch;
-            }
-
-            #stSubcats::-webkit-scrollbar {
-                height: 6px;
-            }
-
-            #stSubcats::-webkit-scrollbar-thumb {
-                background: rgba(0, 0, 0, .1);
-                border-radius: 10px;
-            }
-
-            #stSubcats .chip {
-                font-size: 12px !important;
-                letter-spacing: .75px !important;
-                font-weight: 500 !important;
-                --ring: rgba(0, 191, 166, .18);
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                padding: 3.5px 7.5px;
-                border: 1px solid var(--line);
-                background: #fff;
-                color: #334155;
-                border-radius: 5px;
-                cursor: pointer;
-                user-select: none;
-                transition: border-color .2s, background .2s, color .2s, box-shadow .2s;
-            }
-
-
-            #stSubcats .chip:hover {
-                border-color: var(--accent);
-            }
-
-            #stSubcats .chip:focus-visible {
-                outline: 2px solid var(--accent);
-                outline-offset: 2px;
-            }
-
-            #stSubcats .chip.active {
-                background: rgba(0, 191, 166, .10);
-                color: var(--accent);
-                border-color: var(--accent);
-            }
-
-            #stSubcats .chip .dot {
-                width: 8px;
-                height: 8px;
-                border-radius: 999px;
-                background: currentColor;
-                display: inline-block;
+            /* ===== filtros / tabs / chips ===== */
+            :root{--ink:#1F2937;--muted:#6B7280;--line:rgba(0,0,0,.08);--accent:#00BFA6}
+            .tx-tab{font-size:.78rem;letter-spacing:.02em;font-weight:600;color:var(--muted);padding:.5rem .75rem;border-radius:.5rem}
+            .tx-tab.active{background:var(--accent);color:#fff}
+            #stSubcats{display:flex;gap:.5rem;flex-wrap:wrap}
+            #stSubcats .chip{font-size:.75rem;letter-spacing:.02em;font-weight:600;display:inline-flex;align-items:center;gap:.4rem;
+                padding:.35rem .6rem;border:1px solid var(--line);border-radius:.45rem;background:#fff;color:#334155}
+            #stSubcats .chip.active{background:rgba(0,191,166,.10);color:var(--accent);border-color:var(--accent)}
+            #stSubcats .dot{width:.5rem;height:.5rem;border-radius:999px;background:currentColor;display:inline-block}
+            #txModal [data-crud-body]{
+                max-height: 70vh;
+                overflow: auto;
             }
         </style>
     @endpush
 
+    <section class="mt-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-xl font-semibold">Transações</h2>
+                <p class="text-sm text-neutral-500 dark:text-neutral-400">Acompanhe suas transações por categoria e tipo.</p>
+            </div>
+            <div class="hidden md:flex items-center gap-2">
+                <button data-open-modal="tx"
+                        class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    Nova transação
+                </button>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div id="stFilters" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
+            <div class="grid grid-cols-2 gap-3">
+                <label class="block">
+                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Início</span>
+                    <input type="date" id="stStart"
+                           class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2">
+                </label>
+                <label class="block">
+                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Fim</span>
+                    <input type="date" id="stEnd"
+                           class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2">
+                </label>
+            </div>
+
+            <div id="stTabs" class="mt-3 flex gap-2 overflow-x-auto">
+                <button type="button" class="tx-tab active" data-type="all">Todos</button>
+                <button type="button" class="tx-tab" data-type="entrada">Entradas</button>
+                <button type="button" class="tx-tab" data-type="despesa">Despesas</button>
+                <button type="button" class="tx-tab" data-type="investimento">Investimentos</button>
+            </div>
+
+            <div id="stSubcats" class="mt-2"></div>
+
+            <div class="mt-3 flex justify-end">
+                <button id="stApply"
+                        class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
+                    <i class="fa fa-magnifying-glass text-[12px]"></i>
+                    <span class="text-[14px] tracking-wide">Aplicar</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid -->
+        <div id="txGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"></div>
+
+        <!-- FAB -->
+        <x-fab id="txFab" target="tx" />
+
+        {{-- Menu (mesmo padrão) --}}
+        <div id="txMenu" class="hidden fixed z-[75] min-w-40 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 shadow-soft p-1">
+            <button data-menu-action="edit" class="w-full text-left px-4 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800">Editar</button>
+            <button data-menu-action="show" class="w-full text-left px-4 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800">Ver detalhes</button>
+            <button data-menu-action="delete" class="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Excluir</button>
+        </div>
+
+        {{-- Modal CRUD (igual Category, mas com os campos de Transaction) --}}
+        <x-modal id="txModal" titleCreate="Nova transação" titleEdit="Editar transação" titleShow="Detalhes da transação" submitLabel="Salvar">
+            <input type="hidden" name="id"/>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label class="block">
+                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Título</span>
+                    <input name="title" type="text" placeholder="Ex: Pagamento aluguel"
+                           class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2" required/>
+                    <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
+                </label>
+
+                <label class="block">
+                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Categoria</span>
+                    <select name="transaction_category_id" id="tx_cat"
+                            class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2">
+                        @foreach($categories as $category)
+                            <option value="{{ $category->id }}" data-type="{{ $category->type }}">{{ $category->name }}</option>
+                        @endforeach
+                    </select>
+                    <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
+                </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label class="block">
+                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Valor</span>
+                    <input name="amount" id="tx_amount" inputmode="decimal" placeholder="0,00"
+                           class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"/>
+                    <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
+                </label>
+
+                <label class="block">
+                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Data (início)</span>
+                    <input name="date" type="date"
+                           class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"/>
+                    <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
+                </label>
+            </div>
+
+            <div id="tx_saving_wrap" class="mt-2 hidden">
+                <label class="block">
+                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Cofrinho</span>
+                    <select name="saving_id"
+                            class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2">
+                        @foreach($savings as $s)
+                            <option value="{{ $s->id }}">{{ $s->name }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            </div>
+
+            <div class="mt-3">
+                <span class="text-xs text-neutral-500 dark:text-neutral-400">Forma de pagamento</span>
+                <div class="mt-1 grid grid-cols-3 gap-2">
+                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                        <input id="pix" type="checkbox" name="type" value="pix" class="hidden">
+                        <span class="size-4 rounded-full border"></span><span>Pix</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                        <input id="card" type="checkbox" name="type" value="card" class="hidden">
+                        <span class="size-4 rounded-full border"></span><span>Cartão</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                        <input id="money" type="checkbox" name="type" value="money" class="hidden">
+                        <span class="size-4 rounded-full border"></span><span>Dinheiro</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="tx_card_type" class="mt-3 hidden">
+                <span class="text-xs text-neutral-500 dark:text-neutral-400">Tipo de cartão</span>
+                <div class="mt-1 grid grid-cols-2 gap-2">
+                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                        <input id="credit" type="checkbox" name="type_card" value="credit" class="hidden">
+                        <span class="size-4 rounded-full border"></span><span>Crédito</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                        <input id="debit" type="checkbox" name="type_card" value="debit" class="hidden">
+                        <span class="size-4 rounded-full border"></span><span>Débito</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="tx_alt_row" class="mt-3 hidden">
+                <div class="flex items-center justify-between">
+                    <div class="text-xs text-neutral-500 dark:text-neutral-400">Alternar entre cartões? (crédito + recorrente)</div>
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input id="alternate_cards" name="alternate_cards" type="checkbox" value="1" class="peer hidden">
+                        <span class="w-11 h-6 bg-neutral-200 rounded-full relative transition
+                          after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:size-5 after:bg-white after:rounded-full after:transition
+                          peer-checked:bg-brand-600 peer-checked:after:left-5"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="tx_alt_select" class="mt-2 hidden">
+                <span class="text-xs text-neutral-500 dark:text-neutral-400">Selecione os cartões</span>
+                <div class="mt-1 grid grid-cols-1 md:grid-cols-2 gap-y-2">
+                    @foreach($cards as $card)
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" name="alternate_card_ids[]" value="{{ $card->id }}">
+                            <span>{{ $card->account ? $card->account->bank_name : '' }} {{ $card->last_four_digits }}</span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+
+            <div id="tx_pix_acc" class="mt-3">
+                <span class="text-xs text-neutral-500 dark:text-neutral-400">Conta (Pix/Dinheiro)</span>
+                <select name="account_id"
+                        class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2">
+                    @foreach($accounts as $account)
+                        <option value="{{ $account->id }}">{{ $account->bank_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div id="tx_card_select" class="mt-3 hidden">
+                <span class="text-xs text-neutral-500 dark:text-neutral-400">Cartão vinculado</span>
+                <select name="card_id"
+                        class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2">
+                    <option value="">Selecione um cartão</option>
+                    @foreach($cards as $card)
+                        <option value="{{ $card->id }}">{{ $card->account ? $card->account->bank_name : '' }} {{ $card->last_four_digits }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="mt-3">
+                <span class="text-xs text-neutral-500 dark:text-neutral-400">Recorrência</span>
+                <div class="mt-1 grid grid-cols-4 gap-2">
+                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                        <input id="unique" type="checkbox" name="recurrence_type" value="unique" class="hidden">
+                        <span class="size-4 rounded-full border"></span><span>Única</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                        <input id="monthly" type="checkbox" name="recurrence_type" value="monthly" class="hidden">
+                        <span class="size-4 rounded-full border"></span><span>Mensal</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                        <input id="yearly" type="checkbox" name="recurrence_type" value="yearly" class="hidden">
+                        <span class="size-4 rounded-full border"></span><span>Anual</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                        <input id="custom" type="checkbox" name="recurrence_type" value="custom" class="hidden">
+                        <span class="size-4 rounded-full border"></span><span>A cada X dias</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="tx_custom_rec" class="mt-3 hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label class="block">
+                        <span class="text-xs text-neutral-500 dark:text-neutral-400">Intervalo (dias)</span>
+                        <input type="number" min="1" id="interval_value" name="interval_value"
+                               class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
+                               placeholder="Ex: 7" value="7">
+                    </label>
+                    <div class="block">
+                        <span class="text-xs text-neutral-500 dark:text-neutral-400">Contar fim de semana?</span>
+                        <div class="mt-2 flex items-center gap-4">
+                            <label class="inline-flex items-center gap-2"><input type="checkbox" name="include_sat" id="include_sat" value="1" checked> <span>Sábado</span></label>
+                            <label class="inline-flex items-center gap-2"><input type="checkbox" name="include_sun" id="include_sun" value="1" checked> <span>Domingo</span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tx_term_row" class="mt-3 hidden">
+                <span class="text-xs text-neutral-500 dark:text-neutral-400">Término</span>
+                <div class="mt-1 grid grid-cols-2 gap-2">
+                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                        <input id="no_end" type="checkbox" name="termination" value="no_end" class="hidden">
+                        <span class="size-4 rounded-full border"></span><span>Sem término</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl border">
+                        <input id="has_end" type="checkbox" name="termination" value="has_end" class="hidden">
+                        <span class="size-4 rounded-full border"></span><span>Com término</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="tx_occ" class="mt-3 hidden">
+                <label class="block">
+                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Nº de ocorrências</span>
+                    <input type="number" min="1" id="custom_occurrences" name="custom_occurrences"
+                           class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
+                           placeholder="Ex: 12">
+                </label>
+            </div>
+        </x-modal>
+    </section>
+
     @push('scripts')
+        <script src="{{ asset('assets/js/common/crud-model.js') }}"></script>
         <script>
             (() => {
-                if (window.__TX_PAGE_BOUND__) return;
-                window.__TX_PAGE_BOUND__ = true;
-
-                window.store ??= {
-                    set(k, v, ttl = 60) {
-                        const exp = Date.now() + ttl * 1000;
-                        sessionStorage.setItem(k, JSON.stringify({exp, v}));
-                    },
-                    get(k) {
-                        const raw = sessionStorage.getItem(k);
-                        if (!raw) return null;
-                        try {
-                            const {exp, v} = JSON.parse(raw);
-                            if (Date.now() > exp) {
-                                sessionStorage.removeItem(k);
-                                return null;
-                            }
-                            return v;
-                        } catch {
-                            return null;
-                        }
-                    }
-                };
-                window.http ??= {
-                    async get(url, {timeout = 8000, headers = {}} = {}) {
-                        const ctrl = new AbortController();
-                        const t = setTimeout(() => ctrl.abort('timeout'), timeout);
-                        try {
-                            const r = await fetch(url, {headers, signal: ctrl.signal});
-                            if (!r.ok) throw new Error('HTTP ' + r.status);
-                            const ct = r.headers.get('content-type') || '';
-                            return ct.includes('json') ? r.json() : r.text();
-                        } finally {
-                            clearTimeout(t);
-                        }
-                    }
+                const ROUTES = {
+                    index:  "{{ route('transactions.index') }}",
+                    store:  "{{ route('transactions.store') }}",
+                    show:   "{{ url('/transactions') }}/:id",
+                    update: "{{ url('/transactions') }}/:id",
+                    destroy:"{{ url('/transactions') }}/:id"
                 };
 
-// ====== FILTROS (escopados no segundo card) ======
-                const API_URL = `{{ route('transactions.index') }}`;
-                const ALL_CATS = @json($categories->map(fn($c)=>['id'=>$c->id,'name'=>$c->name,'type'=>$c->type])->values());
+                const brl = (n) => (isNaN(+n) ? 'R$ 0,00' : Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}));
+                const normType = (t) => {
+                    const s = String(t ?? '').toLowerCase();
+                    if (s==='1' || s.includes('entrada')) return 'entrada';
+                    if (s==='3' || s.includes('invest'))  return 'investimento';
+                    return (s==='2' || s.includes('desp')) ? 'despesa' : 'despesa';
+                };
 
-// estado
-                const state = {type: 'all', catIds: new Set(), start: '', end: ''};
+                const RAW_CATS = @json($categories->map(fn($c)=>['id'=>$c->id,'name'=>$c->name,'type'=>$c->type])->values());
+                const ALL_CATS = (RAW_CATS || []).map(c => ({ id:c.id, name:c.name, type:normType(c.type) }));
 
-// pega elementos DENTRO do segundo card
-                const fx = document.getElementById('stFilters');
-                const tabsEl = fx.querySelector('#stTabs');
-                const subcatsEl = fx.querySelector('#stSubcats');
-                const inStart = fx.querySelector('#stStart');
-                const inEnd = fx.querySelector('#stEnd');
+                const state = { type:'all', catIds:new Set(), start:'', end:'' };
+                const fx   = document.getElementById('stFilters');
+                const tabs = fx.querySelector('#stTabs');
+                const sub  = fx.querySelector('#stSubcats');
+                const inS  = fx.querySelector('#stStart');
+                const inE  = fx.querySelector('#stEnd');
 
-// monta querystring a partir do estado
-                function qsFromState() {
+                const BASE_INDEX = "{{ route('transactions.index') }}";
+
+                function buildQS(){
                     const p = new URLSearchParams();
                     if (state.type !== 'all') p.set('type', state.type);
                     if (state.start) p.set('start', state.start);
-                    if (state.end) p.set('end', state.end);
+                    if (state.end)   p.set('end', state.end);
                     if (state.catIds.size) [...state.catIds].forEach(id => p.append('category_ids[]', id));
                     return p.toString();
                 }
 
-// render dos subfiltros (categorias)
-                function renderSubcats() {
-                    subcatsEl.innerHTML = '';
-                    if (state.type === 'all') return;
+                function reloadWithFilters(){
+                    const q = buildQS();
+                    ROUTES.index = q ? `${BASE_INDEX}?${q}` : BASE_INDEX;
+                    txCrud.reload();     // <- método público do CrudLite
+                }
 
+                function renderSubcats(){
+                    sub.innerHTML = '';
+                    if (state.type==='all') return;
                     const cats = ALL_CATS.filter(c => c.type === state.type);
-                    if (!cats.length) {
-                        subcatsEl.innerHTML = '<small class="text-muted">Sem categorias</small>';
-                        return;
-                    }
-
+                    if (!cats.length){ sub.innerHTML = '<small class="text-neutral-500">Sem categorias</small>'; return; }
                     const all = document.createElement('button');
                     all.className = 'chip ' + (state.catIds.size ? '' : 'active');
                     all.textContent = 'Todas';
-                    all.addEventListener('click', () => {
-                        state.catIds.clear();
-                        renderSubcats();
-                    });
-                    subcatsEl.appendChild(all);
-
-                    for (const c of cats) {
+                    all.onclick = () => { state.catIds.clear(); renderSubcats(); };
+                    sub.appendChild(all);
+                    for (const c of cats){
                         const b = document.createElement('button');
                         b.className = 'chip ' + (state.catIds.has(c.id) ? 'active' : '');
-                        b.textContent = c.name;
-                        b.addEventListener('click', () => {
-                            if (state.catIds.has(c.id)) state.catIds.delete(c.id);
-                            else state.catIds.add(c.id);
-                            renderSubcats();
-                        });
-                        subcatsEl.appendChild(b);
+                        b.innerHTML = `<span class="dot"></span>${c.name}`;
+                        b.onclick = () => { state.catIds.has(c.id) ? state.catIds.delete(c.id) : state.catIds.add(c.id); renderSubcats(); };
+                        sub.appendChild(b);
                     }
                 }
 
-// troca de aba
-                tabsEl.addEventListener('click', (e) => {
-                    const btn = e.target.closest('.tx-tab');
-                    if (!btn) return;
-                    tabsEl.querySelectorAll('.tx-tab').forEach(b => b.classList.remove('active'));
+                tabs.addEventListener('click', (e)=>{
+                    const btn = e.target.closest('.tx-tab'); if(!btn) return;
+                    tabs.querySelectorAll('.tx-tab').forEach(b=>b.classList.remove('active'));
                     btn.classList.add('active');
                     state.type = btn.dataset.type || 'all';
                     state.catIds.clear();
                     renderSubcats();
+                    reloadWithFilters();
                 });
 
-// atalhos de período (escopados)
-                fx.querySelectorAll('[data-range]').forEach(b => {
-                    b.addEventListener('click', () => {
-                        const addM = parseInt(b.dataset.range, 10) || 1;
-                        const base = inStart.value ? new Date(inStart.value) : new Date();
-                        const start = new Date(base.getFullYear(), base.getMonth(), 1);
-                        const end = new Date(start.getFullYear(), start.getMonth() + addM, 0);
-                        // NÃO use toISOString() para não “pular” dia
-                        const iso = d => [
-                            d.getFullYear(),
-                            String(d.getMonth() + 1).padStart(2, '0'),
-                            String(d.getDate()).padStart(2, '0')
-                        ].join('-');
-                        inStart.value = iso(start);
-                        inEnd.value = iso(end);
-                    });
+                fx.querySelector('#stApply').addEventListener('click', ()=>{
+                    state.start = inS.value || '';
+                    state.end   = inE.value || '';
+                    reloadWithFilters();
                 });
 
-// aplicar filtros
-                fx.querySelector('#stApply').addEventListener('click', () => {
-                    state.start = inStart.value || '';
-                    state.end = inEnd.value || '';
-                    sessionStorage.removeItem(CACHE_KEY);
-                    loadTransactions();
-                });
-
-// render inicial
                 renderSubcats();
 
-                const list = document.getElementById('transactionList');
-                const form = document.getElementById('formTransaction');
-                const modalEl = document.getElementById('modalTransaction');
-                const saveBtn = form.querySelector('button[type="submit"]');
-                const CACHE_KEY = 'tx:list:v1';
+                const TYPE_COLOR = { pix:'#2ecc71', card:'#3498db', money:'#f39c12' };
+                const TYPE_LABEL = { pix:'Pix', card:'Cartão', money:'Dinheiro' };
 
-                function $(sel) {
-                    return form.querySelector(sel);
-                }
-
-                function setVal(id, val) {
-                    const el = $('#' + id);
-                    if (el) el.value = (val ?? '');
-                }
-
-                function setCheck(id, on) {
-                    const el = $('#' + id);
-                    if (el) {
-                        el.checked = !!on;
-                        el.dispatchEvent(new Event('change'));
-                    }
-                }
-
-                const TYPE_COLOR = {pix: '#2ecc71', card: '#3498db', money: '#f39c12'};
-                const TYPE_LABEL = {pix: 'Pix', card: 'Cartão', money: 'Dinheiro'};
-                const OPEN_W = 96, TH_OPEN = 40;
-
-                let swipe = {active: null, startX: 0, dragging: false};
-                let currentMode = 'create'; // create|edit|show
-                let currentId = null;
-                let pendingDeleteId = null;
-
-                const xConfirm = document.getElementById('confirmDelete');
-                const xConfirmBtn = xConfirm.querySelector('[data-action="confirm"]');
-                const xCancelBtn = xConfirm.querySelectorAll('[data-action="cancel"]');
-
-                function openConfirm() {
-                    xConfirm.classList.add('show');
-                    xConfirm.hidden = false;
-                    document.body.classList.add('modal-open');
-                }
-
-                function closeConfirm() {
-                    xConfirm.classList.remove('show');
-                    xConfirm.hidden = true;
-                    document.body.classList.remove('modal-open');
-                }
-
-                xConfirmBtn.addEventListener('click', async () => {
-                    await doDelete();
-                    closeConfirm();
-                });
-
-                xCancelBtn.forEach(btn => btn.addEventListener('click', closeConfirm));
-
-                xConfirm.addEventListener('click', (e) => {
-                    if (e.target === xConfirm) {
-                        closeConfirm()
-                    }
-                    ;
-
-                });
-
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && !xConfirm.hidden) closeConfirm();
-                });
-
-                function brl(v) {
-                    const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[^\d.-]/g, ''));
-                    if (isNaN(n)) return 'R$ 0,00';
-                    return n.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-                }
-
-                function renderTx(tx) {
-                    const id = tx.id ?? tx.uuid ?? tx._id ?? tx.transaction_id;
-
-                    const src = tx.create_date ?? tx.date;
-                    const d = src ? new Date(src) : null;
-
-                    const date = d && !isNaN(d)
-                        ? (() => {
-                            const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-                            const dayPt  = d.toLocaleString('pt-BR', { day: '2-digit', timeZone: 'America/Sao_Paulo' });
-                            const longPt = d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', timeZone: 'America/Sao_Paulo' });
-                            const mShort = meses[d.getMonth()];
-                            return `${dayPt} ${mShort}`; // ex: 04 nov (04 de novembro)
-                        })()
-                        : '';
-
+                function cardTemplate(tx){
+                    const id   = tx.id ?? tx.uuid ?? tx._id ?? tx.transaction_id;
+                    const src  = tx.create_date ?? tx.date;
+                    const d    = src ? new Date(src) : null;
+                    const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+                    const date = (d && !isNaN(d)) ? (d.toLocaleString('pt-BR',{day:'2-digit',timeZone:'America/Sao_Paulo'})+' '+meses[d.getMonth()]) : '';
                     const type = tx.type ?? 'money';
-                    const color = ({pix: '#2ecc71', card: '#3498db', money: '#f39c12'})[type] || '#777';
-                    const label = ({pix: 'Pix', card: 'Cartão', money: 'Dinheiro'})[type] || type;
+                    const color= TYPE_COLOR[type] || '#777';
+                    const label= TYPE_LABEL[type] || type;
+                    const amount = (typeof tx.amount === 'string') ? tx.amount : brl(tx.amount ?? tx.value ?? 0);
+                    const catName = tx.category?.name ?? tx.transaction_category?.name ?? tx.category_name ?? '';
+
                     return `
-    <li class="swipe-item" data-id="${id}">
-      <button class="swipe-edit-btn" type="button">Editar</button>
-      <div class="swipe-content">
-        <div class="tx-line">
-          <div class="d-flex justify-content-between flex-column">
-            <span class="tx-title">${tx.title ?? 'Sem título'}</span>
-            <small class="tx-date">${date}</small>
-          </div>
-          <div class="text-end">
-            <span class="tx-amount">${tx.amount}</span><br>
-            <span class="badge" style="font-size:10px;background:${color};color:#fff">${label}</span>
-          </div>
-        </div>
+                            <article data-id="${id}" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft">
+  <div class="flex items-start justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <span class="size-12 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800">
+        <i class="fa-solid fa-money-bill-transfer fa-fw" style="color:${color}"></i>
+      </span>
+      <div>
+        <p class="font-semibold">${tx.title ?? 'Sem título'}</p>
+        <p class="text-xs text-neutral-500 dark:text-neutral-400">${catName ? catName + ' • ' : ''}${date}</p>
       </div>
-      <button class="swipe-delete-btn" type="button">Excluir</button>
-    </li>`;
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center h-8 px-2 rounded-lg text-[11px] font-medium"
+            style="color:${color};border:1px solid ${color};background:${color}1a">${label}</span>
+      <button data-action="more" class="inline-grid size-10 place-items-center rounded-lg border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800" aria-label="Mais ações">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="mt-4 grid grid-cols-2 gap-3">
+    <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
+      <p class="text-xs text-neutral-500 dark:text-neutral-400">Valor</p>
+      <p class="text-lg font-medium">${amount}</p>
+    </div>
+    <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
+      <p class="text-xs text-neutral-500 dark:text-neutral-400">Data</p>
+      <p class="text-lg font-medium">${date || '—'}</p>
+    </div>
+  </div>
+</article>`;
                 }
 
-                function clearList() {
-                    list.innerHTML = '';
-                }
+                const txCrud = CrudLite({
+                    key: 'tx',
+                    csrf: '{{ csrf_token() }}',
+                    routes: ROUTES,
+                    selectors: {
+                        grid:    '#txGrid',
+                        modal:   '#txModal',
+                        form:    '#txModal form',
+                        title:   '#txModal [data-crud-title]',
+                        overlay: '#txModal [data-crud-overlay]',
+                        openers: '[data-open-modal="tx"]',
+                        btnClose:'#txModal [data-crud-close]',
+                        btnCancel:'#txModal [data-crud-cancel]',
+                        menu:    '#txMenu',
+                        formError:'#txModal [data-form-error]'
+                    },
+                    template: cardTemplate,
+                    parseIndex: (json) => {
+                        if (Array.isArray(json)) return json;
+                        if (Array.isArray(json?.data)) return json.data;                           // paginator padrão
+                        if (Array.isArray(json?.transactions?.data)) return json.transactions.data;
+                        if (Array.isArray(json?.transactions)) return json.transactions;
+                        if (Array.isArray(json?.items)) return json.items;
+                        if (Array.isArray(json?.results)) return json.results;
+                        if (Array.isArray(json?.data?.data)) return json.data.data;               // data dentro de data
+                        return [];
+                    },
+                    parseShow: (json) => json?.data ?? json?.transaction ?? json,
+                    onModeChange: (m, form, titleEl)=>{
+                        if (titleEl) titleEl.textContent = m==='edit' ? 'Editar transação' : (m==='show' ? 'Detalhes da transação' : 'Nova transação');
+                        form.querySelectorAll('input,select,textarea,[type="radio"]').forEach(el => el.disabled = (m==='show'));
+                        const submit = form.querySelector('button[type="submit"]');
+                        if (submit) submit.classList.toggle('hidden', m==='show');
+                        // sincroniza UI condicional ao entrar no modal
+                        requestAnimationFrame(()=>toggleUI(form));
+                    },
+                    fillForm: (form, tx)=>{
+                        const set = (name,val)=>{ const el=form.querySelector(`[name="${name}"]`); if (el) el.value=(val??''); };
+                        const setC= (id,on)=>{ const el=form.querySelector('#'+id); if(el){ el.checked=!!on; el.dispatchEvent(new Event('change')); } };
 
-                function renderList(data) {
-                    clearList();
-                    data.forEach(tx => list.insertAdjacentHTML('beforeend', renderTx(tx)));
-                }
+                        form.querySelector('[name="id"]')?.setAttribute('value', tx.id ?? tx.uuid ?? '');
 
-                function showSkeleton() {
-                    list.innerHTML = `{!! str_replace("\n","", addslashes(view('partials._skeleton-tx-list')->render())) !!}`;
-                }
+                        set('title', tx.title);
+                        set('description', tx.description);
+                        set('amount', tx.amount);
+                        set('date', String(tx.date ?? '').slice(0,10));
+                        set('transaction_category_id', tx.transaction_category_id ?? tx.category_id);
+                        if (tx.account_id) set('account_id', tx.account_id);
+                        if (tx.card_id)    set('card_id',    tx.card_id);
 
-                const showUrl = id => `{{ url('/transactions') }}/${id}`;
-                const detailCache = new Map();
-                const io = new IntersectionObserver((entries) => {
-                    entries.forEach(ent => {
-                        if (!ent.isIntersecting) return;
-                        const li = ent.target;
-                        const id = li.dataset.id;
-                        if (!id || detailCache.has(id)) return;
-                        fetch(showUrl(id), {
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
-                            .then(r => r.ok ? r.json() : null).then(json => {
-                            if (json) detailCache.set(id, json);
-                        }).catch(() => {
-                        });
-                        io.unobserve(li);
-                    });
-                }, {rootMargin: '200px 0px'});
+                        const type = tx.type || 'pix';
+                        setC('pix', type==='pix');
+                        setC('card', type==='card');
+                        setC('money',type==='money');
 
-                function setFormMode(mode) {
-                    currentMode = mode;
-                    const isShow = (mode === 'show');
-                    form.querySelectorAll('input,select,textarea,button').forEach(el => {
-                        if (el.type === 'submit') return;
-                        el.disabled = isShow;
-                    });
-                    saveBtn.classList.toggle('d-none', isShow);
-                }
-
-                function fillForm(tx) {
-                    setVal('title', tx.title);
-                    setVal('description', tx.description);
-                    setVal('amount', tx.amount);
-                    setVal('date', String(tx.date ?? '').slice(0, 10));
-                    setVal('transaction_category_id', tx.transaction_category_id);
-
-                    const type = tx.type || 'pix';
-                    setCheck('pix', type === 'pix');
-                    setCheck('card', type === 'card');
-                    setCheck('money', type === 'money');
-
-                    if (tx.account_id) setVal('account_id', tx.account_id);
-                    if (tx.card_id) setVal('card_id', tx.card_id);
-
-                    if (tx.type_card) {
-                        setCheck('credit', tx.type_card === 'credit');
-                        setCheck('debit', tx.type_card === 'debit');
-                    }
-
-                    const rec = tx.recurrence_type || 'unique';
-                    setCheck('unique', rec === 'unique');
-                    setCheck('monthly', rec === 'monthly');
-                    setCheck('yearly', rec === 'yearly');
-                    setCheck('custom', rec === 'custom');
-
-                    if (tx.custom_occurrences) setVal('custom_occurrences', tx.custom_occurrences);
-                    if (tx.installments) setVal('installments', tx.installments);
-                }
-
-                function clearForm() {
-                    form.reset();
-                    ['pix', 'card', 'money', 'credit', 'debit', 'unique', 'monthly', 'yearly', 'custom'].forEach(id => {
-                        const el = $('#' + id);
-                        if (el) el.dispatchEvent(new Event('change'));
-                    });
-                }
-
-                function openTxModal(mode, tx) {
-                    setFormMode(mode);
-                    if (tx) fillForm(tx); else clearForm();
-                    modalEl.classList.add('show');
-
-                    document.body.classList.add('modal-open');   // <- adiciona
-                }
-
-                function closeTxModal() {
-                    modalEl.classList.remove('show');
-                    document.body.classList.remove('modal-open'); // <- remove
-                }
-
-                function closeIfOutside(e) {
-                    if (!modalEl.classList.contains('show')) return;
-
-                    const r = form.getBoundingClientRect();
-                    const p = e.touches ? e.touches[0] : e;
-                    const x = p.clientX, y = p.clientY;
-
-                    const inside = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-                    if (!inside) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        closeTxModal();
-                    }
-                }
-
-                window.addEventListener('pointerdown', closeIfOutside, true);
-                window.addEventListener('touchstart', closeIfOutside, {capture: true, passive: false});
-
-                async function loadTransactions() {
-                    const cacheKey = CACHE_KEY + (qsFromState() || 'all');
-                    const cached = store.get(cacheKey);
-
-                    if (cached) {
-                        renderList(cached);
-                        list.querySelectorAll('.swipe-item').forEach(li => io.observe(li));
-                    } else {
-                        showSkeleton();
-                    }
-
-                    try {
-                        const params = qsFromState();
-                        const url = params ? `${API_URL}?${params}` : API_URL;
-
-                        const data = await http.get(url, {
-                            timeout: 8000,
-                            headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}
-                        });
-
-                        renderList(data);
-
-                        store.set(cacheKey, data, 60);
-
-                        list.querySelectorAll('.swipe-item').forEach(li => io.observe(li));
-                    } catch (e) {
-                        if (!cached) {
-                            list.innerHTML = `<p style="padding:8px;color:#666">Sem conexão. Tente novamente.</p>`;
+                        if (tx.type_card){
+                            setC('credit', tx.type_card==='credit');
+                            setC('debit',  tx.type_card==='debit');
                         }
-                    }
-                }
 
-                async function readBodySafe(res) {
-                    const ct = res.headers.get('content-type') || '';
-                    if (ct.includes('application/json')) {
-                        try {
-                            return await res.json();
-                        } catch {
-                            return null;
-                        }
-                    }
-                    try {
-                        return await res.text();
-                    } catch {
-                        return null;
-                    }
-                }
+                        const rec = tx.recurrence_type || 'unique';
+                        setC('unique',  rec==='unique');
+                        setC('monthly', rec==='monthly');
+                        setC('yearly',  rec==='yearly');
+                        setC('custom',  rec==='custom');
 
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
+                        if (tx.custom_occurrences) set('custom_occurrences', tx.custom_occurrences);
+                        if (tx.installments)       set('installments', tx.installments);
+                        if (tx.interval_value)     set('interval_value', tx.interval_value);
+                        if (tx.include_sat != null) form.querySelector('#include_sat').checked = !!+tx.include_sat;
+                        if (tx.include_sun != null) form.querySelector('#include_sun').checked = !!+tx.include_sun;
 
-                    // garante modo edit não deixa nada desabilitado
-                    if (currentMode === 'edit') {
-                        form.querySelectorAll('[disabled]').forEach(el => el.disabled = false);
-                    }
-
-                    const fd = new FormData(form);
-                    const isEdit = currentMode === 'edit' && currentId;
-
-                    let url, method = 'POST';
-                    if (isEdit) {
-                        url = `{{ url('/transactions') }}/${currentId}`;
-                        fd.append('_method', 'PUT'); // spoof seguro para Laravel
-                    } else {
-                        url = `{{ route('transactions.store') }}`;
-                    }
-
-                    let res;
-                    try {
-                        res = await fetch(url, {
-                            method,
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: fd
+                        // abre/fecha campos dependentes
+                        toggleUI(form);
+                    },
+                    clearForm: (form)=>{
+                        form.reset();
+                        form.querySelector('[name="id"]')?.setAttribute('value','');
+                        ['pix','card','money','credit','debit','unique','monthly','yearly','custom'].forEach(id=>{
+                            const el=form.querySelector('#'+id); if(el) el.dispatchEvent(new Event('change'));
                         });
-                    } catch (err) {
-                        alert('Falha de rede ao salvar');
-                        return;
-                    }
-
-                    if (!res.ok) {
-                        const body = await readBodySafe(res);
-                        const msg = (body && body.message) ? body.message
-                            : (typeof body === 'string' ? body : null);
-                        alert(msg || 'Erro ao salvar');
-                        return;
-                    }
-
-                    sessionStorage.removeItem(CACHE_KEY);
-
-                    closeTxModal();
-                    await loadTransactions();
+                        toggleUI(form);
+                    },
+                    onBeforeSubmit: (fd)=>{
+                        // normaliza amount (1.234,56 -> 1234.56)
+                        const raw = fd.get('amount');
+                        if (raw != null){
+                            const cleaned = String(raw).replace(/[^\d,.,-]/g,'').replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',', '.');
+                            fd.set('amount', cleaned);
+                        }
+                        return fd;
+                    },
                 });
 
-                function closeAll() {
-                    document.querySelectorAll('.swipe-item.open-left,.swipe-item.open-right').forEach(li => li.classList.remove('open-left', 'open-right'));
+                // ===== UI condicional do modal (mesmo comportamento do form antigo)
+                function toggleUI(scope){
+                    const $ = (sel)=> scope.querySelector(sel);
+                    const pay = $('#pix')?.checked ? 'pix' : ($('#card')?.checked ? 'card' : ($('#money')?.checked ? 'money' : null));
+                    const rec = $('#custom')?.checked ? 'custom' : ($('#monthly')?.checked ? 'monthly' : ($('#yearly')?.checked ? 'yearly' : 'unique'));
+                    const catSel = document.getElementById('tx_cat');
+                    const catType = normType(catSel?.selectedOptions?.[0]?.dataset?.type);
+                    const invest = (catType === 'investimento');
+
+                    const cardType  = document.getElementById('tx_card_type');
+                    const pixAcc    = document.getElementById('tx_pix_acc');
+                    const cardSel   = document.getElementById('tx_card_select');
+                    const instCon   = document.getElementById('installments'); // pode não existir
+                    const altRow    = document.getElementById('tx_alt_row');
+                    const altSel    = document.getElementById('tx_alt_select');
+                    const savingW   = document.getElementById('tx_saving_wrap');
+                    const termRow   = document.getElementById('tx_term_row');
+                    const occWrap   = document.getElementById('tx_occ');
+
+                    const credit = document.getElementById('credit');
+                    const debit  = document.getElementById('debit');
+
+                    // investimento não permite crédito
+                    if (credit){
+                        credit.disabled = invest;
+                        if (invest && credit.checked){ credit.checked=false; if (debit) debit.checked=true; }
+                    }
+
+                    const isCard = (pay === 'card');
+                    const isCred = isCard && credit?.checked;
+                    const isRec  = (rec !== 'unique');
+
+                    cardType?.classList.toggle('hidden', !isCard);
+                    pixAcc?.classList.toggle('hidden', !(pay==='pix' || pay==='money'));
+                    // card select aparece se cartão e NÃO alternando
+                    const showAlt  = !!(isCred && isRec);
+                    const altOn    = document.getElementById('alternate_cards')?.checked;
+                    altRow?.classList.toggle('hidden', !showAlt);
+                    altSel?.classList.toggle('hidden', !(showAlt && altOn));
+                    cardSel?.classList.toggle('hidden', !(isCard && !(showAlt && altOn)));
+
+                    // parcelas: só crédito + única (se você quiser, crie o input com id="installments")
+                    if (instCon){
+                        const showInst = !!(isCred && !isRec);
+                        instCon.closest('.row, .grid, div')?.classList?.toggle('hidden', !showInst);
+                    }
+
+                    // recorrência/termino/ocorrências
+                    termRow?.classList.toggle('hidden', rec==='unique');
+                    const hasEnd = document.getElementById('has_end')?.checked;
+                    occWrap?.classList.toggle('hidden', !(hasEnd && rec!=='unique'));
+
+                    // recorrência custom
+                    document.getElementById('tx_custom_rec')?.classList.toggle('hidden', rec!=='custom');
+
+                    // cofrinho: só investimento
+                    savingW?.classList.toggle('hidden', !invest);
                 }
 
-                let suppressShowUntil = 0;
-                const suppressShow = (ms = 800) => {
-                    suppressShowUntil = Date.now() + ms;
-                };
-
-                function dragTranslate(item, px) {
-                    const content = item.querySelector('.swipe-content');
-                    content.style.transition = 'none';
-                    const clamp = Math.max(-OPEN_W, Math.min(OPEN_W, px));
-                    content.style.transform = `translateX(${clamp}px)`;
-                }
-
-                function restoreTransition(item) {
-                    const content = item.querySelector('.swipe-content');
-                    requestAnimationFrame(() => content.style.transition = 'transform 160ms ease');
-                }
-
-                function onStart(e) {
-
-                    if (document.body.classList.contains('modal-open')) return;
-
-                    const li = e.target.closest('.swipe-item');
-                    if (!li) return;
-                    closeAll();
-                    swipe.active = li;
-                    swipe.dragging = true;
-                    swipe.startX = (e.touches ? e.touches[0].clientX : e.clientX);
-                    li.querySelector('.swipe-content').style.transition = 'none';
-                }
-
-                function onMove(e) {
-                    if (document.body.classList.contains('modal-open')) return;
-
-                    if (!swipe.dragging || !swipe.active) return;
-                    const x = (e.touches ? e.touches[0].clientX : e.clientX);
-                    const dx = x - swipe.startX;
-                    let base = 0;
-                    if (swipe.active.classList.contains('open-left')) base = -OPEN_W;
-                    if (swipe.active.classList.contains('open-right')) base = OPEN_W;
-                    const move = base + dx;
-                    if (move < 0) dragTranslate(swipe.active, Math.max(move, -OPEN_W));
-                    else dragTranslate(swipe.active, Math.min(move, OPEN_W));
-                }
-
-                function onEnd() {
-                    if (document.body.classList.contains('modal-open')) return;
-
-                    if (!swipe.dragging || !swipe.active) return;
-                    const content = swipe.active.querySelector('.swipe-content');
-                    restoreTransition(swipe.active);
-                    const m = new WebKitCSSMatrix(getComputedStyle(content).transform);
-                    const finalX = m.m41;
-                    swipe.active.classList.remove('open-left', 'open-right');
-                    if (finalX <= -TH_OPEN) swipe.active.classList.add('open-left');
-                    else if (finalX >= TH_OPEN) swipe.active.classList.add('open-right');
-                    content.style.transform = '';
-                    swipe.dragging = false;
-                    swipe.active = null;
-                }
-
-                list.addEventListener('touchstart', onStart, {passive: true});
-                list.addEventListener('mousedown', onStart);
-                window.addEventListener('touchmove', onMove, {passive: false});
-                window.addEventListener('mousemove', onMove);
-                window.addEventListener('touchend', onEnd);
-                window.addEventListener('mouseup', onEnd);
-                document.addEventListener('click', (e) => {
-                    if (!e.target.closest('.swipe-item')) closeAll();
-                });
-
-                async function handleEdit(id) {
-                    const cached = detailCache.get(id);
-                    if (cached) openTxModal('edit', cached);
-                    try {
-                        const tx = await http.get(showUrl(id), {
-                            timeout: 6000,
-                            headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}
-                        });
-                        openTxModal('edit', tx);
-                        detailCache.set(id, tx);
-                    } catch (e) {
-                        if (e.message?.includes('401')) {
-                            location.href = '/transaction';
-                            return;
+                // binds de mudança dentro do modal
+                (function bindModalUI(){
+                    const modal = document.querySelector('#txModal');
+                    if (!modal) return;
+                    modal.addEventListener('change', (e)=> {
+                        const t = e.target;
+                        // exclusividade das "checkbox" de opção única
+                        if (['pix','card','money'].includes(t.id) && t.checked){
+                            ['pix','card','money'].forEach(id => { if (id!==t.id) { const el=document.getElementById(id); if(el) el.checked=false; }});
                         }
-                        if (!cached) list.innerHTML = `<p style="padding:8px;color:#666">Sem conexão. Tente novamente.</p>`;
-                    }
-                }
-
-                function handleAskDelete(id) {
-                    pendingDeleteId = id;
-                    openConfirm();
-                }
-
-                list.addEventListener('touchstart', (e) => {
-                    if (document.body.classList.contains('modal-open')) return;
-                    const btn = e.target.closest('.swipe-edit-btn, .swipe-delete-btn');
-                    if (!btn) return;
-
-                    e.preventDefault(); // evita click fantasma
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-
-                    suppressShow(); // idem
-
-                    const li = btn.closest('.swipe-item');
-                    const id = li?.dataset.id;
-                    if (!id) return;
-
-                    if (btn.classList.contains('swipe-edit-btn')) handleEdit(id);
-                    else handleAskDelete(id);
-                }, {capture: true, passive: false});
-
-                list.addEventListener('pointerdown', (e) => {
-                    if (document.body.classList.contains('modal-open')) return; // <- aqui
-
-                    const btn = e.target.closest('.swipe-edit-btn, .swipe-delete-btn');
-                    if (!btn) return;
-
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-
-                    suppressShow();
-
-                    const li = btn.closest('.swipe-item');
-                    const id = li?.dataset.id;
-                    if (!id) return;
-
-                    if (btn.classList.contains('swipe-edit-btn')) {
-                        handleEdit(id);
-                    } else {
-                        handleAskDelete(id);
-                    }
-                }, true);
-
-                list.addEventListener('click', (e) => {
-                    if (document.body.classList.contains('modal-open')) return; // <- aqui
-
-                    if (e.target.closest('.swipe-edit-btn, .swipe-delete-btn')) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        e.stopImmediatePropagation();
-                    }
-                }, true);
-
-                list.addEventListener('click', async (e) => {
-                    if (Date.now() < suppressShowUntil) return;
-
-                    const content = e.target.closest('.swipe-content');
-
-                    if (!content) return;
-
-                    const li = content.closest('.swipe-item');
-                    if (!li) return;
-
-                    if (li.classList.contains('open-left') || li.classList.contains('open-right')) {
-                        closeAll();
-                        return;
-                    }
-
-                    const id = li.dataset.id;
-                    currentId = id;
-
-                    try {
-                        const tx = await http.get(`{{ url('/transactions') }}/${id}`, {
-                            timeout: 6000,
-                            headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}
-                        });
-
-                        openTxModal('show', tx);
-                    } catch (err) {
-                        alert(err.message);
-                    }
-                });
-
-                async function doDelete() {
-                    if (!pendingDeleteId) return;
-
-                    const res = await fetch(`{{ url('/transactions') }}/${pendingDeleteId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
+                        if (['unique','monthly','yearly','custom'].includes(t.id) && t.checked){
+                            ['unique','monthly','yearly','custom'].forEach(id => { if (id!==t.id) { const el=document.getElementById(id); if(el) el.checked=false; }});
                         }
+                        if (['credit','debit'].includes(t.id) && t.checked){
+                            ['credit','debit'].forEach(id => { if (id!==t.id) { const el=document.getElementById(id); if(el) el.checked=false; }});
+                        }
+                        toggleUI(modal);
                     });
+                    modal.querySelector('#tx_cat')?.addEventListener('change', ()=>toggleUI(modal));
+                    modal.querySelector('#alternate_cards')?.addEventListener('change', ()=>toggleUI(modal));
+                })();
 
-                    if (!res.ok) {
-                        alert('Erro ao excluir');
-                        return;
-                    }
+                // ===== Boot com skeleton e primeira carga
+                (function boot(){
+                    const g = document.getElementById('txGrid');
+                    const sk = `
+                        <article class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft">
+                          <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                              <span class="size-12 rounded-xl skel"></span>
+                              <div class="w-40 space-y-2">
+                                <div class="h-4 skel"></div>
+                                <div class="h-3 w-24 skel"></div>
+                              </div>
+                            </div>
+                            <div class="h-8 w-24 rounded-lg skel"></div>
+                          </div>
+                          <div class="mt-4 grid grid-cols-2 gap-3">
+                            <div class="h-16 rounded-xl skel"></div>
+                            <div class="h-16 rounded-xl skel"></div>
+                          </div>
+                        </article>`;
+                    g.innerHTML = sk + sk + sk + sk;
 
-                    const li = list.querySelector(`.swipe-item[data-id="${pendingDeleteId}"]`);
-
-                    if (li) li.remove();
-                    pendingDeleteId = null;
-
-                    sessionStorage.removeItem(CACHE_KEY);
-                    detailCache.delete(pendingDeleteId);
-
-                    const cEl = document.getElementById('confirmDeleteModal');
-
-                    if (window.bootstrap && cEl) window.bootstrap.Modal.getInstance(cEl)?.hide();
-
-                    pendingDeleteId = null;
-                }
-
-                const confirmBtn = document.getElementById('confirmDeleteBtn');
-                if (confirmBtn) confirmBtn.addEventListener('click', doDelete);
-
-                const openBtn = document.getElementById('openModal');
-
-                openBtn?.addEventListener('click', () => {
-                    currentId = null;
-                    openTxModal('create', null);
-                });
-
-                const closeBtn = document.getElementById('closeModal');
-                if (closeBtn) closeBtn.addEventListener('click', closeTxModal);
-
-                loadTransactions();
+                    reloadWithFilters();
+                })();
             })();
         </script>
     @endpush
 @endsection
-

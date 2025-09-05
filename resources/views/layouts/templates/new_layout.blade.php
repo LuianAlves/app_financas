@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>UX/UI Demo • Banking Webapp + Dashboard</title>
 
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <script>
         (function () {
             try {
@@ -69,7 +71,9 @@
             }
         }
 
-         #accFab { z-index: 80; }
+        #accFab {
+            z-index: 80;
+        }
 
         body.ui-modal-open #accFab,
         body.ui-sheet-open #accFab {
@@ -382,9 +386,13 @@ dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-bra
 
     document.addEventListener('DOMContentLoaded', syncThemeUI);
 
-    // Marca item ativo no bottom nav ao rolar (mobile)
     const tabs = document.querySelectorAll('[data-tab]');
-    const sections = Array.from(tabs).map(a => document.querySelector(a.getAttribute('href')));
+    const sections = Array.from(tabs)
+        .map(a => a.getAttribute('href'))
+        .filter(href => href && href.startsWith('#'))
+        .map(sel => document.querySelector(sel))
+        .filter(Boolean);
+
     const io = new IntersectionObserver((entries) => {
         entries.forEach(e => {
             const i = sections.indexOf(e.target);

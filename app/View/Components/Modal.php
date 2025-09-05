@@ -8,15 +8,11 @@ use Illuminate\View\Component;
 
 class Modal extends Component
 {
-   public $modalId;
-   public $formId;
-   public $pathForm;
+   public $id;
 
-    public function __construct($modalId, $formId, $pathForm)
+    public function __construct($id = null)
     {
-        $this->modalId = $modalId;
-        $this->formId = $formId;
-        $this->pathForm = $pathForm;
+        $this->id = $id;
     }
 
     /**

@@ -149,6 +149,7 @@ class DashboardController extends Controller
 
     private function buildWindowEvents(Collection $userIds, Carbon $winStart, Carbon $winEnd): Collection
     {
+        $seenTxDate = [];
         $events = collect();
 
         $paidIdx = $this->paymentsIndex($userIds);
@@ -245,6 +246,12 @@ class DashboardController extends Controller
         foreach ($uniqueTx as $t) {
             $cat  = $t->transactionCategory;
             $type = in_array($cat?->type, ['entrada','despesa','investimento'], true) ? $cat->type : 'investimento';
+
+            $day = \Carbon\Carbon::parse($t->date)->toDateString();
+            $key = $t->id.'|'.$day;
+            if (!empty($seenTxDate[$key])) continue;
+            $seenTxDate[$key] = true;
+
             $events->push([
                 'id'    => $t->id,
                 'title' => $t->title ?? $cat?->name,
@@ -303,24 +310,36 @@ class DashboardController extends Controller
                 $m = $winStart->copy()->startOfMonth();
                 while ($m->lte($winEnd)) {
                     $occ = $m->copy()->day(min($paymentDay, $m->daysInMonth));
+                    $ym  = $occ->format('Y-m');
 
-                    $ym = $occ->format('Y-m');
-                    if (!empty($paidIdx[$t->id][$ym])) { $m->addMonth(); continue; }
+                    if (empty($paidIdx[$t->id][$ym]) && $occ->gte($startBase)) {
+                        $day = $occ->toDateString();
+                        $key = $t->id.'|'.$day;
+                        if (empty($seenTxDate[$key])) {
+                            $seenTxDate[$key] = true;
+                            $events->push($this->ev($r->id, 'm', $t, $cat, $type, $occ, $amount));
+                        }
+                    }
 
-                    if ($occ->gte($startBase)) $events->push($this->ev($r->id,'m',$t,$cat,$type,$occ,$amount));
+                    // sempre avança o mês
                     $m->addMonth();
                 }
             } else { // yearly
                 $anchorMonth = (int) $startBase->month;
                 for ($y = $winStart->year; $y <= $winEnd->year; $y++) {
                     $daysIn = Carbon::create($y, $anchorMonth, 1)->daysInMonth;
-                    $occ = Carbon::create($y, $anchorMonth, min($paymentDay, $daysIn));
+                    $occ    = Carbon::create($y, $anchorMonth, min($paymentDay, $daysIn));
 
                     $ym = $occ->format('Y-m');
-                    if (!empty($paidIdx[$t->id][$ym])) { continue; }
+                    if (!empty($paidIdx[$t->id][$ym])) continue;
 
                     if ($occ->betweenIncluded($winStart, $winEnd) && $occ->gte($startBase)) {
-                        $events->push($this->ev($r->id,'y',$t,$cat,$type,$occ,$amount));
+                        $day = $occ->toDateString();
+                        $key = $t->id.'|'.$day;
+                        if (!empty($seenTxDate[$key])) continue; // <- aqui NÃO use $m
+                        $seenTxDate[$key] = true;
+
+                        $events->push($this->ev($r->id, 'y', $t, $cat, $type, $occ, $amount));
                     }
                 }
             }
@@ -368,6 +387,11 @@ class DashboardController extends Controller
                 if (!empty($paidByDate[$t->id][$ymd])) continue;
 
                 if (!$occ->betweenIncluded($winStart, $winEnd)) continue;
+
+                $day = $occ->toDateString();
+                $key = $t->id.'|'.$day;
+                if (!empty($seenTxDate[$key])) continue;
+                $seenTxDate[$key] = true;
 
                 $events->push($this->ev($r->id,'c',$t,$cat,$type,$occ,(float)$ci->amount,$ci->custom_occurrence_number));
             }
@@ -417,15 +441,11 @@ class DashboardController extends Controller
             while ($cursor->lte($winEnd)) {
                 if ($cursor->gte($start)) {
                     $ymd = $cursor->toDateString();
-                    if (!empty($paidByDate[$t->id][$ymd])) {
-                        $cursor = $this->normalizeW(
-                            $cursor->copy()->addDays($interval),
-                            (bool)$r->include_sat,
-                            (bool)$r->include_sun
-                        );
-                        continue; // só essa ocorrência foi paga, não o mês todo
+                    $key = $t->id.'|'.$ymd;
+                    if (empty(($paidByDate[$t->id] ?? [])[$ymd]) && empty($seenTxDate[$key])) {
+                        $seenTxDate[$key] = true;
+                        $events->push($this->ev($r->id, 'd', $t, $cat, $type, $cursor, (float)$r->amount));
                     }
-                    $events->push($this->ev($r->id, 'd', $t, $cat, $type, $cursor, (float)$r->amount));
                 }
                 $cursor = $this->normalizeW(
                     $cursor->copy()->addDays($interval),

@@ -96,6 +96,8 @@
                     </div>
 
                     <form id="tcatForm" class="mt-4 grid gap-3">
+                        <div id="trFormErr" class="hidden mb-2 rounded-lg bg-red-50 text-red-700 text-sm px-3 py-2"></div>
+
                         <input type="hidden" id="cat_id" name="id"/>
                         <input type="hidden" id="icon" name="icon" value="fa-solid fa-tags"/>
                         <input type="hidden" id="has_limit" name="has_limit" value="0"/>
@@ -218,7 +220,6 @@
 
             const grid = document.getElementById('tcatGrid');
             const fab = document.getElementById('tcatFab');
-
             const modal = document.getElementById('tcatModal');
             const overlay = document.getElementById('tcatOverlay');
             const btnOpeners = document.querySelectorAll('[data-open-modal="tcat"]');
@@ -226,7 +227,6 @@
             const btnCancel = document.getElementById('tcatCancel');
             const form = document.getElementById('tcatForm');
             const title = document.getElementById('tcatTitle');
-
             const color = document.getElementById('color');
             const colorHex = document.getElementById('color_hex');
 
@@ -263,7 +263,6 @@
                 });
             });
 
-
             // Cache
             const CAT_CACHE_KEY = 'tcat_cache_v1';
 
@@ -281,6 +280,20 @@
                 if (s.includes(',')) return parseFloat(s.replace(',','.')) || 0;
                 return parseFloat(s) || 0;
             };
+
+            function clearFormErrors(){
+                clearFieldError(trTo, 'trToErr');
+                clearFieldError(trAmount, 'trAmountErr');
+
+                const g = document.getElementById('formError');
+                if (g){ g.classList.add('hidden'); g.textContent=''; }
+            }
+
+            function showFormError(msg){
+                const g = document.getElementById('formError');
+                if (g){ g.textContent = msg || 'Erro ao enviar'; g.classList.remove('hidden'); }
+            }
+
             function readCache(){ try{ return JSON.parse(localStorage.getItem(CAT_CACHE_KEY)) || null; }catch{ return null; } }
             function writeCache(categories){ try{ localStorage.setItem(CAT_CACHE_KEY, JSON.stringify({categories, t: Date.now()})); }catch{} }
             function showGridOverlay(){ grid.classList.add('grid-loading'); }

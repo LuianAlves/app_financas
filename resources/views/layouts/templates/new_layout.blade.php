@@ -60,11 +60,9 @@
     @php
         $styleCssPath = public_path('assets/css/new_style.css');
     @endphp
+
     <link href="{{ asset('assets/css/new_style.css') }}?v={{ file_exists($styleCssPath) ? filemtime($styleCssPath) : time() }}" rel="stylesheet">
 </head>
-{{--<body class="min-h-screen text-neutral-900 dark:text-neutral-100
-bg-gradient-to-b from-brand-50/60 to-white
-dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-brand-200 selection:text-neutral-900">--}}
 <body class="min-h-screen text-neutral-900 dark:text-neutral-100
              bg-white
              dark:bg-gradient-to-b dark:from-neutral-950 dark:to-neutral-900 selection:bg-brand-200 selection:text-neutral-900">

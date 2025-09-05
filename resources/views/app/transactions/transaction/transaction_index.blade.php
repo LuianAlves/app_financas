@@ -17,11 +17,11 @@
             /* ===== filtros / tabs / chips ===== */
             :root{--ink:#1F2937;--muted:#6B7280;--line:rgba(0,0,0,.08);--accent:#00BFA6}
             .tx-tab{font-size:.78rem;letter-spacing:.02em;font-weight:600;color:var(--muted);padding:.5rem .75rem;border-radius:.5rem}
-            .tx-tab.active{background:var(--accent);color:#fff}
+            .tx-tab.active{background: #2563eb;color:#fff}
             #stSubcats{display:flex;gap:.5rem;flex-wrap:wrap}
             #stSubcats .chip{font-size:.75rem;letter-spacing:.02em;font-weight:600;display:inline-flex;align-items:center;gap:.4rem;
                 padding:.35rem .6rem;border:1px solid var(--line);border-radius:.45rem;background:#fff;color:#334155}
-            #stSubcats .chip.active{background:rgba(0,191,166,.10);color:var(--accent);border-color:var(--accent)}
+            #stSubcats .chip.active{background:#2563eb1a;color:#2563eb;border-color:#2563eb}
             #stSubcats .dot{width:.5rem;height:.5rem;border-radius:999px;background:currentColor;display:inline-block}
             #txModal [data-crud-body]{
                 max-height: 70vh;
@@ -101,9 +101,9 @@
 
             <div class="mt-3 flex justify-end">
                 <button id="stApply"
-                        class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
+                        class="inline-flex items-center p-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
                     <i class="fa fa-magnifying-glass text-[12px]"></i>
-                    <span class="text-[14px] tracking-wide">Aplicar</span>
+                    <span class="text-[14px] tracking-wide"></span>
                 </button>
             </div>
         </div>

@@ -3,7 +3,62 @@
 @section('new-content')
     @push('styles')
         <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+
         <style>
+            /* Calendário 100% + sem sombra (mantém tua regra) */
+            .flatpickr-calendar.animate.inline.arrowTop{
+                width:100% !important;
+                box-shadow:none !important;
+                background:transparent !important;                /* bg “vaza” do container */
+                border-radius:.75rem !important;
+            }
+
+            /* remove o triângulo do “balão” */
+            .flatpickr-calendar:before,
+            .flatpickr-calendar:after{ display:none !important; }
+
+            /* deixa o grid elástico */
+            .flatpickr-days,
+            .flatpickr-days .dayContainer{
+                width:100% !important; max-width:100% !important; min-width:0 !important; border:0 !important;
+            }
+
+            /* ----- Dark mode: texto/ícones claros + borda ----- */
+            .dark .flatpickr-calendar.animate.inline.arrowTop{
+                background:transparent !important;
+            }
+
+            /* títulos/ano/mes e cabeçalhos */
+            .dark .flatpickr-months .flatpickr-month,
+            .dark .flatpickr-current-month .cur-month,
+            .dark .flatpickr-current-month input.cur-year,
+            .dark .flatpickr-weekday{
+                color:#e5e7eb !important;
+            }
+
+            /* setas de navegação */
+            .dark .flatpickr-prev-month svg,
+            .dark .flatpickr-next-month svg{
+                stroke:#e5e7eb !important; fill:none !important;
+            }
+
+            /* dias (normais / fora do mês / desabilitados) */
+            .dark .flatpickr-day{ color:#e5e7eb !important; background:transparent !important; }
+            .dark .flatpickr-day.otherMonthDay,
+            .dark .flatpickr-day.prevMonthDay,
+            .dark .flatpickr-day.nextMonthDay{ color:#9ca3af !important; }
+            .dark .flatpickr-day.disabled{ color:#6b7280 !important; }
+
+            /* hover/“hoje”/selecionado coerentes com a brand */
+            .dark .flatpickr-day:hover{ background:rgba(255,255,255,.06) !important; }
+            .dark .flatpickr-day.today:not(.selected){ border-color:#93c5fd !important; }
+            .dark .flatpickr-day.selected,
+            .dark .flatpickr-day.startRange,
+            .dark .flatpickr-day.endRange{
+                background:#2563eb !important; border-color:#2563eb !important; color:#fff !important;
+            }
+
+
             .shimmer.is-loading{position:relative}
             .shimmer.is-loading::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:skel 1.1s infinite;opacity:.35;pointer-events:none}
             .dark .shimmer.is-loading::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);opacity:.6}
@@ -14,7 +69,6 @@
             .icon-button{min-width:88px;display:flex;justify-content:center}
             .icon-button i{font-size:20px}
             .price-default{font-variant-numeric:tabular-nums}
-            .late{color:#dc2626}
         </style>
     @endpush
 
@@ -113,38 +167,40 @@
 
         {{-- atalhos do hero --}}
         <div id="atalhos" class="mt-5 grid grid-cols-4 gap-2 md:gap-3">
-            <a href="{{ route('transaction-view.index') }}" class="group flex flex-col items-center gap-2 p-3 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
-                        <span class="grid place-items-center size-10 rounded-xl bg-white/80 text-brand-600">
-                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            <a href="{{ route('account-view.index') }}" class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                        <span class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
+                            <i class="fas fa-landmark text-white"></i>
                         </span>
-                <span class="text-xs">Adicionar</span>
+                <span class="text-xs">Contas</span>
             </a>
-            <a href="{{ route('account-view.index') }}" class="group flex flex-col items-center gap-2 p-3 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
-                        <span class="grid place-items-center size-10 rounded-xl bg-white/80 text-brand-600">
-                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12H2"/><path d="m15 5-7 7 7 7"/></svg>
+            <a href="{{ route('transaction-view.index') }}" class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                        <span class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
+                            <i class="fa-solid fa-cart-plus text-white"></i>
                         </span>
-                <span class="text-xs">Transferir</span>
+                <span class="text-xs">Transações</span>
             </a>
-            <a href="{{ route('transaction-view.index') }}" class="group flex flex-col items-center gap-2 p-3 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
-                        <span class="grid place-items-center size-10 rounded-xl bg-white/80 text-brand-600">
-                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+            <a href="{{ route('transaction-view.index') }}" class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                        <span class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
+                             <i class="fas fa-credit-card text-white"></i>
                         </span>
-                <span class="text-xs">Pagar</span>
+                <span class="text-xs">Cartões</span>
             </a>
             <a href="{{ url()->current() . '?month=' . $startOfMonth->format('Y-m') }}"
-               class="group flex flex-col items-center gap-2 p-3 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
-                        <span class="grid place-items-center size-10 rounded-xl bg-white/80 text-brand-600">
-                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4"/><path d="M20 11H8"/><path d="M20 15H4"/><path d="M20 19H8"/></svg>
+               class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                        <span class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
+                            <i class="fas fa-chart-line text-white"></i>
                         </span>
-                <span class="text-xs">Extrato</span>
+                <span class="text-xs">Investimentos</span>
             </a>
         </div>
 
         {{-- Calendário --}}
         <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3">
             <div id="calendar"></div>
-            <div id="calendar-results" class="py-3"></div>
         </div>
+
+        <div id="calendar-results" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3"></div>
+
 
         {{-- Próximos pagamentos (card/list do template) --}}
         <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
@@ -162,7 +218,7 @@
                             <p class="text-xs text-neutral-500 dark:text-neutral-400">{{ \Carbon\Carbon::parse($item['date'])->format('d/m/Y') }}</p>
                         </div>
                         <div class="text-right flex items-center gap-3">
-                            <p class="text-sm font-semibold text-red-600 dark:text-red-400">- {{ brlPrice($item['amount']) }}</p>
+                            <p class="text-sm font-semibold">- {{ brlPrice($item['amount']) }}</p>
 
                             @if($item['kind'] === 'tx')
                                 <button type="button"
@@ -230,7 +286,7 @@
                             @endif
                         </div>
                         <div class="text-right">
-                            <p class="text-sm font-semibold {{ $categoryType === 'despesa' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400' }}">
+                            <p class="text-sm font-semibold">
                                 {{ $categoryType === 'despesa' ? '-' : '+' }} {{ brlPrice($transaction->amount) }}
                             </p>
                         </div>
@@ -637,7 +693,7 @@
 
                     let html = `<h2 class="mt-3 text-lg font-semibold">Lançamentos do dia ${br(dateStr)}</h2>`;
                     if (!eventos.length){
-                        html += `<div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card">
+                        html += `<div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card ">
                                     <span class="size-10 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800"><i class="fa-solid fa-sack-dollar"></i></span>
                                     <div class="text-sm">Nenhum lançamento.</div><div></div>
                                  </div>`;
@@ -670,14 +726,14 @@
                         }
 
                         html += `
-                        <div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card">
+                        <div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card ">
                             <span class="size-10 grid place-items-center rounded-xl text-white" style="background-color:${bgColor}"><i class="${iconCls}"></i></span>
                             <div>
                                 <p class="text-sm font-medium">${ev.descricao}</p>
                                 <p class="text-xs text-neutral-500 dark:text-neutral-400">${br(dateStr)}</p>
                             </div>
                             <div class="text-right flex items-center gap-3">
-                                <p class="text-sm font-semibold ${isPaidInv ? 'text-sky-500' : (ev.tipo==='despesa'?'text-red-600 dark:text-red-400':'text-emerald-600 dark:text-emerald-400')}">${sinal} ${amountHtml}</p>
+                                <p class="text-sm font-semibold">${sinal} ${amountHtml}</p>
                                 ${action}
                             </div>
                         </div>`;

@@ -63,5 +63,9 @@
 
     @stack('styles')
 
-    <link href="{{ asset('assets/css/style.css') }}" rel="stylesheet">
+    @php
+        $styleCssPath = public_path('assets/css/style.css');
+    @endphp
+
+    <link href="{{ asset('assets/css/style.css') }}?v={{ file_exists($styleCssPath) ? filemtime($styleCssPath) : time() }}" rel="stylesheet">
 </head>

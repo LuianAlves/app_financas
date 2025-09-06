@@ -84,15 +84,6 @@
         <!-- Lista -->
         <div id="accGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
 
-        <!-- FAB (mobile) -->
-        <button id="accFab" type="button" data-open-modal="acc"
-                class="md:hidden fixed bottom-20 right-4 z-[80] size-14 rounded-2xl grid place-items-center text-white shadow-lg bg-brand-600 hover:bg-brand-700 active:scale-95 transition"
-                aria-label="Nova conta">
-            <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 5v14M5 12h14"/>
-            </svg>
-        </button>
-
         <!-- Modal Conta -->
         <div id="accModal" class="fixed inset-0 z-[60] hidden" role="dialog" aria-modal="true"
              aria-labelledby="accModalTitle">
@@ -257,8 +248,16 @@
                 </div>
             </div>
         </div>
-
     </section>
+
+    <!-- FAB (mobile) -->
+    <button id="accFab" type="button" data-open-modal="acc"
+            class="md:hidden fixed bottom-20 right-4 z-[80] size-14 rounded-2xl grid place-items-center text-white shadow-lg bg-brand-600 hover:bg-brand-700 active:scale-95 transition"
+            aria-label="Nova conta">
+        <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14"/>
+        </svg>
+    </button>
 
     @push('scripts')
         <script src="{{ asset('assets/js/common/crud-model.js') }}"></script>
@@ -321,12 +320,10 @@
                 // FAB toggle
                 function updateFabVisibility(has) {
                     if (!accFab) return;
-                    accFab.classList.toggle('md:hidden', has); // desktop: esconde se tiver contas
-                    if (window.matchMedia('(min-width:768px)').matches) {
-                        accFab.style.display = has ? 'none' : 'grid';
-                    } else {
-                        accFab.style.display = '';
-                    }
+                    const isDesktop = window.matchMedia('(min-width:768px)').matches;
+                    // mobile: SEMPRE visível
+                    // desktop: esconde se houver contas
+                    accFab.style.display = (isDesktop && has) ? 'none' : 'grid';
                 }
 
                 // Skeleton
@@ -691,8 +688,13 @@
                 });
 
                 // ---------- Boot
-                window.addEventListener('DOMContentLoaded', ()=>{
-                    accFab?.classList.remove('hidden'); // mostra FAB sempre (mobile), desktop depende do updateFabVisibility
+                window.addEventListener('DOMContentLoaded', () => {
+                    updateFabVisibility(false); // mostra já no first paint
+                });
+
+                window.addEventListener('resize', () => {
+                    const has = !!document.querySelector('#accGrid article[data-id]');
+                    updateFabVisibility(has);
                 });
             })();
         </script>

@@ -185,11 +185,11 @@
             </div>
 
             <div class="mt-3 grid md:grid-cols-[360px_1fr] gap-4 items-start">
-                <div class="p-3 rounded-xl">
+                <ul id="pieLegend" class="flex flex-wrap gap-3 max-h-24 overflow-auto"></ul>
+
+                <div class="rounded-xl">
                     <canvas id="pieChart" class="w-full h-[280px]"></canvas>
                 </div>
-                <ul id="pieLegend" class="flex flex-wrap gap-3 max-h-24 overflow-auto mb-2"></ul>
-
                 <div>
                     <ul id="pieList" class="divide-y divide-neutral-200/70 dark:divide-neutral-800/70"></ul>
                 </div>

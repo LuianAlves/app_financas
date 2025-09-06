@@ -344,9 +344,16 @@
 
                 function toggleFab(hasAccounts) {
                     if (!accFab) return;
+                    // controla classe tailwind
                     accFab.classList.toggle('md:hidden', hasAccounts);
-                    accFab.classList.remove('hidden');
+                    // fallback direto no display no desktop
+                    if (window.matchMedia('(min-width:768px)').matches) {
+                        accFab.style.display = hasAccounts ? 'none' : 'grid';
+                    } else {
+                        accFab.style.display = '';
+                    }
                 }
+
 
                 function renderSkeletons(n = 4) {
                     const item = `
@@ -481,6 +488,7 @@
                         grid.innerHTML = accounts.length ? accounts.map(a => cardTemplate(a, map)).join('')
                             : `<div class="text-sm text-neutral-500">Nenhuma conta cadastrada.</div>`;
 
+                        toggleFab(accounts.length > 0);
                         writeCache(accounts, savings);
                     } catch (e) {
                         console.error(e);

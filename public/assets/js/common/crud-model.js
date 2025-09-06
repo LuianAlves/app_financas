@@ -1,8 +1,3 @@
-/*!
-* CrudLite v1.0 – VANILLA JS
-* Recursos: lista (index), show, create, edit, delete, modal, form-binding, 422 errors, cache+skeleton.
-* Dependências: nenhuma.
-*/
 (function (global) {
     function qs(sel, root = document) {
         return root.querySelector(sel);

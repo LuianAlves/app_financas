@@ -232,6 +232,8 @@ class ChartController extends Controller
                     ];
                 })->sortByDesc('value')->values();
 
+                $rows = $rows->map(fn($r)=>self::paint($r));
+
                 return response()->json([
                     'mode'=>'tx','level'=>'category','title'=>'Categorias ('.ucfirst($type).')',
                     'breadcrumbs'=>$breadcrumbs,'items'=>$rows,'total'=>$rows->sum('value'),

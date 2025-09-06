@@ -1,7 +1,7 @@
 {{-- resources/views/app/digest/index.blade.php --}}
 @extends('layouts.templates.app')
 
-@section('content')
+@section('new-content')
     @push('styles')
         <style>
             h5  {

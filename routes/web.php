@@ -23,7 +23,7 @@ use App\Http\Controllers\Api\{
 };
 
 // Web Controllers
-use App\Http\Controllers\Web\{
+use App\Http\Controllers\Web\{ChartController,
     UserController as WebUserController,
     AccountController as WebAccountController,
     CardController as WebCardController,
@@ -35,8 +35,7 @@ use App\Http\Controllers\Web\{
     InvoiceController as WebInvoiceController,
     InvoiceItemController as WebInvoiceItemController,
     InvestmentController as WebInvestmentController,
-    PaymentController as WebPaymentController,
-};
+    PaymentController as WebPaymentController};
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [AuthController::class, 'welcome']);
@@ -120,6 +119,9 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
         Route::get('/calendar/events', [WebDashboardController::class, 'calendarEvents'])->name('calendar.events');
 
         Route::get('/lancamentos-do-dia', [DailyDigestController::class, 'index'])->name('digest.index');
+
+        // Charts
+        Route::get('/api/analytics/pie', [ChartController::class, 'pie'])->name('analytics.pie');
     });
 });
 

@@ -392,8 +392,11 @@ class ChartController extends Controller
                     $items = $ids->map(function($id) use ($txAcc,$payAcc){
                         $label = $txAcc[$id]->label ?? $payAcc[$id]->label ?? '(Sem conta)';
                         $value = (float)($txAcc[$id]->value ?? 0) + (float)($payAcc[$id]->value ?? 0);
-                        return ['id'=>$id,'label'=>$label,'value'=>$value,'color'=>'#93c5fd','next'=>null];
+                        $color = self::colorForKey((string)$id.$label);
+                        return ['id'=>$id,'label'=>$label,'value'=>$value,'color'=>$color,'next'=>null];
                     })->sortByDesc('value')->values();
+
+                    $items = $items->map(fn($r)=>self::paint($r));  // <<< não esqueça
 
                     return response()->json([
                         'mode'=>'tx','level'=>'instrument','title'=>'Contas',
@@ -584,7 +587,7 @@ class ChartController extends Controller
         return [$start, $end];
     }
 
-    private static function withAlpha(string $hex, string $alpha = '1a'): string
+    private static function withAlpha(string $hex, string $alpha = '82'): string
     {
         $hex = trim($hex);
         if ($hex === '') return '#94a3b8'.$alpha;        // fallback
@@ -603,9 +606,21 @@ class ChartController extends Controller
 
     private static function paint(array $row): array
     {
-        $c = $row['color'] ?? '#94a3b8';
-        $row['border'] = $c;
-        $row['bg']     = self::withAlpha($c, '1a');
+        $base = $row['color'] ?? self::colorForKey(($row['id'] ?? $row['label'] ?? 'x'));
+        $row['color']  = $base;              // mantém compat
+        $row['border'] = $base;              // borda sólida
+        $row['bg']     = self::withAlpha($base, '1a'); // fill com alpha
         return $row;
+    }
+
+    private static function colorForKey(string $key): string
+    {
+        $palette = [
+            '#89b4fa','#a6e3a1','#f38ba8','#94e2d5','#f9e2af',
+            '#fab387','#cba6f7','#f5c2e7','#74c7ec','#b4befe',
+            '#8bd5ca','#eed49f'
+        ];
+        $i = abs(crc32($key)) % count($palette);
+        return $palette[$i];
     }
 }

@@ -978,16 +978,30 @@
                     });
                 }
 
-                function renderList(items) {
-                    listEl.innerHTML = items.map(i => `
+                function renderList(items, visibleMask) {
+                    const rows = items
+                        .map((i, idx) => ({...i, __visible: visibleMask[idx]}))
+                        .filter(i => i.__visible);
+
+                    const total = rows.reduce((s, r) => s + (r.value || 0), 0);
+
+                    listEl.innerHTML = [
+                        // 1ª linha: somatória dinâmica
+                        `<li class="py-2 flex items-center justify-between font-semibold">
+       <span>Total visível</span><span>${currencyBRL(total)}</span>
+     </li>`,
+                        // Demais linhas
+                        ...rows.map(i => `
       <li class="py-2 flex items-center justify-between">
         <button class="text-left flex-1 pr-3 hover:underline" data-next='${JSON.stringify(i.next || null)}'>
           ${i.label}
         </button>
         <strong>${currencyBRL(i.value)}</strong>
       </li>
-    `).join('');
-                    // clique na lista = mesmo drill do gráfico
+    `)
+                    ].join('');
+
+                    // drill pela lista
                     listEl.querySelectorAll('button[data-next]').forEach(btn => {
                         btn.addEventListener('click', () => {
                             const next = JSON.parse(btn.getAttribute('data-next'));
@@ -997,45 +1011,53 @@
                 }
 
                 function renderChart(payload) {
-                    const labels = payload.items.map(i => i.label);
-                    const values = payload.items.map(i => i.value);
-                    const colors = payload.items.map(i => i.color || '#18dec7');
-
-                    const colorsBg = payload.items.map(i => i.bg);     // ex: #a6e3a11a
-                    const colorsBorder = payload.items.map(i => i.border); // ex: #a6e3a1
-
                     titleEl.textContent = payload.title || 'Distribuição';
                     renderCrumbs(payload.breadcrumbs || []);
                     backBtn.classList.toggle('hidden', state.stack.length === 0);
 
-                    if (state.chart) {
-                        state.chart.destroy();
-                    }
+                    const labels = payload.items.map(i => i.label);
+                    const values = payload.items.map(i => i.value);
+                    const bg     = payload.items.map(i => i.bg);
+                    const border = payload.items.map(i => i.border);
+
+                    if (state.chart) state.chart.destroy();
+
                     state.chart = new Chart(ctx, {
                         type: 'doughnut',
                         data: {
-                            labels: payload.items.map(i => i.label),
+                            labels,
                             datasets: [{
-                                data: payload.items.map(i => i.value),
-                                backgroundColor: colorsBg,
-                                borderColor: colorsBorder,
+                                data: values,
+                                backgroundColor: bg,
+                                borderColor: border,
                                 borderWidth: 1
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2), // alta resolução sem exagero
-                            elements: {
-                                arc: {
-                                    borderAlign: 'inner',         // borda desenhada “para dentro” (fica nítida)
-                                    hoverBorderWidth: 0,
-                                    hoverOffset: 0,
-                                    borderJoinStyle: 'round'      // suaviza junções
-                                }
-                            },
+                            devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+                            elements: { arc: { borderAlign: 'inner', hoverBorderWidth: 0, hoverOffset: 0, borderJoinStyle: 'round' } },
                             cutout: '65%',
-                            radius: '85%'
+                            radius: '85%',
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        label: ctx => `${ctx.label}: ${currencyBRL(ctx.parsed)}`
+                                    }
+                                },
+                                legend: {
+                                    onClick: (e, item, legend) => {
+                                        // toggle do slice
+                                        const index = item.index;
+                                        const meta = legend.chart.getDatasetMeta(0);
+                                        const el = meta.data[index];
+                                        el.hidden = !el.hidden;
+                                        legend.chart.update();
+                                        updateListAndTotal(); // <- refaz lista/total
+                                    }
+                                }
+                            }
                         }
                     });
 
@@ -1048,8 +1070,17 @@
                         if (next && next.level) pushAndLoad(next.level, next.params || {});
                     };
 
-                    renderList(payload.items);
+                    function updateListAndTotal() {
+                        const meta = state.chart.getDatasetMeta(0);
+                        const visibleMask = payload.items.map((_, i) => !(meta.data[i]?.hidden));
+                        renderList(payload.items, visibleMask); // só itens visíveis + total
+                    }
+
+                    // primeira renderização
                     state.lastPayload = payload;
+                    // expõe p/ reuso (ex.: re-render após tema)
+                    window.updatePieListAndTotal = updateListAndTotal;
+                    updateListAndTotal();
                 }
 
                 function pushAndLoad(level, params) {

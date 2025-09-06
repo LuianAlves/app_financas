@@ -113,8 +113,9 @@ class ChartController extends Controller
                     // 3.1 Transações do mês (sem 'card')
                     $txCat = DB::table('transactions as t')
                         ->join('transaction_categories as c','c.id','=','t.transaction_category_id')
-                        ->whereIn('t.user_id', $userIds) // se usa adicionais: ->whereIn('t.user_id', $userIds)
-                        ->where('c.type', $type)      // 'entrada' ou 'investimento'
+                        ->whereIn('t.user_id', $userIds)
+                        ->where('c.type','despesa')
+                        ->whereRaw("t.type <> 'card'") // <<< faltava isso
                         ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
                         ->selectRaw('c.id, c.name, COALESCE(c.color,"#18dec7") as color, SUM(t.amount) as value')
                         ->groupBy('c.id','c.name','c.color')
@@ -169,19 +170,48 @@ class ChartController extends Controller
                     ]);
                 }
 
-                // === entrada / investimento (original)
-                $rows = DB::table('transactions as t')
-                    ->join('transaction_categories as c', 'c.id', '=', 't.transaction_category_id')
+                // === entrada / investimento (corrigido: soma payments do mês)
+                $txCat = DB::table('transactions as t')
+                    ->join('transaction_categories as c','c.id','=','t.transaction_category_id')
+                    ->whereIn('t.user_id', $userIds)
+                    ->where('c.type', $type) // 'entrada' ou 'investimento'
+                    ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
+                    ->selectRaw('c.id, c.name, COALESCE(c.color,"#18dec7") as color, SUM(t.amount) as tvalue')
+                    ->groupBy('c.id','c.name','c.color')
+                    ->get()->keyBy('id');
+
+                $monthNum = \Carbon\Carbon::parse($start)->format('m');
+                $monthNo0 = ltrim($monthNum, '0'); // caso tenha salvo "9" em vez de "09"
+
+                $payCat = DB::table('payment_transactions as p')
+                    ->join('transactions as t','t.id','=','p.transaction_id')
+                    ->join('transaction_categories as c','c.id','=','t.transaction_category_id')
                     ->whereIn('t.user_id', $userIds)
                     ->where('c.type', $type)
-                    ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
-                    ->selectRaw('c.id, c.name as label, COALESCE(c.color,"#18dec7") as color, SUM(t.amount) as value')
+                    ->whereIn('p.reference_month', [$monthNum, $monthNo0]) // tolera zero à esquerda
+                    ->where('p.reference_year',  \Carbon\Carbon::parse($start)->format('Y'))
+                    ->where(function ($q) use ($start,$end) {
+                        $q->whereNull('t.date')
+                            ->orWhereNotBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start,$end]);
+                    })
+                    ->selectRaw('c.id, c.name, COALESCE(c.color,"#18dec7") as color, SUM(p.amount) as pvalue')
                     ->groupBy('c.id','c.name','c.color')
-                    ->orderByDesc('value')->get()
-                    ->map(fn($r) => [
-                        'id'=>$r->id,'label'=>$r->label,'value'=>(float)$r->value,'color'=>$r->color,
-                        'next'=>['level'=>'pay','params'=>['type'=>$type,'category_id'=>$r->id]],
-                    ]);
+                    ->get()->keyBy('id');
+
+                $ids = collect($txCat->keys())->merge($payCat->keys())->unique();
+
+                $rows = $ids->map(function ($id) use ($txCat,$payCat,$type) {
+                    $name  = $txCat[$id]->name  ?? $payCat[$id]->name  ?? '—';
+                    $color = $txCat[$id]->color ?? $payCat[$id]->color ?? '#18dec7';
+                    $value = (float)($txCat[$id]->tvalue ?? 0) + (float)($payCat[$id]->pvalue ?? 0);
+                    return [
+                        'id'    => $id,
+                        'label' => $name,
+                        'value' => round($value, 2),
+                        'color' => $color,
+                        'next'  => ['level'=>'pay','params'=>['type'=>$type,'category_id'=>$id]],
+                    ];
+                })->sortByDesc('value')->values();
 
                 return response()->json([
                     'mode'=>'tx','level'=>'category','title'=>'Categorias ('.ucfirst($type).')',

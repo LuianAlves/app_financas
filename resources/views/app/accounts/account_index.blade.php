@@ -261,102 +261,77 @@
     </section>
 
     @push('scripts')
+        <script src="{{ asset('assets/js/common/crud-model.js') }}"></script>
         <script>
             (() => {
+                // ---------- Constantes/rotas
                 const CSRF = '{{ csrf_token() }}';
                 const ROUTES = {
                     index: "{{ route('accounts.index') }}",
                     store: "{{ route('accounts.store') }}",
-                    show: "{{ url('/accounts') }}/:id",
-                    update: "{{ url('/accounts') }}/:id",
-                    destroy: "{{ url('/accounts') }}/:id",
-                    savings: "{{ route('savings.index') }}",
+                    show:  "{{ url('/accounts') }}/:id",
+                    update:"{{ url('/accounts') }}/:id",
+                    destroy:"{{ url('/accounts') }}/:id",
+                    savings:"{{ route('savings.index') }}",
                     tx: "{{ route('transaction-view.index') }}",
-                    transfer: "{{ route('accounts.transfer') }}"
+                    transfer:"{{ route('accounts.transfer') }}"
                 };
-                const u = (t, id) => t.replace(':id', id);
+                const u = (t,id)=>t.replace(':id', id);
 
-                const grid = document.getElementById('accGrid');
+                // ---------- DOM
+                const grid   = document.getElementById('accGrid');
+                const modal  = document.getElementById('accModal');
+                const form   = document.getElementById('accForm');
+                const titleEl= document.getElementById('accModalTitle');
+                const overlay= document.getElementById('accOverlay');
                 const accFab = document.getElementById('accFab');
-                const modal = document.getElementById('accModal');
-                const overlay = document.getElementById('accOverlay');
-                const btnOpen = document.querySelectorAll('[data-open-modal="acc"]');
-                const btnClose = document.getElementById('accClose');
-                const btnCancel = document.getElementById('accCancel');
-                const form = document.getElementById('accForm');
-                const titleEl = document.getElementById('accModalTitle');
-                const formErr = document.getElementById('accFormErr');
 
-                // Sheet
-                const sheet = document.getElementById('accSheet');
+                // Bottom sheet
+                const sheet   = document.getElementById('accSheet');
                 const sheetOv = document.getElementById('accSheetOv');
 
                 // Transfer
-                const trModal = document.getElementById('trModal');
-                const trOverlay = document.getElementById('trOverlay');
-                const trClose = document.getElementById('trClose');
+                const trModal  = document.getElementById('trModal');
+                const trOverlay= document.getElementById('trOverlay');
+                const trClose  = document.getElementById('trClose');
                 const trCancel = document.getElementById('trCancel');
-                const trForm = document.getElementById('trForm');
-                const trFrom = document.getElementById('trFrom');
-                const trTo = document.getElementById('trTo');
+                const trForm   = document.getElementById('trForm');
+                const trFrom   = document.getElementById('trFrom');
+                const trTo     = document.getElementById('trTo');
                 const trAmount = document.getElementById('trAmount');
 
-                let currentId = null;
-                let sheetId = null;
-                let suppressUntil = 0;
-
-                const ACC_CACHE_KEY = 'acc_cache_v1';
-
-                // ===== Utils
-                const ensureArray = (d) => Array.isArray(d) ? d : (d?.data ?? (typeof d === 'object' ? Object.values(d) : []));
-                const moneyToNumber = (v) => {
-                    if (v == null) return 0;
-                    if (typeof v === 'number') return v;
-                    const s = String(v).trim().replace(/[^\d,.-]/g, '');
-                    if (s.includes(',') && s.includes('.')) return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
-                    if (s.includes(',')) return parseFloat(s.replace(',', '.')) || 0;
-                    return parseFloat(s) || 0;
+                // ---------- Utils
+                const ensureArray = (d)=>Array.isArray(d)?d:(d?.data ?? (typeof d==='object'?Object.values(d):[]));
+                const moneyToNumber = (v)=>{
+                    if (v==null) return 0;
+                    if (typeof v==='number') return v;
+                    const s = String(v).trim().replace(/[^\d,.-]/g,'');
+                    if (s.includes(',') && s.includes('.')) return parseFloat(s.replace(/\./g,'').replace(',', '.'))||0;
+                    if (s.includes(',')) return parseFloat(s.replace(',', '.'))||0;
+                    return parseFloat(s)||0;
                 };
-                const brl = (n) => (isNaN(n) ? 'R$ 0,00' : Number(n).toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL'
-                }));
-                const readCache = () => {
-                    try {
-                        return JSON.parse(localStorage.getItem(ACC_CACHE_KEY)) || null;
-                    } catch {
-                        return null;
-                    }
-                };
-                const writeCache = (accounts, savings) => {
-                    try {
-                        localStorage.setItem(ACC_CACHE_KEY, JSON.stringify({accounts, savings, t: Date.now()}));
-                    } catch {
-                    }
-                };
-
-                const typeGradient = (t) => (String(t) === '2' || String(t).toLowerCase() === 'poupanca') ? 'from-emerald-400 to-emerald-600'
-                    : (String(t) === '3' || String(t).toLowerCase() === 'investimento') ? 'from-violet-400 to-violet-600'
+                const brl = (n)=> (isNaN(n)?'R$ 0,00': Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}));
+                const typeGradient = (t)=> (String(t)==='2'||String(t).toLowerCase()==='poupanca')?'from-emerald-400 to-emerald-600'
+                    : (String(t)==='3'||String(t).toLowerCase()==='investimento')?'from-violet-400 to-violet-600'
                         : 'from-brand-400 to-brand-600';
-                const typeLabel = (t) => (String(t) === '2' || String(t).toLowerCase() === 'poupanca') ? 'Poupança'
-                    : (String(t) === '3' || String(t).toLowerCase() === 'investimento') ? 'Investimento'
+                const typeLabel = (t)=> (String(t)==='2'||String(t).toLowerCase()==='poupanca')?'Poupança'
+                    : (String(t)==='3'||String(t).toLowerCase()==='investimento')?'Investimento'
                         : 'Conta corrente';
 
-                function toggleFab(hasAccounts) {
+                // FAB toggle
+                function updateFabVisibility(has) {
                     if (!accFab) return;
-                    // controla classe tailwind
-                    accFab.classList.toggle('md:hidden', hasAccounts);
-                    // fallback direto no display no desktop
+                    accFab.classList.toggle('md:hidden', has); // desktop: esconde se tiver contas
                     if (window.matchMedia('(min-width:768px)').matches) {
-                        accFab.style.display = hasAccounts ? 'none' : 'grid';
+                        accFab.style.display = has ? 'none' : 'grid';
                     } else {
                         accFab.style.display = '';
                     }
                 }
 
-
-                function renderSkeletons(n = 4) {
-                    const item = `
+                // Skeleton
+                function cardSkeleton() {
+                    return `
 <article class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft dark:shadow-softDark">
   <div class="flex items-start justify-between gap-3">
     <div class="flex items-center gap-3">
@@ -376,27 +351,17 @@
     </div>
   </div>
 </article>`;
-                    grid.innerHTML = Array.from({length: n}).map(() => item).join('');
                 }
 
-                function showGridOverlay() {
-                    grid.classList.add('grid-loading');
-                }
-
-                function hideGridOverlay() {
-                    grid.classList.remove('grid-loading');
-                }
-
-                // ===== Card
-                function cardTemplate(acc, savingsMap) {
+                // Card template (o botão de “mais” abre o sheet via data-sheet-open, NÃO via CrudLite)
+                function cardTemplate(acc) {
                     const id = acc.id ?? acc.uuid ?? acc.account_id;
                     const t = acc.type ?? '1';
                     const label = typeLabel(t);
                     const grad = typeGradient(t);
                     const inAcc = moneyToNumber(acc.current_balance);
-                    const cofr = (savingsMap?.get(id) != null) ? savingsMap.get(id) : moneyToNumber(acc.saving_amount);
+                    const cofr = moneyToNumber(acc.saving_amount); // valor inicial; depois patch com savings endpoint
                     const total = inAcc + cofr;
-
                     return `
 <article data-id="${id}" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft">
   <div class="flex items-start justify-between gap-3">
@@ -415,7 +380,7 @@
       <button data-action="edit" class="hidden md:inline-flex text-xs px-2 py-1.5 rounded-lg border hover:bg-neutral-50 dark:hover:bg-neutral-800">Editar</button>
       <button data-action="transfer" class="hidden md:inline-flex text-xs px-2 py-1.5 rounded-lg border hover:bg-neutral-50 dark:hover:bg-neutral-800">Transferir</button>
       <button data-action="delete" class="hidden md:inline-flex text-xs px-2 py-1.5 rounded-lg border border-red-200/70 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/20">Excluir</button>
-      <button data-action="more" class="inline-grid size-10 place-items-center rounded-lg border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800" aria-label="Mais ações">
+      <button data-sheet-open class="inline-grid size-10 place-items-center rounded-lg border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800" aria-label="Mais ações">
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
       </button>
     </div>
@@ -429,7 +394,7 @@
   <div class="mt-3 grid grid-cols-2 gap-3">
     <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
       <p class="text-xs text-neutral-500 dark:text-neutral-400">Em conta</p>
-      <p class="text-lg font-medium" data-inacc>${typeof acc.current_balance === 'string' ? acc.current_balance : brl(inAcc)}</p>
+      <p class="text-lg font-medium" data-inacc>${typeof acc.current_balance==='string' ? acc.current_balance : brl(inAcc)}</p>
     </div>
     <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
       <p class="text-xs text-neutral-500 dark:text-neutral-400">Cofrinhos</p>
@@ -439,390 +404,222 @@
 </article>`;
                 }
 
-                // ===== Load
-                (function primeFromCache() {
-                    const cached = readCache();
-                    if (cached?.accounts?.length) {
-                        const map = buildSavingsMap(ensureArray(cached.savings || []));
-                        grid.innerHTML = cached.accounts.map(a => cardTemplate(a, map)).join('');
-                        showGridOverlay();
-                        toggleFab(true);
-                    } else {
-                        renderSkeletons();
-                        toggleFab(false);
+                // ---------- Hooks personalizados do CrudLite
+                function onModeChange(m, formEl, title, data) {
+                    const isShow = (m==='show');
+                    if (title) title.textContent = m==='edit' ? 'Editar conta' : (isShow ? 'Detalhes da conta' : 'Nova conta bancária');
+                    if (formEl) {
+                        formEl.querySelectorAll('input,[type="radio"]').forEach(el => el.disabled = isShow);
+                        const btn = formEl.querySelector('button[type="submit"]');
+                        if (btn) btn.classList.toggle('hidden', isShow);
                     }
-                })();
-
-
-                function buildSavingsMap(arr) {
-                    const map = new Map();
-                    for (const s of ensureArray(arr)) {
-                        const id = s.account_id || s.account?.id;
-                        if (!id) continue;
-                        map.set(id, (map.get(id) || 0) + moneyToNumber(s.current_amount));
-                    }
-                    return map;
-                }
-
-                async function loadAccounts() {
-                    try {
-                        const [resAcc, resSav] = await Promise.all([
-                            fetch(ROUTES.index, {
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'X-Requested-With': 'XMLHttpRequest'
-                                }
-                            }),
-                            fetch(ROUTES.savings, {
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'X-Requested-With': 'XMLHttpRequest'
-                                }
-                            })
-                        ]);
-                        if (!resAcc.ok) throw new Error('Falha ao carregar contas');
-                        const accounts = ensureArray(await resAcc.json());
-                        const savings = resSav.ok ? ensureArray(await resSav.json()) : [];
-                        const map = buildSavingsMap(savings);
-
-                        grid.innerHTML = accounts.length ? accounts.map(a => cardTemplate(a, map)).join('')
-                            : `<div class="text-sm text-neutral-500">Nenhuma conta cadastrada.</div>`;
-
-                        toggleFab(accounts.length > 0);
-                        writeCache(accounts, savings);
-                    } catch (e) {
-                        console.error(e);
-                    } finally {
-                        hideGridOverlay();
-                    }
-                }
-
-                // ===== Modal base
-                function setMode(m) {
-                    const isShow = (m === 'show');
-                    titleEl.textContent = m === 'edit' ? 'Editar conta' : (isShow ? 'Detalhes da conta' : 'Nova conta bancária');
-                    form.querySelectorAll('input,[type="radio"]').forEach(el => el.disabled = isShow);
-                    form.querySelector('button[type="submit"]').classList.toggle('hidden', isShow);
                 }
 
                 function mapTypeIn(acc) {
                     const v = acc.type ?? acc.account_type ?? acc.account_type_id;
-                    if (v === 1 || v === '1' || v === 'corrente') return '1';
-                    if (v === 2 || v === '2' || v === 'poupanca') return '2';
-                    if (v === 3 || v === '3' || v === 'investimento') return '3';
+                    if (v===1||v==='1'||v==='corrente') return '1';
+                    if (v===2||v==='2'||v==='poupanca') return '2';
+                    if (v===3||v==='3'||v==='investimento') return '3';
                     return '1';
                 }
 
-                function fillForm(acc) {
-                    form.bank_name.value = acc.bank_name ?? '';
+                function fillFormAcc(formEl, acc) {
+                    if (!formEl || !acc) return;
+                    formEl.bank_name.value = acc.bank_name ?? '';
                     const raw = acc.current_balance;
-                    form.current_balance.value = typeof raw === 'number' ? String(raw).replace('.', ',') : String(raw ?? '');
-                    form.acc_id.value = acc.id ?? acc.uuid ?? '';
+                    formEl.current_balance.value = typeof raw==='number' ? String(raw).replace('.', ',') : String(raw ?? '');
                     const t = mapTypeIn(acc);
-                    form.querySelectorAll('input[name="type"]').forEach(i => i.checked = (i.value === t));
+                    formEl.querySelectorAll('input[name="type"]').forEach(i => i.checked = (i.value === t));
+                    // id hidden
+                    const hid = formEl.querySelector('#acc_id');
+                    if (hid) hid.value = acc.id ?? acc.uuid ?? '';
                 }
 
-                function openModal(m = 'create', data = null) {
-                    formErr.classList.add('hidden');
-                    formErr.textContent = '';
-                    setMode(m);
-                    if (data) fillForm(data); else {
-                        form.reset();
-                        form.acc_id.value = '';
+                function beforeSubmit(fd, mode) {
+                    // normaliza valor
+                    const val = fd.get('current_balance');
+                    if (val != null) {
+                        const cleaned = String(val).replace(/[^\d,.,-]/g,'').replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',', '.');
+                        fd.set('current_balance', cleaned);
                     }
-                    if ((m === 'edit' || m === 'show') && !form.acc_id.value) form.acc_id.value = currentId ?? '';
-                    modal.classList.remove('hidden');
-                    document.body.classList.add('overflow-hidden', 'ui-modal-open');
+                    const t = fd.get('type') || '1';
+                    fd.set('type', t);
+                    fd.set('account_type', t==='2' ? 'poupanca' : (t==='3' ? 'investimento' : 'corrente'));
+                    return fd;
                 }
 
-                function closeModal() {
-                    modal.classList.add('hidden');
-                    document.body.classList.remove('overflow-hidden', 'ui-modal-open');
+                // patch dos valores de cofrinho/total após render (busca savings)
+                let lastList = [];
+                async function patchSavingsAndFab(arr) {
+                    try {
+                        lastList = Array.isArray(arr) ? arr : [];
+                        const resSav = await fetch(ROUTES.savings, {headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});
+                        const savings = resSav.ok ? ensureArray(await resSav.json()) : [];
+                        const map = new Map();
+                        for (const s of savings) {
+                            const id = s.account_id || s.account?.id;
+                            if (!id) continue;
+                            map.set(id, (map.get(id)||0) + moneyToNumber(s.current_amount));
+                        }
+                        // atualiza DOM
+                        grid.querySelectorAll('article[data-id]').forEach(card => {
+                            const id = card.dataset.id;
+                            const rec = lastList.find(a => String(a.id ?? a.uuid ?? a.account_id) === String(id));
+                            const inAcc = moneyToNumber(rec?.current_balance);
+                            const cofr = map.get(id) ?? moneyToNumber(rec?.saving_amount);
+                            const total = inAcc + cofr;
+                            const cofrEl = card.querySelector('[data-cofr]');
+                            const totEl  = card.querySelector('[data-total]');
+                            if (cofrEl) cofrEl.textContent = brl(cofr);
+                            if (totEl)  totEl.textContent  = brl(total);
+                        });
+                    } finally {
+                        updateFabVisibility(!!grid.querySelector('article[data-id]'));
+                    }
                 }
 
-                function openCreate(e) {
-                    e?.preventDefault();
-                    e?.stopPropagation();
-                    currentId = null;
-                    closeSheet();
-                    openModal('create');
-                }
-
-                btnOpen.forEach(b => b.addEventListener('click', openCreate));
-                accFab?.addEventListener('click', openCreate, {passive: false});
-                btnClose.addEventListener('click', closeModal);
-                btnCancel.addEventListener('click', closeModal);
-                overlay.addEventListener('click', closeModal);
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+                // ---------- Inicializa CrudLite
+                const crud = CrudLite({
+                    key: 'accounts',
+                    routes: {
+                        index: ROUTES.index,
+                        store: ROUTES.store,
+                        show:  ROUTES.show,
+                        update:ROUTES.update,
+                        destroy:ROUTES.destroy
+                    },
+                    selectors: {
+                        grid: '#accGrid',
+                        modal: '#accModal',
+                        form:  '#accForm',
+                        title: '#accModalTitle',
+                        overlay:'#accOverlay',
+                        openers:'[data-open-modal="acc"]',
+                        btnClose: '#accClose',
+                        btnCancel:'#accCancel',
+                        fab: '#accFab' // só pra termos referência; CrudLite não usa sozinho
+                    },
+                    template: cardTemplate,
+                    skeleton: cardSkeleton,
+                    skeletonCount: 4,
+                    parseIndex: (json)=> ensureArray(json),
+                    parseShow:  (json)=> (json && typeof json==='object' && 'data' in json) ? json.data : json,
+                    onModeChange,
+                    fillForm: fillFormAcc,
+                    onBeforeSubmit: beforeSubmit,
+                    onAfterRender: (arr)=> { patchSavingsAndFab(arr); },
+                    confirmDelete: (id)=> confirm('Excluir esta conta?'),
+                    onAction: (act, id, api)=> {
+                        if (act === 'transfer') {
+                            openTransfer(id);
+                        }
+                        // outros “act” custom aqui, se precisar
+                    }
                 });
 
-                // ===== Grid actions + sheet
+                // ---------- Bottom Sheet (abre com botão [data-sheet-open])
+                let sheetId = null;
                 function openSheet(id) {
                     sheetId = id;
                     sheet.classList.remove('hidden');
-                    document.body.classList.add('overflow-hidden', 'ui-sheet-open');
+                    document.body.classList.add('overflow-hidden','ui-sheet-open');
                 }
-
                 function closeSheet() {
                     sheet.classList.add('hidden');
-                    document.body.classList.remove('overflow-hidden', 'ui-sheet-open');
+                    document.body.classList.remove('overflow-hidden','ui-sheet-open');
                 }
+                sheetOv.addEventListener('click', closeSheet);
+                document.addEventListener('keydown', e => { if (e.key==='Escape' && !sheet.classList.contains('hidden')) closeSheet(); });
 
-                grid.addEventListener('click', async (e) => {
+                // Delegação no grid para abrir sheet e ações do sheet
+                grid.addEventListener('click', async (e)=>{
                     const card = e.target.closest('article[data-id]');
                     if (!card) return;
-                    const id = card.dataset.id;
-
-                    const btn = e.target.closest('[data-action]');
-                    if (btn) {
-                        e.preventDefault();
-                        suppressUntil = Date.now() + 400;
-                        const act = btn.dataset.action;
-
-                        if (act === 'transfer') {
-                            openTransfer(id);
-                            return;
-                        }
-                        if (act === 'edit') {
-                            try {
-                                const res = await fetch(u(ROUTES.show, id), {
-                                    headers: {
-                                        'Accept': 'application/json',
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    }
-                                });
-                                if (!res.ok) throw 0;
-                                const acc = await res.json();
-                                currentId = id;
-                                openModal('edit', acc);
-                            } catch {
-                                alert('Erro ao carregar conta');
-                            }
-                            return;
-                        }
-                        if (act === 'delete') {
-                            if (!confirm('Excluir esta conta?')) return;
-                            try {
-                                await doDeleteAccount(id);
-                                card.remove();
-                                toggleFab(!!grid.querySelector('article[data-id]'));
-                            } catch {
-                                alert('Erro ao excluir');
-                            }
-                            return;
-                        }
-                        if (act === 'more') {
-                            openSheet(id);
-                            return;
-                        }
+                    // abrir sheet (botão com data-sheet-open)
+                    if (e.target.closest('[data-sheet-open]')) {
+                        openSheet(card.dataset.id);
                         return;
-                    }
-
-                    if (Date.now() < suppressUntil) return;
-                    try {
-                        const res = await fetch(u(ROUTES.show, id), {
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-                        if (!res.ok) throw 0;
-                        const acc = await res.json();
-                        currentId = id;
-                        openModal('show', acc);
-                    } catch {
-                        alert('Erro ao carregar detalhes');
                     }
                 });
 
-                sheet.addEventListener('click', async (e) => {
+                // Ações do sheet
+                sheet.addEventListener('click', async (e)=>{
                     const b = e.target.closest('[data-sheet-action]');
-                    if (!b) return;
-                    if (!sheetId) return;
+                    if (!b || !sheetId) return;
                     const act = b.dataset.sheetAction;
-
-                    if (act === 'transfer') {
+                    if (act==='transfer') {
                         closeSheet();
                         openTransfer(sheetId);
                         return;
                     }
-                    if (act === 'statement') {
+                    if (act==='statement') {
                         closeSheet();
                         window.location.href = ROUTES.tx + '?account=' + encodeURIComponent(sheetId);
                         return;
                     }
-                    if (act === 'edit') {
+                    if (act==='edit') {
+                        closeSheet();
+                        // abre via CrudLite (show->edit)
                         try {
-                            const res = await fetch(u(ROUTES.show, sheetId), {
-                                headers: {
-                                    'Accept': 'application/json',
-                                    'X-Requested-With': 'XMLHttpRequest'
-                                }
-                            });
+                            const res = await fetch(u(ROUTES.show, sheetId), {headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});
                             if (!res.ok) throw 0;
-                            const acc = await res.json();
-                            closeSheet();
-                            currentId = sheetId;
-                            openModal('edit', acc);
-                        } catch {
-                            alert('Erro ao carregar conta');
-                        }
+                            const rec = await res.json();
+                            crud.openModal('edit', rec);
+                        } catch { alert('Erro ao carregar conta'); }
                         return;
                     }
-                    if (act === 'delete') {
-                        const id = sheetId;
+                    if (act==='delete') {
                         closeSheet();
                         if (!confirm('Excluir esta conta?')) return;
                         try {
-                            await doDeleteAccount(id);
-                            const el = [...grid.querySelectorAll('article[data-id]')].find(n => n.dataset.id == id);
-                            el?.remove();
-                            toggleFab(!!grid.querySelector('article[data-id]'));
-                        } catch {
-                            alert('Erro ao excluir');
-                        }
+                            await doDeleteAccount(sheetId);
+                            // recarrega lista pra garantir FAB + savings patch
+                            await crud.reload();
+                        } catch { alert('Erro ao excluir'); }
                         return;
                     }
                 });
-                sheetOv.addEventListener('click', closeSheet);
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && !sheet.classList.contains('hidden')) closeSheet();
+
+                // Pequena “rede de segurança” para o FAB após delete pela ação inline do CrudLite
+                grid.addEventListener('click', (e)=>{
+                    if (e.target.closest('[data-action="delete"]')) {
+                        setTimeout(()=> updateFabVisibility(!!grid.querySelector('article[data-id]')), 120);
+                    }
                 });
 
-                // ===== Delete
-                async function doDeleteAccount(rawId) {
-                    const id = (rawId ?? '').toString().trim() || form.acc_id?.value?.trim() || currentId || sheetId;
-                    if (!id) throw new Error('ID inválido');
+                // ---------- Delete manual (sheet/externo)
+                async function doDeleteAccount(id) {
                     const fd = new FormData();
-                    fd.append('_method', 'DELETE');
+                    fd.append('_method','DELETE');
                     fd.append('id', id);
                     const res = await fetch(u(ROUTES.destroy, encodeURIComponent(id)), {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': CSRF,
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
+                        method:'POST',
+                        headers:{'X-CSRF-TOKEN': CSRF, 'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
                         body: fd
                     });
                     if (!res.ok) throw new Error('Falha ao excluir');
                 }
 
-                // ===== Submit
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-
-                    // limpa erros inline
-                    formErr.classList.add('hidden');
-                    formErr.textContent = '';
-                    form.querySelectorAll('.field-error').forEach(el => {
-                        el.textContent = '';
-                        el.classList.add('hidden');
-                    });
-                    form.querySelectorAll('input,select,textarea').forEach(el => el.classList.remove('ring-2', 'ring-red-500/40', 'border-red-500'));
-
-                    const fd = new FormData(form);
-
-                    // normaliza valor
-                    const val = fd.get('current_balance');
-                    if (val != null) {
-                        const cleaned = String(val).replace(/[^\d,.,-]/g, '').replace(/\.(?=\d{3}(?:\D|$))/g, '').replace(',', '.');
-                        fd.set('current_balance', cleaned);
-                    }
-
-                    // tipo string auxiliar
-                    const t = fd.get('type') || '1';
-                    fd.set('type', t);
-                    fd.set('account_type', t === '2' ? 'poupanca' : (t === '3' ? 'investimento' : 'corrente'));
-
-                    const id = form.acc_id.value?.trim();
-                    const isEdit = !!id;
-                    let url = isEdit ? u(ROUTES.update, id) : ROUTES.store;
-                    if (isEdit) fd.append('_method', 'PUT');
-
-                    try {
-                        showGridOverlay();
-                        const res = await fetch(url, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': CSRF,
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: fd
-                        });
-
-                        if (!res.ok) {
-                            let data = null;
-                            try {
-                                data = await res.json();
-                            } catch {
-                            }
-                            if (res.status === 422 && data?.errors) {
-                                for (const [field, msgs] of Object.entries(data.errors)) {
-                                    const input = form.querySelector(`[name="${field}"]`);
-                                    const errEl = input ? input.closest('label,div,fieldset')?.querySelector('.field-error') : null;
-                                    if (errEl) {
-                                        errEl.textContent = msgs?.[0] || 'Campo inválido';
-                                        errEl.classList.remove('hidden');
-                                    }
-                                    input?.classList.add('ring-2', 'ring-red-500/40', 'border-red-500');
-                                }
-                                if (data?.message) {
-                                    formErr.textContent = data.message;
-                                    formErr.classList.remove('hidden');
-                                }
-                                hideGridOverlay();
-                                return;
-                            }
-                            if (data?.message) {
-                                formErr.textContent = data.message;
-                                formErr.classList.remove('hidden');
-                            }
-                            throw new Error('Erro ao salvar');
-                        }
-
-                        closeModal();
-                        form.acc_id.value = '';
-                        await loadAccounts();
-                    } catch (err) {
-                        alert(err.message || 'Falha ao salvar');
-                    } finally {
-                        hideGridOverlay();
-                    }
-                });
-
-                // ===== Transfer
-                function openTransfer(fromId) {
-                    clearTransferErrors();
-                    trForm.reset();
-                    trFrom.value = fromId;
-
-                    // popula select destino (cache, se houver)
-                    const cached = readCache();
-                    const list = ensureArray(cached?.accounts) ?? [];
-                    if (list.length) {
-                        fillToSelect(list, fromId);
-                    } else {
-                        fetch(ROUTES.index, {
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
-                            .then(r => r.json())
-                            .then(arr => fillToSelect(ensureArray(arr), fromId))
-                            .catch(() => trTo.innerHTML = '<option value="">Falha ao carregar</option>');
-                    }
-
-                    trModal.classList.remove('hidden');
-                    document.body.classList.add('overflow-hidden', 'ui-modal-open');
+                // ---------- Transferência
+                function clearFieldError(inputEl, id) {
+                    const el = document.getElementById(id);
+                    el?.classList.add('hidden'); if (el) el.textContent='';
+                    inputEl?.classList.remove('ring-2','ring-red-500/40','border-red-500');
                 }
-
-                function closeTransfer() {
-                    trModal.classList.add('hidden');
-                    document.body.classList.remove('overflow-hidden', 'ui-modal-open');
+                function showFieldError(inputEl, id, msg) {
+                    const el = document.getElementById(id);
+                    if (el) { el.textContent = msg||'Campo inválido'; el.classList.remove('hidden'); }
+                    inputEl?.classList.add('ring-2','ring-red-500/40','border-red-500');
+                }
+                function clearTransferErrors() {
+                    clearFieldError(trTo,'trToErr');
+                    clearFieldError(trAmount,'trAmountErr');
+                    const g = document.getElementById('formError');
+                    if (g) { g.classList.add('hidden'); g.textContent=''; }
+                }
+                function showTransferError(msg) {
+                    const g = document.getElementById('formError');
+                    if (g) { g.textContent = msg||'Erro ao enviar'; g.classList.remove('hidden'); }
                 }
 
                 function fillToSelect(accounts, fromId) {
@@ -832,86 +629,51 @@
                     trTo.innerHTML = opts.length ? opts.join('') : '<option value="">Nenhuma conta disponível</option>';
                 }
 
-                function clearFieldError(inputEl, id) {
-                    const el = document.getElementById(id);
-                    el?.classList.add('hidden');
-                    if (el) el.textContent = '';
-                    inputEl?.classList.remove('ring-2', 'ring-red-500/40', 'border-red-500');
-                }
-
-                function showFieldError(inputEl, id, msg) {
-                    const el = document.getElementById(id);
-                    if (el) {
-                        el.textContent = msg || 'Campo inválido';
-                        el.classList.remove('hidden');
-                    }
-                    inputEl?.classList.add('ring-2', 'ring-red-500/40', 'border-red-500');
-                }
-
-                function clearTransferErrors() {
-                    clearFieldError(trTo, 'trToErr');
-                    clearFieldError(trAmount, 'trAmountErr');
-                    const g = document.getElementById('formError');
-                    if (g) {
-                        g.classList.add('hidden');
-                        g.textContent = '';
-                    }
-                }
-
-                function showTransferError(msg) {
-                    const g = document.getElementById('formError');
-                    if (g) {
-                        g.textContent = msg || 'Erro ao enviar';
-                        g.classList.remove('hidden');
-                    }
-                }
-
-                trTo.addEventListener('change', () => clearFieldError(trTo, 'trToErr'));
-                trAmount.addEventListener('input', () => clearFieldError(trAmount, 'trAmountErr'));
-                trClose.addEventListener('click', () => {
+                function openTransfer(fromId) {
                     clearTransferErrors();
-                    closeTransfer();
-                });
-                trCancel.addEventListener('click', () => {
-                    clearTransferErrors();
-                    closeTransfer();
-                });
-                trOverlay.addEventListener('click', () => {
-                    clearTransferErrors();
-                    closeTransfer();
-                });
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && !trModal.classList.contains('hidden')) closeTransfer();
-                });
+                    trForm.reset();
+                    trFrom.value = fromId;
+                    const list = lastList || [];
+                    if (list.length) {
+                        fillToSelect(list, fromId);
+                    } else {
+                        fetch(ROUTES.index, {headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}})
+                            .then(r=>r.json()).then(arr=>fillToSelect(ensureArray(arr), fromId))
+                            .catch(()=> trTo.innerHTML = '<option value="">Falha ao carregar</option>');
+                    }
+                    trModal.classList.remove('hidden');
+                    document.body.classList.add('overflow-hidden','ui-modal-open');
+                }
+                function closeTransfer() {
+                    trModal.classList.add('hidden');
+                    document.body.classList.remove('overflow-hidden','ui-modal-open');
+                }
+                trTo.addEventListener('change', ()=> clearFieldError(trTo,'trToErr'));
+                trAmount.addEventListener('input', ()=> clearFieldError(trAmount,'trAmountErr'));
+                trClose.addEventListener('click', ()=> { clearTransferErrors(); closeTransfer(); });
+                trCancel.addEventListener('click', ()=> { clearTransferErrors(); closeTransfer(); });
+                trOverlay.addEventListener('click', ()=> { clearTransferErrors(); closeTransfer(); });
+                document.addEventListener('keydown', (e)=>{ if (e.key==='Escape' && !trModal.classList.contains('hidden')) closeTransfer(); });
 
-                trForm.addEventListener('submit', async (e) => {
+                trForm.addEventListener('submit', async (e)=>{
                     e.preventDefault();
                     clearTransferErrors();
                     const fd = new FormData(trForm);
                     const raw = fd.get('amount');
-                    const cleaned = String(raw ?? '').replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}(?:\D|$))/g, '').replace(',', '.');
+                    const cleaned = String(raw ?? '').replace(/[^\d,.-]/g,'').replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',', '.');
                     fd.set('amount', cleaned);
-
                     try {
-                        showGridOverlay();
+                        grid.classList.add('grid-loading');
                         const res = await fetch(ROUTES.transfer, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': CSRF,
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
+                            method:'POST',
+                            headers:{'X-CSRF-TOKEN': CSRF, 'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},
                             body: fd
                         });
                         if (!res.ok) {
-                            let data = null;
-                            try {
-                                data = await res.json();
-                            } catch {
-                            }
-                            if (res.status === 422 && data?.errors) {
-                                if (data.errors.to_id?.[0]) showFieldError(trTo, 'trToErr', data.errors.to_id[0]);
-                                if (data.errors.amount?.[0]) showFieldError(trAmount, 'trAmountErr', data.errors.amount[0]);
+                            let data=null; try { data = await res.json(); } catch {}
+                            if (res.status===422 && data?.errors) {
+                                if (data.errors.to_id?.[0]) showFieldError(trTo,'trToErr',data.errors.to_id[0]);
+                                if (data.errors.amount?.[0]) showFieldError(trAmount,'trAmountErr',data.errors.amount[0]);
                                 if (data.errors.from_id?.[0]) showTransferError(data.errors.from_id[0]);
                             } else {
                                 showTransferError(data?.message || 'Falha na transferência');
@@ -919,20 +681,18 @@
                             return;
                         }
                         closeTransfer();
-                        await loadAccounts();
+                        await crud.reload();
                     } catch (err) {
                         showTransferError('Erro ao realizar transferência');
                         console.error(err);
                     } finally {
-                        hideGridOverlay();
+                        grid.classList.remove('grid-loading');
                     }
                 });
 
-                // ===== Boot
-                window.addEventListener('DOMContentLoaded', () => {
-                    accFab?.classList.remove('hidden');
-                    loadAccounts().catch(() => {
-                    });
+                // ---------- Boot
+                window.addEventListener('DOMContentLoaded', ()=>{
+                    accFab?.classList.remove('hidden'); // mostra FAB sempre (mobile), desktop depende do updateFabVisibility
                 });
             })();
         </script>

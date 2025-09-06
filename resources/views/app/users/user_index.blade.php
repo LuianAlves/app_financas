@@ -165,7 +165,7 @@
         </style>
     @endpush
 
-    @section('content')
+    @section('new-content')
         <div class="d-flex justify-content-between align-items-center">
             <a href="{{route('dashboard')}}"><i class="fas fa-chevron-left text-dark" style="font-size: 16px;"></i></a>
             <h2 class="m-0 mx-3 fw-semi-bold" style="font-size: 14px; letter-spacing: .75px;">Meu perfil</h2>

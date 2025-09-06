@@ -6,8 +6,7 @@
     @endpush
 
     <section class="mt-6 space-y-4">
-        <div
-            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
+        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
             <button
                 class="w-full mb-3 hidden items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white px-3 py-2"
                 style="letter-spacing:.75px;font-size:12px;font-weight:600" data-install>
@@ -49,12 +48,9 @@
             </form>
         </div>
 
-        {{-- === HERO / SALDO (template novo) === --}}
         <section id="saldo" class="mt-4 md:mt-0">
-            <div
-                class="relative overflow-hidden rounded-2xl p-5 pb-0 md:p-6 bg-gradient-to-br from-brand-400 to-brand-600 dark:from-neutral-900 dark:to-neutral-800 text-white shadow-soft dark:shadow-softDark">
-                <div
-                    class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/15 dark:bg-neutral-800/80 blur-2xl"></div>
+            <div class="relative overflow-hidden rounded-2xl p-5 pb-0 md:p-6 bg-gradient-to-br from-brand-400 to-brand-600 dark:from-neutral-900 dark:to-neutral-800 text-white shadow-soft dark:shadow-softDark">
+                <div class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/15 dark:bg-neutral-800/80 blur-2xl"></div>
 
                 <div class="flex items-start justify-between gap-1">
                     <div>
@@ -101,58 +97,70 @@
             </div>
         </section>
 
-        {{-- atalhos do hero --}}
         <div id="atalhos" class="mt-5 grid grid-cols-4 gap-2 md:gap-3">
-            <a href="{{ route('account-view.index') }}"
-               class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
-                        <span
-                            class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
-                            <i class="fas fa-landmark text-white"></i>
-                        </span>
+            <a href="{{ route('account-view.index') }}" class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                <span class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
+                    <i class="fas fa-landmark text-white"></i>
+                </span>
                 <span class="text-xs">Contas</span>
             </a>
-            <a href="{{ route('transaction-view.index') }}"
-               class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
-                        <span
-                            class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
-                            <i class="fa-solid fa-cart-plus text-white"></i>
-                        </span>
+            <a href="{{ route('transaction-view.index') }}" class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                <span class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
+                    <i class="fa-solid fa-cart-plus text-white"></i>
+                </span>
                 <span class="text-xs">Transações</span>
             </a>
-            <a href="{{ route('transaction-view.index') }}"
-               class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
-                        <span
-                            class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
-                             <i class="fas fa-credit-card text-white"></i>
-                        </span>
+            <a href="{{ route('card-view.index') }}" class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                <span class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
+                     <i class="fas fa-credit-card text-white"></i>
+                </span>
                 <span class="text-xs">Cartões</span>
             </a>
-            <a href="{{ url()->current() . '?month=' . $startOfMonth->format('Y-m') }}"
-               class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
-                        <span
-                            class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
-                            <i class="fas fa-chart-line text-white"></i>
-                        </span>
+            <a href="{{ route('saving-view.index') }}" class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                <span class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
+                    <i class="fas fa-chart-line text-white"></i>
+                </span>
                 <span class="text-xs">Investimentos</span>
             </a>
         </div>
 
-        {{-- Calendário --}}
-        <div
-            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3">
+        <!-- Calendar -->
+        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3">
             <div id="calendar"></div>
         </div>
 
-        <div id="calendar-results"
-             class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3"></div>
+        <div id="calendar-results" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3"></div>
 
+        <!-- Chart Despesas -->
+        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 text-sm">
+                    <button id="pieBack"
+                            class="hidden inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-neutral-200/70 dark:border-neutral-800/70">
+                        <i class="fa fa-arrow-left text-xs"></i><span>Voltar</span>
+                    </button>
+                    <div id="pieCrumbs" class="flex items-center gap-1 text-neutral-500 dark:text-neutral-400"></div>
+                </div>
+                <span id="pieTitle" class="text-sm font-medium">Distribuição</span>
+            </div>
 
-        {{-- Próximos pagamentos (card/list do template) --}}
-        <div
-            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
+            <div class="mt-3 grid md:grid-cols-[360px_1fr] gap-4 items-start">
+                <div class="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50">
+                    <canvas id="pieChart" class="w-full h-[280px]"></canvas>
+                </div>
+
+                <div>
+                    <ul id="pieList" class="divide-y divide-neutral-200/70 dark:divide-neutral-800/70"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Next Payments -->
+        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
             <div class="flex items-center justify-between">
                 <p class="font-medium">Próximos pagamentos</p>
             </div>
+
             <ul class="mt-3 divide-y divide-neutral-200/70 dark:divide-neutral-800/70">
                 @forelse($upcomingAny as $item)
                     <li class="group grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card"
@@ -203,9 +211,8 @@
             </ul>
         </div>
 
-        {{-- Transações recentes (card/list do template) --}}
-        <div
-            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
+        <!-- Transactions Recent -->
+        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
             <div class="flex items-center justify-between">
                 <p class="font-medium">Transações recentes</p>
             </div>
@@ -253,9 +260,9 @@
             </ul>
         </div>
 
+        <!-- Actual Invoices -->
         <h2 class="text-lg font-semibold">Faturas atuais</h2>
-        <div
-            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
+        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
             @if($cardTip)
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-credit-card" style="color: {{ $cardTip['color'] }}"></i>
@@ -284,30 +291,6 @@
             </div>
         @endforeach
     </section>
-
-    <div
-        class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
-        <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2 text-sm">
-                <button id="pieBack"
-                        class="hidden inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-neutral-200/70 dark:border-neutral-800/70">
-                    <i class="fa fa-arrow-left text-xs"></i><span>Voltar</span>
-                </button>
-                <div id="pieCrumbs" class="flex items-center gap-1 text-neutral-500 dark:text-neutral-400"></div>
-            </div>
-            <span id="pieTitle" class="text-sm font-medium">Distribuição</span>
-        </div>
-
-        <div class="mt-3 grid md:grid-cols-[360px_1fr] gap-4 items-start">
-            <div class="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50">
-                <canvas id="pieChart" class="w-full h-[280px]"></canvas>
-            </div>
-
-            <div>
-                <ul id="pieList" class="divide-y divide-neutral-200/70 dark:divide-neutral-800/70"></ul>
-            </div>
-        </div>
-    </div>
 
     <!-- Check Payment -->
     <x-modal id="paymentModal" titleCreate="Registrar pagamento" titleEdit="Registrar pagamento"

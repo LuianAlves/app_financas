@@ -1,5 +1,5 @@
 @extends('layouts.templates.app')
-@section('content')
+@section('new-content')
     <x-card-header prevRoute="{{ route('card-view.index') }}" iconRight="fa-solid fa-credit-card" title=""
                    description=""></x-card-header>
 

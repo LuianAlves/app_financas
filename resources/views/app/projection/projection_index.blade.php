@@ -288,7 +288,7 @@
     </style>
 @endpush
 
-@section('content')
+@section('new-content')
     <x-card-header
         prevRoute="{{ route('dashboard') }}"
         iconRight="fa-solid fa-credit-card"

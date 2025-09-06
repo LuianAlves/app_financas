@@ -1,5 +1,5 @@
 @extends('layouts.templates.app')
-@section('content')
+@section('new-content')
     <x-card-header
         prevRoute="{{ route('dashboard') }}"
         iconRight="fa-solid fa-circle-question"

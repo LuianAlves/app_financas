@@ -1025,10 +1025,51 @@
                     backBtn.classList.toggle('hidden', state.stack.length === 0);
 
                     const labels = payload.items.map(i => i.label);
-                    const values = payload.items.map(i => i.value);
+                    const values = payload.items.map(i => Number(i.value || 0));
+                    const total  = values.reduce((s,v)=>s+v,0);
+
+                    // <<< Fallback quando não há dados (itens vazios ou somatório 0)
+                    if (!values.length || total <= 0) {
+                        if (state.chart) state.chart.destroy();
+                        state.chart = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Sem dados'],
+                                datasets: [{
+                                    data: [1],                   // placeholder
+                                    backgroundColor: ['#e5e7eb'],
+                                    borderColor: ['#cbd5e1'],
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+                                elements: { arc: { borderAlign: 'inner', hoverBorderWidth: 0, hoverOffset: 0, borderJoinStyle: 'round' } },
+                                cutout: '65%',
+                                radius: '85%',
+                                plugins: { legend: { display: false }, tooltip: { enabled: false } }
+                            }
+                        });
+
+                        // zera legenda e lista
+                        document.getElementById('pieLegend').innerHTML = '';
+                        listEl.innerHTML = `
+      <li class="py-2 flex items-center justify-between font-semibold">
+        <span>Total visível</span><span>R$ 0,00</span>
+      </li>
+      <li class="py-2 text-sm text-neutral-500 dark:text-neutral-400">Nenhum dado neste mês.</li>
+    `;
+
+                        state.lastPayload = payload;
+                        // sem registrar handlers/legend para o caso vazio
+                        return;
+                    }
+
+                    // --- resto do renderChart original (com cores, criação do chart, legenda, clique, etc.)
                     const bg     = payload.items.map(i => i.bg);
                     const border = payload.items.map(i => i.border);
-
                     if (state.chart) state.chart.destroy();
 
                     const withAlpha = c => {
@@ -1041,33 +1082,16 @@
                     const colorsBg     = payload.items.map(i => i.bg ?? withAlpha(i.color));
                     const colorsBorder = payload.items.map(i => i.border ?? i.color ?? '#94a3b8');
 
-
                     state.chart = new Chart(ctx, {
                         type: 'doughnut',
-                        data: {
-                            labels,
-                            datasets: [{
-                                data: values,
-                                backgroundColor: colorsBg,
-                                borderColor: colorsBorder,
-                                borderWidth: 1
-                            }]
-                        },
+                        data: { labels, datasets: [{ data: values, backgroundColor: colorsBg, borderColor: colorsBorder, borderWidth: 1 }] },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
                             devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
                             elements: { arc: { borderAlign: 'inner', hoverBorderWidth: 0, hoverOffset: 0, borderJoinStyle: 'round' } },
-                            cutout: '65%',
-                            radius: '85%',
-                            plugins: {
-                                tooltip: {
-                                    callbacks: {
-                                        label: ctx => `${ctx.label}: ${currencyBRL(ctx.parsed)}`
-                                    }
-                                },
-                                legend: { display: false }
-                            }
+                            cutout: '65%', radius: '85%',
+                            plugins: { tooltip: { callbacks: { label: ctx => `${ctx.label}: ${(ctx.parsed ?? 0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}` } }, legend: { display: false } }
                         }
                     });
 
@@ -1075,19 +1099,18 @@
                     function renderHtmlLegend() {
                         const meta = state.chart.getDatasetMeta(0);
                         legendEl.innerHTML = payload.items.map((it, idx) => `
-                            <li data-idx="${idx}" class="inline-flex items-center gap-2 cursor-pointer select-none">
-                              <span class="inline-block w-4 h-3 rounded-sm"
-                                    style="background:${it.bg ?? it.color+'1a'};border:2px solid ${it.border ?? it.color};"></span>
-                              <span class="text-xs">${it.label}</span>
-                            </li>
-                          `).join('');
+      <li data-idx="${idx}" class="inline-flex items-center gap-2 cursor-pointer select-none">
+        <span class="inline-block w-4 h-3 rounded-sm"
+              style="background:${it.bg ?? it.color+'1a'};border:2px solid ${it.border ?? it.color};"></span>
+        <span class="text-xs">${it.label}</span>
+      </li>`).join('');
                         legendEl.querySelectorAll('[data-idx]').forEach(li => {
                             li.addEventListener('click', () => {
                                 const i = +li.dataset.idx;
                                 const el = meta.data[i];
-                                el.hidden = !el.hidden;             // alterna visibilidade
+                                el.hidden = !el.hidden;
                                 state.chart.update();
-                                updateListAndTotal();               // refaz lista + total
+                                updateListAndTotal();
                                 li.classList.toggle('opacity-40', el.hidden);
                             });
                         });
@@ -1099,7 +1122,6 @@
                         renderList(payload.items, visible);
                     }
 
-                    // clique em fatia = drill
                     document.getElementById('pieChart').onclick = (evt) => {
                         const points = state.chart.getElementsAtEventForMode(evt, 'nearest', {intersect: true}, true);
                         if (!points.length) return;
@@ -1108,9 +1130,7 @@
                         if (next && next.level) pushAndLoad(next.level, next.params || {});
                     };
 
-                    // primeira renderização
                     state.lastPayload = payload;
-                    // expõe p/ reuso (ex.: re-render após tema)
                     window.updatePieListAndTotal = updateListAndTotal;
 
                     renderHtmlLegend();

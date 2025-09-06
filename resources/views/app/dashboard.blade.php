@@ -1022,14 +1022,25 @@
 
                     if (state.chart) state.chart.destroy();
 
+                    const withAlpha = c => {
+                        if (!c) return undefined;
+                        let h = String(c).replace('#','');
+                        if (h.length === 3) h = h.split('').map(x=>x+x).join('');
+                        if (h.length === 8) h = h.slice(0,6);
+                        return '#'+h+'1a';
+                    };
+                    const colorsBg     = payload.items.map(i => i.bg ?? withAlpha(i.color));
+                    const colorsBorder = payload.items.map(i => i.border ?? i.color ?? '#94a3b8');
+
+
                     state.chart = new Chart(ctx, {
                         type: 'doughnut',
                         data: {
                             labels,
                             datasets: [{
                                 data: values,
-                                backgroundColor: bg,
-                                borderColor: border,
+                                backgroundColor: colorsBg,
+                                borderColor: colorsBorder,
                                 borderWidth: 1
                             }]
                         },

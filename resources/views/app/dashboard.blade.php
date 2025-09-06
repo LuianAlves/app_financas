@@ -644,29 +644,26 @@
 
             (function calendarBoot() {
                 const routeUrl = "{{ route('calendar.events') }}";
-                const ym = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                const br = s => {
-                    const [y, m, d] = String(s).slice(0, 10).split('-');
-                    return `${d}/${m}/${y}`;
-                };
-                const brl = n => Number(n || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-                const escAttr = s => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const ym  = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+                const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                const br  = s => { const [y,m,d] = String(s).slice(0,10).split('-'); return `${d}/${m}/${y}`; };
+                const brl = n => Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+                const escAttr = s => String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
                 const eventosCache = {};
                 const loadedWindows = new Set();
 
-                function addEventToCache(ev) {
-                    const day = String(ev.start).slice(0, 10);
-                    const xp = ev.extendedProps || {};
-                    let key = ev.id ?? `${ev.title}-${ev.start}`;
+                function addEventToCache(ev){
+                    const day = String(ev.start).slice(0,10);
+                    const xp  = ev.extendedProps || {};
+                    let key   = ev.id ?? `${ev.title}-${ev.start}`;
 
                     const tipo = (xp.type || '').toLowerCase().trim();
-                    const isTxLaunch = (tipo === 'entrada' || tipo === 'despesa') && xp.transaction_id;
+                    const isTxLaunch = (tipo==='entrada' || tipo==='despesa') && xp.transaction_id;
                     if (isTxLaunch) key = `tx_${xp.transaction_id}_${day}`;
 
                     const item = {
-                        id: key, tipo, color: ev.bg, icon: ev.icon,
+                        id:key, tipo, color:ev.bg, icon:ev.icon,
                         descricao: ev.title ?? xp.category_name ?? 'Sem descrição',
                         valor: Number(xp.amount ?? 0),
                         valor_brl: xp.amount_brl,
@@ -681,10 +678,10 @@
                     if (!map.has(key)) map.set(key, item);
                 }
 
-                async function loadWindow(ymStr, months = 2) {
+                async function loadWindow(ymStr, months=2){
                     const key = `${ymStr}:${months}`;
                     if (loadedWindows.has(key)) return;
-                    const resp = await fetch(`${routeUrl}?start=${ymStr}&months=${months}`, {headers: {'Accept': 'application/json'}});
+                    const resp = await fetch(`${routeUrl}?start=${ymStr}&months=${months}`, {headers:{'Accept':'application/json'}});
                     if (!resp.ok) return;
                     (await resp.json()).forEach(addEventToCache);
                     loadedWindows.add(key);
@@ -695,66 +692,105 @@
                     return map ? Array.from(map.values()) : [];
                 };
 
-                function exibirEventos(dateStr) {
+                function exibirEventos(dateStr){
                     const c = document.getElementById('calendar-results');
                     const eventos = eventosDoDia(dateStr);
 
                     let html = `<h2 class="mt-3 text-lg font-semibold">Lançamentos do dia ${br(dateStr)}</h2>`;
-                    if (!eventos.length) {
+                    if (!eventos.length){
                         html += `<div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card ">
-                                    <span class="size-10 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800"><i class="fa-solid fa-sack-dollar"></i></span>
-                                    <div class="text-sm">Nenhum lançamento.</div><div></div>
-                                 </div>`;
-                        c.innerHTML = html;
-                        return;
+                 <span class="size-10 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800"><i class="fa-solid fa-sack-dollar"></i></span>
+                 <div class="text-sm">Nenhum lançamento.</div><div></div>
+               </div>`;
+                        c.innerHTML = html; return;
                     }
 
-                    for (const ev of eventos) {
-                        const isPaidInv = ev.is_invoice && ev.paid === true;
-                        const iconCls = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
-                        const bgColor = isPaidInv ? '#0ea5e9' : (ev.color || '#999');
+                    for (const ev of eventos){
+                        const isPaidInv = ev.is_invoice && ev.paid===true;
+                        const iconCls   = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
+                        const bgColor   = isPaidInv ? '#0ea5e9' : (ev.color || '#999');
 
                         let amountHtml = ev.valor_brl, sinal = '';
-                        if (!isPaidInv) {
-                            sinal = ev.tipo === 'despesa' ? '-' : (ev.tipo === 'entrada' ? '+' : '');
-                        } else {
-                            amountHtml = brl(Math.abs(ev.valor || 0));
-                        }
+                        if (!isPaidInv) { sinal = ev.tipo==='despesa' ? '-' : (ev.tipo==='entrada' ? '+' : ''); }
+                        else { amountHtml = brl(Math.abs(ev.valor || 0)); }
 
                         let action = '';
-                        if (ev.is_invoice && ev.card_id && ev.current_month && !ev.paid) {
+                        if (ev.is_invoice && ev.card_id && ev.current_month && !ev.paid){
                             action = `<button type="button" class="bg-transparent border-0"
-                                data-pay-invoice data-card="${ev.card_id}" data-month="${ev.current_month}"
-                                data-amount="${Math.abs(ev.valor || 0)}" data-title="${escAttr(ev.descricao)}">
-                                <i class="fa-solid fa-check text-green-600"></i></button>`;
-                        } else if ((ev.tipo === 'despesa' || ev.tipo === 'entrada') && ev.tx_id && !ev.paid) {
+                    data-pay-invoice data-card="${ev.card_id}" data-month="${ev.current_month}"
+                    data-amount="${Math.abs(ev.valor || 0)}" data-title="${escAttr(ev.descricao)}">
+                    <i class="fa-solid fa-check text-green-600"></i></button>`;
+                        } else if ((ev.tipo==='despesa' || ev.tipo==='entrada') && ev.tx_id && !ev.paid){
                             action = `<button type="button" class="bg-transparent border-0"
-                                data-open-payment data-id="${ev.tx_id}"
-                                data-amount="${Math.abs(ev.valor)}" data-date="${dateStr}" data-title="${escAttr(ev.descricao)}">
-                                <i class="fa-solid fa-check-to-slot text-green-600"></i></button>`;
+                    data-open-payment data-id="${ev.tx_id}"
+                    data-amount="${Math.abs(ev.valor)}" data-date="${dateStr}" data-title="${escAttr(ev.descricao)}">
+                    <i class="fa-solid fa-check-to-slot text-green-600"></i></button>`;
                         }
 
                         html += `
-                        <div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card ">
-                            <span class="size-10 grid place-items-center rounded-xl text-white" style="background-color:${bgColor}"><i class="${iconCls}"></i></span>
-                            <div>
-                                <p class="text-sm font-medium">${ev.descricao}</p>
-                                <p class="text-xs text-neutral-500 dark:text-neutral-400">${br(dateStr)}</p>
-                            </div>
-                            <div class="text-right flex items-center gap-3">
-                                <p class="text-sm font-semibold">${sinal} ${amountHtml}</p>
-                                ${action}
-                            </div>
-                        </div>`;
+        <div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card ">
+          <span class="size-10 grid place-items-center rounded-xl text-white" style="background-color:${bgColor}">
+            <i class="${iconCls}"></i>
+          </span>
+          <div>
+            <p class="text-sm font-medium">${ev.descricao}</p>
+            <p class="text-xs text-neutral-500 dark:text-neutral-400">${br(dateStr)}</p>
+          </div>
+          <div class="text-right flex items-center gap-3">
+            <p class="text-sm font-semibold">${sinal} ${amountHtml}</p>
+            ${action}
+          </div>
+        </div>`;
                     }
                     c.innerHTML = html;
                 }
 
-                let fp;
-                document.addEventListener('DOMContentLoaded', () => {
+                async function atualizarKpisDoMes(ymStr){
+                    startLoading('kpi-contas','kpi-receber','kpi-pagar','kpi-balanco','saldoValor');
+                    try{
+                        const url = `{{ route('dashboard.kpis') }}?month=${encodeURIComponent(ymStr)}&cumulative=1`;
+                        const r = await fetch(url,{headers:{Accept:'application/json'}});
+                        if (!r.ok) throw new Error('Falha ao carregar KPIs');
+                        const k = await r.json();
+                        renderSaldoCofrinhos('kpi-contas', k.accountsBalance_brl, k.savingsBalance_brl);
+                        renderBreakdown('kpi-receber', k, 'aReceber', 'pendentes');
+                        renderBreakdown('kpi-pagar', k, 'aPagar', 'atrasados');
+                        const total = (k.saldoPrevisto_brl || k.saldoMes_brl);
+                        const saldoEl = document.getElementById('saldoValor'); if (saldoEl) saldoEl.textContent = total || '—';
+                        const bal = document.getElementById('kpi-balanco');   if (bal)    bal.textContent   = total || '—';
+                    } catch(e){ console.error(e); }
+                    finally { finishLoading('kpi-contas','kpi-receber','kpi-pagar','kpi-balanco','saldoValor'); }
+                }
+
+                async function syncMonthUI(ymStr){
+                    const [y,m] = ymStr.split('-').map(Number);
+                    const first = new Date(y, m-1, 1);
+                    await loadWindow(ymStr, 2);
+                    fp.jumpToDate(first, true);
+                    fp.setDate(first, true);
+                    fp.redraw();
+                    exibirEventos(iso(first));
+                    atualizarKpisDoMes(ymStr);
+                }
+                window.syncMonthUI = syncMonthUI;
+
+                async function changeMonth(delta){
+                    const input = document.getElementById('monthPicker');
+                    const [y,m] = input.value.split('-').map(Number);
+                    const next = new Date(y, m-1 + delta, 1);
+                    const ymStr = ym(next);
+                    input.value = ymStr;
+                    await syncMonthUI(ymStr);
+                }
+                window.changeMonth = changeMonth;
+
+                let fp; // flatpickr instance
+
+                function initCalendar(){
                     fp = flatpickr("#calendar", {
                         locale: 'pt',
                         inline: true,
+                        static: true,           // mantém ancorado ao container (como no teu CSS)
                         defaultDate: "today",
                         disableMobile: true,
 
@@ -764,19 +800,13 @@
                             if (!evs.length) return;
 
                             const hasGreen = evs.some(e => e.tipo === 'entrada');
-                            const hasRed = evs.some(e => (e.tipo === 'despesa' && !e.is_invoice) || (e.is_invoice && !e.paid));
-                            const hasBlue = evs.some(e => e.tipo === 'investimento' || e.tipo === 'payment' || (e.is_invoice && e.paid));
+                            const hasRed   = evs.some(e => (e.tipo==='despesa' && !e.is_invoice) || (e.is_invoice && !e.paid));
+                            const hasBlue  = evs.some(e => e.tipo==='investimento' || e.tipo==='payment' || (e.is_invoice && e.paid));
 
                             const wrap = document.createElement('div');
                             wrap.style.cssText = 'display:flex;justify-content:center;gap:2px;margin-top:-10px';
-                            const dot = c => {
-                                const s = document.createElement('span');
-                                s.style.cssText = `width:6px;height:6px;background:${c};border-radius:50%`;
-                                wrap.appendChild(s);
-                            };
-                            if (hasGreen) dot('green');
-                            if (hasRed) dot('red');
-                            if (hasBlue) dot('#0ea5e9');
+                            const dot = c => { const s=document.createElement('span'); s.style.cssText=`width:6px;height:6px;background:${c};border-radius:50%`; wrap.appendChild(s); };
+                            if (hasGreen) dot('green'); if (hasRed) dot('red'); if (hasBlue) dot('#0ea5e9');
                             if (wrap.childElementCount) dayElem.appendChild(wrap);
                         },
 
@@ -789,6 +819,7 @@
                             monthPicker.value = ymStr;
                             atualizarKpisDoMes(ymStr);
                         },
+
                         onYearChange: async (_sd, _ds, inst) => {
                             const first = new Date(inst.currentYear, inst.currentMonth, 1);
                             const ymStr = ym(first);
@@ -798,73 +829,44 @@
                             monthPicker.value = ymStr;
                             atualizarKpisDoMes(ymStr);
                         },
+
                         onReady: async (sd, _ds, inst) => {
+                            // espera fontes/CSS aplicarem antes do primeiro redraw (mobile)
+                            try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(_){}
                             const first = new Date(inst.currentYear, inst.currentMonth, 1);
                             const ymStr = ym(first);
                             await loadWindow(ymStr, 2);
-                            inst.redraw();
+
+                            requestAnimationFrame(() => inst.redraw());
+                            setTimeout(() => { try{ inst.redraw(); }catch(_){} }, 160); // segundo redraw garante layout no Safari
+
                             exibirEventos(iso(sd?.[0] ?? new Date()));
                             const initialYm = document.getElementById('monthPicker').value || ymStr;
                             atualizarKpisDoMes(initialYm);
                         },
-                        onChange: sd => {
-                            if (sd?.[0]) exibirEventos(iso(sd[0]));
-                        }
+
+                        onChange: sd => { if (sd?.[0]) exibirEventos(iso(sd[0])); }
                     });
 
-                    document.getElementById('monthForm')?.addEventListener('submit', e => e.preventDefault());
-                    document.getElementById('monthPicker')?.addEventListener('change', async (e) => {
-                        await window.syncMonthUI(e.target.value);
-                    });
+                    // observers/redraws
+                    const doRedraw = () => { try { fp && fp.redraw(); } catch(_){} };
+                    window.addEventListener('resize', doRedraw, {passive:true});
+                    window.addEventListener('orientationchange', doRedraw, {passive:true});
+                    window.addEventListener('pageshow', e => { if (e.persisted) doRedraw(); }, {passive:true});
 
-                    window.__cal = {fp, eventosCache, exibirEventos, iso};
-                });
-
-                async function atualizarKpisDoMes(ymStr) {
-                    startLoading('kpi-contas', 'kpi-receber', 'kpi-pagar', 'kpi-balanco', 'saldoValor');
-                    try {
-                        const url = `{{ route('dashboard.kpis') }}?month=${encodeURIComponent(ymStr)}&cumulative=1`;
-                        const r = await fetch(url, {headers: {Accept: 'application/json'}});
-                        if (!r.ok) throw new Error('Falha ao carregar KPIs');
-                        const k = await r.json();
-                        renderSaldoCofrinhos('kpi-contas', k.accountsBalance_brl, k.savingsBalance_brl);
-                        renderBreakdown('kpi-receber', k, 'aReceber', 'pendentes');
-                        renderBreakdown('kpi-pagar', k, 'aPagar', 'atrasados');
-                        const total = (k.saldoPrevisto_brl || k.saldoMes_brl);
-                        const saldoEl = document.getElementById('saldoValor');
-                        if (saldoEl) saldoEl.textContent = total || '—';
-                        const bal = document.getElementById('kpi-balanco');
-                        if (bal) bal.textContent = total || '—';
-                    } catch (e) {
-                        console.error(e);
-                    } finally {
-                        finishLoading('kpi-contas', 'kpi-receber', 'kpi-pagar', 'kpi-balanco', 'saldoValor');
+                    const calBox = document.getElementById('calendar')?.parentElement;
+                    if (calBox && 'ResizeObserver' in window){
+                        const ro = new ResizeObserver(() => doRedraw());
+                        ro.observe(calBox);
                     }
+
+                    // expõe utilitários para outros scripts
+                    window.__cal = {fp, eventosCache, exibirEventos, iso};
                 }
 
-                async function syncMonthUI(ymStr) {
-                    const [y, m] = ymStr.split('-').map(Number);
-                    const first = new Date(y, m - 1, 1);
-                    await loadWindow(ymStr, 2);
-                    fp.jumpToDate(first, true);
-                    fp.setDate(first, true);
-                    fp.redraw();
-                    exibirEventos(iso(first));
-                    atualizarKpisDoMes(ymStr);
-                }
+                // inicia DEPOIS do load (garante CSS aplicado no mobile)
+                window.addEventListener('load', initCalendar, {once:true});
 
-                window.syncMonthUI = syncMonthUI;
-
-                async function changeMonth(delta) {
-                    const input = document.getElementById('monthPicker');
-                    const [y, m] = input.value.split('-').map(Number);
-                    const next = new Date(y, m - 1 + delta, 1);
-                    const ymStr = ym(next);
-                    input.value = ymStr;
-                    await syncMonthUI(ymStr);
-                }
-
-                window.changeMonth = changeMonth;
             })();
         </script>
 
@@ -883,7 +885,6 @@
                     lastPayload: null,  // dados atuais
                     chart: null
                 };
-
 
                 function textColor() {
                     return document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#111827';
@@ -938,6 +939,9 @@
                     const values = payload.items.map(i => i.value);
                     const colors = payload.items.map(i => i.color || '#18dec7');
 
+                    const colorsBg     = payload.items.map(i => i.bg);     // ex: #a6e3a11a
+                    const colorsBorder = payload.items.map(i => i.border); // ex: #a6e3a1
+
                     titleEl.textContent = payload.title || 'Distribuição';
                     renderCrumbs(payload.breadcrumbs || []);
                     backBtn.classList.toggle('hidden', state.stack.length === 0);
@@ -947,18 +951,28 @@
                     }
                     state.chart = new Chart(ctx, {
                         type: 'doughnut',
-                        data: {labels, datasets: [{data: values, backgroundColor: colors, borderWidth: 0}]},
+                        data: {
+                            labels: payload.items.map(i => i.label),
+                            datasets: [{
+                                data: payload.items.map(i => i.value),
+                                backgroundColor: colorsBg,
+                                borderColor: colorsBorder,
+                                borderWidth: 1
+                            }]},
                         options: {
                             responsive: true,
-                            cutout: '60%',
-                            plugins: {
-                                legend: {position: 'bottom', labels: {color: textColor()}},
-                                tooltip: {
-                                    callbacks: {
-                                        label: (ctx) => ` ${ctx.label}: ${currencyBRL(ctx.parsed)}`
-                                    }
+                            maintainAspectRatio: false,
+                            devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2), // alta resolução sem exagero
+                            elements: {
+                                arc: {
+                                    borderAlign: 'inner',         // borda desenhada “para dentro” (fica nítida)
+                                    hoverBorderWidth: 0,
+                                    hoverOffset: 0,
+                                    borderJoinStyle: 'round'      // suaviza junções
                                 }
-                            }
+                            },
+                            cutout: '65%',
+                            radius: '85%'
                         }
                     });
 

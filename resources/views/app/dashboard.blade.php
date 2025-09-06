@@ -5,13 +5,20 @@
         <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
 
         <style>
-            .no-scrollbar::-webkit-scrollbar{ display:none; }
-            .no-scrollbar{ -ms-overflow-style:none; scrollbar-width:none; }
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+
+            .no-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
         </style>
     @endpush
 
     <section class="mt-6 space-y-4">
-        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
+        <div
+            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
             <button
                 class="w-full mb-3 hidden items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white px-3 py-2"
                 style="letter-spacing:.75px;font-size:12px;font-weight:600" data-install>
@@ -54,8 +61,10 @@
         </div>
 
         <section id="saldo" class="mt-4 md:mt-0">
-            <div class="relative overflow-hidden rounded-2xl p-5 pb-0 md:p-6 bg-gradient-to-br from-brand-400 to-brand-600 dark:from-neutral-900 dark:to-neutral-800 text-white shadow-soft dark:shadow-softDark">
-                <div class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/15 dark:bg-neutral-800/80 blur-2xl"></div>
+            <div
+                class="relative overflow-hidden rounded-2xl p-5 pb-0 md:p-6 bg-gradient-to-br from-brand-400 to-brand-600 dark:from-neutral-900 dark:to-neutral-800 text-white shadow-soft dark:shadow-softDark">
+                <div
+                    class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/15 dark:bg-neutral-800/80 blur-2xl"></div>
 
                 <div class="flex items-start justify-between gap-1">
                     <div>
@@ -103,26 +112,34 @@
         </section>
 
         <div id="atalhos" class="mt-5 grid grid-cols-4 gap-2 md:gap-3">
-            <a href="{{ route('account-view.index') }}" class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
-                <span class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
+            <a href="{{ route('account-view.index') }}"
+               class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                <span
+                    class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
                     <i class="fas fa-landmark text-white"></i>
                 </span>
                 <span class="text-xs">Contas</span>
             </a>
-            <a href="{{ route('transaction-view.index') }}" class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
-                <span class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
+            <a href="{{ route('transaction-view.index') }}"
+               class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                <span
+                    class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
                     <i class="fa-solid fa-cart-plus text-white"></i>
                 </span>
                 <span class="text-xs">Transações</span>
             </a>
-            <a href="{{ route('card-view.index') }}" class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
-                <span class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
+            <a href="{{ route('card-view.index') }}"
+               class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                <span
+                    class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
                      <i class="fas fa-credit-card text-white"></i>
                 </span>
                 <span class="text-xs">Cartões</span>
             </a>
-            <a href="{{ route('saving-view.index') }}" class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
-                <span class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
+            <a href="{{ route('saving-view.index') }}"
+               class="group flex flex-col items-center gap-2 p-1 py-2 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900">
+                <span
+                    class="grid place-items-center size-10 rounded-xl shadow-brand-600/30 bg-gradient-to-br from-brand-500 to-brand-700 active:scale-95">
                     <i class="fas fa-chart-line text-white"></i>
                 </span>
                 <span class="text-xs">Investimentos</span>
@@ -130,14 +147,17 @@
         </div>
 
         <!-- Calendar -->
-        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3">
+        <div
+            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3">
             <div id="calendar"></div>
         </div>
 
-        <div id="calendar-results" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3"></div>
+        <div id="calendar-results"
+             class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3"></div>
 
         <!-- Chart Despesas -->
-        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
+        <div
+            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
 
             <div class="flex items-center justify-between gap-2">
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -178,7 +198,8 @@
         </div>
 
         <!-- Next Payments -->
-        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
+        <div
+            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
             <div class="flex items-center justify-between">
                 <p class="font-medium">Próximos pagamentos</p>
             </div>
@@ -234,7 +255,8 @@
         </div>
 
         <!-- Transactions Recent -->
-        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
+        <div
+            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
             <div class="flex items-center justify-between">
                 <p class="font-medium">Transações recentes</p>
             </div>
@@ -284,7 +306,8 @@
 
         <!-- Actual Invoices -->
         <h2 class="text-lg font-semibold">Faturas atuais</h2>
-        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
+        <div
+            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
             @if($cardTip)
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-credit-card" style="color: {{ $cardTip['color'] }}"></i>
@@ -644,26 +667,29 @@
 
             (function calendarBoot() {
                 const routeUrl = "{{ route('calendar.events') }}";
-                const ym  = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-                const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-                const br  = s => { const [y,m,d] = String(s).slice(0,10).split('-'); return `${d}/${m}/${y}`; };
-                const brl = n => Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-                const escAttr = s => String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const ym = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                const br = s => {
+                    const [y, m, d] = String(s).slice(0, 10).split('-');
+                    return `${d}/${m}/${y}`;
+                };
+                const brl = n => Number(n || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+                const escAttr = s => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
                 const eventosCache = {};
                 const loadedWindows = new Set();
 
-                function addEventToCache(ev){
-                    const day = String(ev.start).slice(0,10);
-                    const xp  = ev.extendedProps || {};
-                    let key   = ev.id ?? `${ev.title}-${ev.start}`;
+                function addEventToCache(ev) {
+                    const day = String(ev.start).slice(0, 10);
+                    const xp = ev.extendedProps || {};
+                    let key = ev.id ?? `${ev.title}-${ev.start}`;
 
                     const tipo = (xp.type || '').toLowerCase().trim();
-                    const isTxLaunch = (tipo==='entrada' || tipo==='despesa') && xp.transaction_id;
+                    const isTxLaunch = (tipo === 'entrada' || tipo === 'despesa') && xp.transaction_id;
                     if (isTxLaunch) key = `tx_${xp.transaction_id}_${day}`;
 
                     const item = {
-                        id:key, tipo, color:ev.bg, icon:ev.icon,
+                        id: key, tipo, color: ev.bg, icon: ev.icon,
                         descricao: ev.title ?? xp.category_name ?? 'Sem descrição',
                         valor: Number(xp.amount ?? 0),
                         valor_brl: xp.amount_brl,
@@ -678,10 +704,10 @@
                     if (!map.has(key)) map.set(key, item);
                 }
 
-                async function loadWindow(ymStr, months=2){
+                async function loadWindow(ymStr, months = 2) {
                     const key = `${ymStr}:${months}`;
                     if (loadedWindows.has(key)) return;
-                    const resp = await fetch(`${routeUrl}?start=${ymStr}&months=${months}`, {headers:{'Accept':'application/json'}});
+                    const resp = await fetch(`${routeUrl}?start=${ymStr}&months=${months}`, {headers: {'Accept': 'application/json'}});
                     if (!resp.ok) return;
                     (await resp.json()).forEach(addEventToCache);
                     loadedWindows.add(key);
@@ -692,35 +718,39 @@
                     return map ? Array.from(map.values()) : [];
                 };
 
-                function exibirEventos(dateStr){
+                function exibirEventos(dateStr) {
                     const c = document.getElementById('calendar-results');
                     const eventos = eventosDoDia(dateStr);
 
                     let html = `<h2 class="mt-3 text-lg font-semibold">Lançamentos do dia ${br(dateStr)}</h2>`;
-                    if (!eventos.length){
+                    if (!eventos.length) {
                         html += `<div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card ">
                  <span class="size-10 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800"><i class="fa-solid fa-sack-dollar"></i></span>
                  <div class="text-sm">Nenhum lançamento.</div><div></div>
                </div>`;
-                        c.innerHTML = html; return;
+                        c.innerHTML = html;
+                        return;
                     }
 
-                    for (const ev of eventos){
-                        const isPaidInv = ev.is_invoice && ev.paid===true;
-                        const iconCls   = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
-                        const bgColor   = isPaidInv ? '#0ea5e9' : (ev.color || '#999');
+                    for (const ev of eventos) {
+                        const isPaidInv = ev.is_invoice && ev.paid === true;
+                        const iconCls = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
+                        const bgColor = isPaidInv ? '#0ea5e9' : (ev.color || '#999');
 
                         let amountHtml = ev.valor_brl, sinal = '';
-                        if (!isPaidInv) { sinal = ev.tipo==='despesa' ? '-' : (ev.tipo==='entrada' ? '+' : ''); }
-                        else { amountHtml = brl(Math.abs(ev.valor || 0)); }
+                        if (!isPaidInv) {
+                            sinal = ev.tipo === 'despesa' ? '-' : (ev.tipo === 'entrada' ? '+' : '');
+                        } else {
+                            amountHtml = brl(Math.abs(ev.valor || 0));
+                        }
 
                         let action = '';
-                        if (ev.is_invoice && ev.card_id && ev.current_month && !ev.paid){
+                        if (ev.is_invoice && ev.card_id && ev.current_month && !ev.paid) {
                             action = `<button type="button" class="bg-transparent border-0"
                     data-pay-invoice data-card="${ev.card_id}" data-month="${ev.current_month}"
                     data-amount="${Math.abs(ev.valor || 0)}" data-title="${escAttr(ev.descricao)}">
                     <i class="fa-solid fa-check text-green-600"></i></button>`;
-                        } else if ((ev.tipo==='despesa' || ev.tipo==='entrada') && ev.tx_id && !ev.paid){
+                        } else if ((ev.tipo === 'despesa' || ev.tipo === 'entrada') && ev.tx_id && !ev.paid) {
                             action = `<button type="button" class="bg-transparent border-0"
                     data-open-payment data-id="${ev.tx_id}"
                     data-amount="${Math.abs(ev.valor)}" data-date="${dateStr}" data-title="${escAttr(ev.descricao)}">
@@ -745,26 +775,31 @@
                     c.innerHTML = html;
                 }
 
-                async function atualizarKpisDoMes(ymStr){
-                    startLoading('kpi-contas','kpi-receber','kpi-pagar','kpi-balanco','saldoValor');
-                    try{
+                async function atualizarKpisDoMes(ymStr) {
+                    startLoading('kpi-contas', 'kpi-receber', 'kpi-pagar', 'kpi-balanco', 'saldoValor');
+                    try {
                         const url = `{{ route('dashboard.kpis') }}?month=${encodeURIComponent(ymStr)}&cumulative=1`;
-                        const r = await fetch(url,{headers:{Accept:'application/json'}});
+                        const r = await fetch(url, {headers: {Accept: 'application/json'}});
                         if (!r.ok) throw new Error('Falha ao carregar KPIs');
                         const k = await r.json();
                         renderSaldoCofrinhos('kpi-contas', k.accountsBalance_brl, k.savingsBalance_brl);
                         renderBreakdown('kpi-receber', k, 'aReceber', 'pendentes');
                         renderBreakdown('kpi-pagar', k, 'aPagar', 'atrasados');
                         const total = (k.saldoPrevisto_brl || k.saldoMes_brl);
-                        const saldoEl = document.getElementById('saldoValor'); if (saldoEl) saldoEl.textContent = total || '—';
-                        const bal = document.getElementById('kpi-balanco');   if (bal)    bal.textContent   = total || '—';
-                    } catch(e){ console.error(e); }
-                    finally { finishLoading('kpi-contas','kpi-receber','kpi-pagar','kpi-balanco','saldoValor'); }
+                        const saldoEl = document.getElementById('saldoValor');
+                        if (saldoEl) saldoEl.textContent = total || '—';
+                        const bal = document.getElementById('kpi-balanco');
+                        if (bal) bal.textContent = total || '—';
+                    } catch (e) {
+                        console.error(e);
+                    } finally {
+                        finishLoading('kpi-contas', 'kpi-receber', 'kpi-pagar', 'kpi-balanco', 'saldoValor');
+                    }
                 }
 
-                async function syncMonthUI(ymStr){
-                    const [y,m] = ymStr.split('-').map(Number);
-                    const first = new Date(y, m-1, 1);
+                async function syncMonthUI(ymStr) {
+                    const [y, m] = ymStr.split('-').map(Number);
+                    const first = new Date(y, m - 1, 1);
                     await loadWindow(ymStr, 2);
                     fp.jumpToDate(first, true);
                     fp.setDate(first, true);
@@ -772,25 +807,27 @@
                     exibirEventos(iso(first));
                     atualizarKpisDoMes(ymStr);
                 }
+
                 window.syncMonthUI = syncMonthUI;
 
-                async function changeMonth(delta){
+                async function changeMonth(delta) {
                     const input = document.getElementById('monthPicker');
-                    const [y,m] = input.value.split('-').map(Number);
-                    const next = new Date(y, m-1 + delta, 1);
+                    const [y, m] = input.value.split('-').map(Number);
+                    const next = new Date(y, m - 1 + delta, 1);
                     const ymStr = ym(next);
                     input.value = ymStr;
                     await syncMonthUI(ymStr);
                 }
+
                 window.changeMonth = changeMonth;
 
-                let fp; // flatpickr instance
+                let fp;
 
-                function initCalendar(){
+                document.addEventListener('DOMContentLoaded', () => {
                     fp = flatpickr("#calendar", {
                         locale: 'pt',
                         inline: true,
-                        static: true,           // mantém ancorado ao container (como no teu CSS)
+                        static: true,
                         defaultDate: "today",
                         disableMobile: true,
 
@@ -800,13 +837,19 @@
                             if (!evs.length) return;
 
                             const hasGreen = evs.some(e => e.tipo === 'entrada');
-                            const hasRed   = evs.some(e => (e.tipo==='despesa' && !e.is_invoice) || (e.is_invoice && !e.paid));
-                            const hasBlue  = evs.some(e => e.tipo==='investimento' || e.tipo==='payment' || (e.is_invoice && e.paid));
+                            const hasRed = evs.some(e => (e.tipo === 'despesa' && !e.is_invoice) || (e.is_invoice && !e.paid));
+                            const hasBlue = evs.some(e => e.tipo === 'investimento' || e.tipo === 'payment' || (e.is_invoice && e.paid));
 
                             const wrap = document.createElement('div');
                             wrap.style.cssText = 'display:flex;justify-content:center;gap:2px;margin-top:-10px';
-                            const dot = c => { const s=document.createElement('span'); s.style.cssText=`width:6px;height:6px;background:${c};border-radius:50%`; wrap.appendChild(s); };
-                            if (hasGreen) dot('green'); if (hasRed) dot('red'); if (hasBlue) dot('#0ea5e9');
+                            const dot = c => {
+                                const s = document.createElement('span');
+                                s.style.cssText = `width:6px;height:6px;background:${c};border-radius:50%`;
+                                wrap.appendChild(s);
+                            };
+                            if (hasGreen) dot('green');
+                            if (hasRed) dot('red');
+                            if (hasBlue) dot('#0ea5e9');
                             if (wrap.childElementCount) dayElem.appendChild(wrap);
                         },
 
@@ -815,8 +858,7 @@
                             const ymStr = ym(first);
                             await loadWindow(ymStr, 2);
                             inst.redraw();
-                            const monthPicker = document.getElementById('monthPicker');
-                            monthPicker.value = ymStr;
+                            document.getElementById('monthPicker').value = ymStr;
                             atualizarKpisDoMes(ymStr);
                         },
 
@@ -825,48 +867,65 @@
                             const ymStr = ym(first);
                             await loadWindow(ymStr, 2);
                             inst.redraw();
-                            const monthPicker = document.getElementById('monthPicker');
-                            monthPicker.value = ymStr;
+                            document.getElementById('monthPicker').value = ymStr;
                             atualizarKpisDoMes(ymStr);
                         },
 
                         onReady: async (sd, _ds, inst) => {
-                            // espera fontes/CSS aplicarem antes do primeiro redraw (mobile)
-                            try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(_){}
+                            // força as classes que teu CSS espera
+                            try {
+                                const calEl = inst.calendarContainer;
+                                calEl.classList.add('animate');   // tua regra usa .animate
+                                calEl.classList.add('arrowTop');  // tua regra usa .arrowTop
+                                // garante CSS/Fontes aplicadas
+                                if (document.fonts && document.fonts.ready) await document.fonts.ready;
+                            } catch (_) {
+                            }
+
                             const first = new Date(inst.currentYear, inst.currentMonth, 1);
                             const ymStr = ym(first);
                             await loadWindow(ymStr, 2);
 
+                            // dois redraws curtos evitam “abrir torto” no Safari/Android
                             requestAnimationFrame(() => inst.redraw());
-                            setTimeout(() => { try{ inst.redraw(); }catch(_){} }, 160); // segundo redraw garante layout no Safari
+                            setTimeout(() => {
+                                try {
+                                    inst.redraw();
+                                } catch (_) {
+                                }
+                            }, 120);
 
                             exibirEventos(iso(sd?.[0] ?? new Date()));
                             const initialYm = document.getElementById('monthPicker').value || ymStr;
                             atualizarKpisDoMes(initialYm);
                         },
 
-                        onChange: sd => { if (sd?.[0]) exibirEventos(iso(sd[0])); }
+                        onChange: sd => {
+                            if (sd?.[0]) exibirEventos(iso(sd[0]));
+                        }
                     });
 
-                    // observers/redraws
-                    const doRedraw = () => { try { fp && fp.redraw(); } catch(_){} };
-                    window.addEventListener('resize', doRedraw, {passive:true});
-                    window.addEventListener('orientationchange', doRedraw, {passive:true});
-                    window.addEventListener('pageshow', e => { if (e.persisted) doRedraw(); }, {passive:true});
+                    // Redraw em eventos de viewport (sem mexer no teu CSS)
+                    const doRedraw = () => {
+                        try {
+                            fp && fp.redraw();
+                        } catch (_) {
+                        }
+                    };
+                    ['load', 'resize', 'orientationchange'].forEach(ev =>
+                        window.addEventListener(ev, doRedraw, {passive: true})
+                    );
+                    window.addEventListener('pageshow', e => {
+                        if (e.persisted) doRedraw();
+                    }, {passive: true});
 
-                    const calBox = document.getElementById('calendar')?.parentElement;
-                    if (calBox && 'ResizeObserver' in window){
-                        const ro = new ResizeObserver(() => doRedraw());
-                        ro.observe(calBox);
-                    }
+                    document.getElementById('monthForm')?.addEventListener('submit', e => e.preventDefault());
+                    document.getElementById('monthPicker')?.addEventListener('change', async (e) => {
+                        await window.syncMonthUI(e.target.value);
+                    });
 
-                    // expõe utilitários para outros scripts
                     window.__cal = {fp, eventosCache, exibirEventos, iso};
-                }
-
-                // inicia DEPOIS do load (garante CSS aplicado no mobile)
-                window.addEventListener('load', initCalendar, {once:true});
-
+                });
             })();
         </script>
 
@@ -894,20 +953,23 @@
                     return (v ?? 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
                 }
 
-                function renderCrumbs(bc){
+                function renderCrumbs(bc) {
                     const wrap = document.getElementById('pieCrumbs');
                     wrap.innerHTML = '';
-                    if(!bc?.length) return;
+                    if (!bc?.length) return;
 
-                    bc.forEach((b,i)=>{
+                    bc.forEach((b, i) => {
                         const btn = document.createElement('button');
                         btn.className = 'px-2 py-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 shrink-0 max-w-[60vw] truncate';
                         btn.title = b.label; // tooltip
                         btn.textContent = b.label;
-                        btn.onclick = ()=>{ state.stack = []; load(b.level, b.params||{}); };
+                        btn.onclick = () => {
+                            state.stack = [];
+                            load(b.level, b.params || {});
+                        };
                         wrap.appendChild(btn);
 
-                        if(i < bc.length-1){
+                        if (i < bc.length - 1) {
                             const sep = document.createElement('span');
                             sep.className = 'mx-1 shrink-0';
                             sep.textContent = '›';
@@ -939,7 +1001,7 @@
                     const values = payload.items.map(i => i.value);
                     const colors = payload.items.map(i => i.color || '#18dec7');
 
-                    const colorsBg     = payload.items.map(i => i.bg);     // ex: #a6e3a11a
+                    const colorsBg = payload.items.map(i => i.bg);     // ex: #a6e3a11a
                     const colorsBorder = payload.items.map(i => i.border); // ex: #a6e3a1
 
                     titleEl.textContent = payload.title || 'Distribuição';
@@ -958,7 +1020,8 @@
                                 backgroundColor: colorsBg,
                                 borderColor: colorsBorder,
                                 borderWidth: 1
-                            }]},
+                            }]
+                        },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,

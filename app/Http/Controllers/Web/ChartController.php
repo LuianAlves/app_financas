@@ -8,12 +8,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Models\AdditionalUser;
 
 class ChartController extends Controller
 {
     public function pie(Request $req)
     {
         $userId = Auth::id();
+        $ownerId = AdditionalUser::ownerIdFor();
+        $userIds = AdditionalUser::query()
+            ->where('user_id', $ownerId)
+            ->pluck('linked_user_id')
+            ->push($ownerId)
+            ->unique()
+            ->values();
+
         [$start, $end] = $this->monthBounds($req->string('month')->toString());
         $ym = $req->string('month')->toString();
         $currentMonth = $ym && preg_match('/^\d{4}-\d{2}$/', $ym) ? $ym : now()->format('Y-m');
@@ -37,7 +46,7 @@ class ChartController extends Controller
             if ($level === 'type') {
                 $rows = DB::table('transactions as t')
                     ->join('transaction_categories as c', 'c.id', '=', 't.transaction_category_id')
-                    ->where('t.user_id', $userId)
+                    ->whereIn('t.user_id', $userIds)
                     ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
                     ->selectRaw('c.type as label, SUM(t.amount) as value')
                     ->groupBy('c.type')
@@ -71,7 +80,7 @@ class ChartController extends Controller
 
                 $rows = DB::table('transactions as t')
                     ->join('transaction_categories as c', 'c.id', '=', 't.transaction_category_id')
-                    ->where('t.user_id', $userId)
+                    ->whereIn('t.user_id', $userIds)
                     ->where('c.type', $type)
                     ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
                     ->selectRaw('c.id, c.name as label, COALESCE(c.color,"#18dec7") as color, SUM(t.amount) as value')
@@ -93,9 +102,9 @@ class ChartController extends Controller
                 $breadcrumbs[] = ['label'=>ucfirst($type),'level'=>'category','params'=>['type'=>$type]];
 
                 $rows = DB::table('transactions as t')
-                    ->where('t.user_id',$userId)
+                    ->whereIn('t.user_id', $userIds)
                     ->where('t.transaction_category_id',$categoryId)
-                    ->whereBetween('t.date',[$start,$end])
+                    ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
                     ->selectRaw('t.type as label, SUM(t.amount) as value')
                     ->groupBy('t.type')->orderByDesc('value')->get()
                     ->map(function($r) use($type,$categoryId){
@@ -123,10 +132,10 @@ class ChartController extends Controller
                 $breadcrumbs[] = ['label'=>'Cartão','level'=>'pay','params'=>['type'=>$type,'category_id'=>$categoryId]];
 
                 $rows = DB::table('transactions as t')
-                    ->where('t.user_id',$userId)
+                    ->whereIn('t.user_id', $userIds)
                     ->where('t.transaction_category_id',$categoryId)
                     ->where('t.type','card')
-                    ->whereBetween('t.date',[$start,$end])
+                    ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
                     ->selectRaw('t.type_card as label, SUM(t.amount) as value')
                     ->groupBy('t.type_card')->orderByDesc('value')->get()
                     ->map(function($r) use($type,$categoryId){
@@ -156,11 +165,11 @@ class ChartController extends Controller
                 if ($pay === 'card') {
                     $q = DB::table('transactions as t')
                         ->join('cards as k','k.id','=','t.card_id')
-                        ->where('t.user_id',$userId)
+                        ->whereIn('t.user_id', $userIds)
                         ->when($categoryId, fn($qq)=>$qq->where('t.transaction_category_id',$categoryId))
                         ->where('t.type','card')
                         ->when($cardType, fn($qq)=>$qq->where('t.type_card',$cardType))
-                        ->whereBetween('t.date',[$start,$end])
+                        ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
                         ->selectRaw('k.id, k.cardholder_name as label, SUM(t.amount) as value, COALESCE(k.color_card,"#a78bfa") as color')
                         ->groupBy('k.id','k.cardholder_name','k.color_card')
                         ->orderByDesc('value')->get();
@@ -176,10 +185,10 @@ class ChartController extends Controller
                 } else {
                     $q = DB::table('transactions as t')
                         ->join('accounts as a','a.id','=','t.account_id')
-                        ->where('t.user_id',$userId)
+                        ->whereIn('t.user_id', $userIds)
                         ->when($categoryId, fn($qq)=>$qq->where('t.transaction_category_id',$categoryId))
                         ->where('t.type',$pay)
-                        ->whereBetween('t.date',[$start,$end])
+                        ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
                         ->selectRaw('a.id, a.bank_name as label, SUM(t.amount) as value')
                         ->groupBy('a.id','a.bank_name')
                         ->orderByDesc('value')->get();
@@ -205,7 +214,7 @@ class ChartController extends Controller
                 $rows = DB::table('invoices as i')
                     ->leftJoin('invoice_items as it','it.invoice_id','=','i.id')
                     ->join('cards as k','k.id','=','i.card_id')
-                    ->where('i.user_id',$userId)
+                    ->whereIn('i.user_id', $userIds)
                     ->whereBetween('it.date', [$start, $end]) // << FILTRO DO MÊS
                     ->selectRaw('i.id, k.id as card_id,
         CONCAT(k.cardholder_name, " • ", LPAD(COALESCE(k.last_four_digits,0),4,"0")) as label,

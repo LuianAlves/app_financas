@@ -49,6 +49,16 @@
                 background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .08), transparent);
                 opacity: .6
             }
+
+            #accFab {
+                z-index: 80;
+            }
+
+            body.ui-modal-open #accFab,
+            body.ui-sheet-open #accFab {
+                z-index: 40;
+                pointer-events: none;
+            }
         </style>
     @endpush
 

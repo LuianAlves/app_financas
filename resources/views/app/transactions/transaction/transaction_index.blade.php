@@ -287,15 +287,15 @@
                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Forma de pagamento</span>
                 <div class="mt-1 grid grid-cols-3 gap-2">
                     <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="pix" type="checkbox" name="type" value="pix" class="hidden">
+                        <input id="pix" type="radio" name="type" value="pix" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Pix</span>
                     </label>
                     <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="card" type="checkbox" name="type" value="card" class="hidden">
+                        <input id="card" type="radio" name="type" value="card" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Cartão</span>
                     </label>
                     <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="money" type="checkbox" name="type" value="money" class="hidden">
+                        <input id="money" type="radio" name="type" value="money" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Dinheiro</span>
                     </label>
                 </div>
@@ -305,11 +305,11 @@
                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Tipo de cartão</span>
                 <div class="mt-1 grid grid-cols-2 gap-2">
                     <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="credit" type="checkbox" name="type_card" value="credit" class="hidden">
+                        <input id="credit" type="radio" name="type_card" value="credit" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Crédito</span>
                     </label>
                     <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="debit" type="checkbox" name="type_card" value="debit" class="hidden">
+                        <input id="debit" type="radio" name="type_card" value="debit" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Débito</span>
                     </label>
                 </div>
@@ -367,19 +367,19 @@
                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Recorrência</span>
                 <div class="mt-1 grid grid-cols-2 gap-2">
                     <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="unique" type="checkbox" name="recurrence_type" value="unique" class="hidden">
+                        <input id="unique" type="radio" name="recurrence_type" value="unique" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Única</span>
                     </label>
                     <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="monthly" type="checkbox" name="recurrence_type" value="monthly" class="hidden">
+                        <input id="monthly" type="radio" name="recurrence_type" value="monthly" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Mensal</span>
                     </label>
                     <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="yearly" type="checkbox" name="recurrence_type" value="yearly" class="hidden">
+                        <input id="yearly" type="radio" name="recurrence_type" value="yearly" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Anual</span>
                     </label>
                     <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="custom" type="checkbox" name="recurrence_type" value="custom" class="hidden">
+                        <input id="custom" type="radio" name="recurrence_type" value="custom" class="hidden">
                         <span class="size-4 rounded-full border"></span><span>Personalizado</span>
                     </label>
                 </div>
@@ -699,6 +699,40 @@
                         return fd;
                     },
                 });
+
+                (function bindModalUI(){
+                    const modal = document.getElementById('txModal');
+                    if (!modal) return;
+
+                    const groups = {
+                        pay:  ['pix','card','money'],
+                        card: ['credit','debit'],
+                        rec:  ['unique','monthly','yearly','custom'],
+                    };
+
+                    modal.addEventListener('change', (e) => {
+                        const id = e.target?.id;
+                        if (!id) return;
+
+                        // exclusividade por grupo
+                        Object.values(groups).forEach(g => {
+                            if (g.includes(id) && modal.querySelector('#'+id)?.checked){
+                                g.forEach(other => {
+                                    if (other !== id){
+                                        const el = modal.querySelector('#'+other);
+                                        if (el) el.checked = false;
+                                    }
+                                });
+                            }
+                        });
+
+                        // re-render das seções condicionais
+                        toggleUI(modal);
+                    });
+
+                    modal.querySelector('#tx_cat')?.addEventListener('change', () => toggleUI(modal));
+                    modal.querySelector('#alternate_cards')?.addEventListener('change', () => toggleUI(modal));
+                })();
 
                 function toggleUI(scope) {
                     const $ = (sel) => scope.querySelector(sel);

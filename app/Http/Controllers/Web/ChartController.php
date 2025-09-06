@@ -72,27 +72,26 @@ class ChartController extends Controller
                     ->groupBy('c.type')
                     ->pluck('value','label');
 
-                // 2.3 Faturas do mês -> somar em DESPESA
-                $invItemsDesp = (float) (DB::table('invoice_items as it')
+                $invItemsDesp = (float) DB::table('invoice_items as it')
                     ->join('invoices as i','i.id','=','it.invoice_id')
                     ->join('transaction_categories as c','c.id','=','it.transaction_category_id')
                     ->whereIn('i.user_id', $userIds)
+                    ->where('i.current_month', $currentMonth)     // << AQUI
                     ->where('c.type','despesa')
-                    ->whereBetween('it.date', [$start, $end])
-                    ->selectRaw('SUM(it.amount) as total')->value('total') ?? 0);
+                    ->selectRaw('SUM(it.amount) as total')->value('total') ?? 0;
 
-// 2.3b Pagamentos de fatura no mês (evita duplicar com itens já no mês)
-                $invPaysDesp = (float) (DB::table('invoice_payments as ip')
+// 2.3b Pagamentos de fatura no mês (só se a fatura não tiver itens – evita duplicar)
+                $invPaysDesp = (float) DB::table('invoice_payments as ip')
                     ->join('invoices as i','i.id','=','ip.invoice_id')
                     ->whereIn('i.user_id', $userIds)
+                    ->where('i.current_month', $currentMonth)     // << AQUI
                     ->whereBetween('ip.paid_at', [$start.' 00:00:00', $end.' 23:59:59'])
-                    ->whereDoesntExist(function($q) use ($start,$end){
+                    ->whereNotExists(function($q){
                         $q->select(DB::raw(1))
                             ->from('invoice_items as it')
-                            ->whereColumn('it.invoice_id','i.id')
-                            ->whereBetween('it.date', [$start, $end]);
+                            ->whereColumn('it.invoice_id','i.id'); // basta existir item em qualquer data
                     })
-                    ->selectRaw('SUM(ip.amount) as total')->value('total') ?? 0);
+                    ->selectRaw('COALESCE(SUM(ip.amount),0) as total')->value('total');
 
                 // 2.4 Consolidado
                 $sum = ['entrada'=>0,'despesa'=>0,'investimento'=>0];
@@ -148,13 +147,11 @@ class ChartController extends Controller
                         ->get()->keyBy('id');
 
                     // 3.3 Total de faturas do mês (para a categoria sintética)
-                    $invTotal = (float) (DB::table('invoice_items as it')
+                    $invTotal = DB::table('invoice_items as it')
                         ->join('invoices as i','i.id','=','it.invoice_id')
-                        ->join('transaction_categories as c','c.id','=','it.transaction_category_id')
                         ->whereIn('i.user_id',$userIds)
-                        ->where('c.type','despesa')
-                        ->whereBetween('it.date',[$start,$end])
-                        ->selectRaw('SUM(it.amount) as total')->value('total') ?? 0);
+                        ->where('i.current_month', $currentMonth)     // << AQUI
+                        ->selectRaw('SUM(it.amount) as total')->value('total') ?? 0;
 
 // 3.4 Merge TX + PAY e depois injeta a categoria "Faturas"
                     $ids = collect($txCat->keys())->merge($payCat->keys())->unique();
@@ -178,12 +175,10 @@ class ChartController extends Controller
                             'id'    => '__INVOICES__',
                             'label' => 'Faturas',
                             'value' => round($invTotal, 2),
-                            'color' => '#8b5cf6', // roxo
-                            'next'  => ['level' => 'invoice_cards_tx', 'params' => []], // << drill próprio
+                            'color' => '#8b5cf6',
+                            'next'  => ['level' => 'invoice_cards_tx', 'params' => []],
                         ]);
                     }
-
-// ordena por valor desc depois de injetar
                     $rows = $rows->sortByDesc('value')->values();
 
                     return response()->json([
@@ -244,24 +239,52 @@ class ChartController extends Controller
                 $breadcrumbs[] = ['label'=>'Tipos','level'=>'type','params'=>[]];
                 $breadcrumbs[] = ['label'=>ucfirst($type),'level'=>'category','params'=>['type'=>$type]];
 
-                $rows = DB::table('transactions as t')
+                // A) Transações do mês
+                $tx = DB::table('transactions as t')
                     ->whereIn('t.user_id', $userIds)
-                    ->where('t.transaction_category_id',$categoryId)
+                    ->where('t.transaction_category_id', $categoryId)
                     ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
                     ->selectRaw('t.type as label, SUM(t.amount) as value')
-                    ->groupBy('t.type')->orderByDesc('value')->get()
-                    ->map(function($r) use($type,$categoryId){
-                        $label = $r->label;
-                        $nice  = ['pix'=>'PIX','card'=>'Cartão','money'=>'Dinheiro'][$label] ?? strtoupper($label);
+                    ->groupBy('t.type')
+                    ->pluck('value', 'label'); // ['pix'=>..., 'money'=>..., 'card'=>...]
+
+                // B) Pagamentos do mês (transações fora do mês)
+                $pay = DB::table('payment_transactions as p')
+                    ->join('transactions as t','t.id','=','p.transaction_id')
+                    ->whereIn('t.user_id', $userIds)
+                    ->where('t.transaction_category_id', $categoryId)
+                    ->whereBetween('p.payment_date', [$start, $end])
+                    ->where(function ($q) use ($start,$end) {
+                        $q->whereNull('t.date')
+                            ->orWhereNotBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start,$end]);
+                    })
+                    ->selectRaw('t.type as label, SUM(p.amount) as value')
+                    ->groupBy('t.type')
+                    ->pluck('value', 'label');
+
+                // C) Consolida
+                $byType = ['pix'=>0,'money'=>0,'card'=>0];
+                foreach ($tx as $k=>$v)  { $byType[$k] = ($byType[$k] ?? 0) + (float)$v; }
+                foreach ($pay as $k=>$v) { $byType[$k] = ($byType[$k] ?? 0) + (float)$v; }
+
+                // D) Monta itens
+                $mapLabel = ['pix'=>'PIX','money'=>'Dinheiro','card'=>'Cartão'];
+                $mapColor = ['pix'=>'#22c55e','money'=>'#f59e0b','card'=>'#6366f1'];
+
+                $rows = collect($byType)
+                    ->filter(fn($v)=>$v > 0)
+                    ->map(function($v,$k) use ($mapLabel,$mapColor,$type,$categoryId){
                         return [
-                            'id'=>$label,'label'=>$nice,'value'=>(float)$r->value,
-                            'color'=> $label==='card' ? '#6366f1' : ($label==='pix'?'#22c55e':'#f59e0b'),
-                            'next'=>[
-                                'level'=> $label==='card' ? 'card_type' : 'instrument',
-                                'params'=>['type'=>$type,'category_id'=>$categoryId,'pay'=>$label],
+                            'id'    => $k,
+                            'label' => $mapLabel[$k] ?? strtoupper($k),
+                            'value' => (float)$v,
+                            'color' => $mapColor[$k] ?? '#18dec7',
+                            'next'  => [
+                                'level'  => $k === 'card' ? 'card_type' : 'instrument',
+                                'params' => ['type'=>$type,'category_id'=>$categoryId,'pay'=>$k],
                             ],
                         ];
-                    });
+                    })->values();
 
                 return response()->json([
                     'mode'=>'tx','level'=>'pay','title'=>'Forma de pagamento',
@@ -326,19 +349,39 @@ class ChartController extends Controller
                         'breadcrumbs'=>$breadcrumbs,'items'=>$items,'total'=>$items->sum('value'),
                     ]);
                 } else {
-                    $q = DB::table('transactions as t')
-                        ->join('accounts as a','a.id','=','t.account_id')
+                    // === PIX / Dinheiro: somar transações do mês + payments do mês (conta via transactions.account_id)
+                    $txAcc = DB::table('transactions as t')
+                        ->leftJoin('accounts as a','a.id','=','t.account_id') // LEFT
                         ->whereIn('t.user_id', $userIds)
                         ->when($categoryId, fn($qq)=>$qq->where('t.transaction_category_id',$categoryId))
-                        ->where('t.type',$pay)
+                        ->where('t.type',$pay) // 'pix' ou 'money'
                         ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
-                        ->selectRaw('a.id, a.bank_name as label, SUM(t.amount) as value')
-                        ->groupBy('a.id','a.bank_name')
-                        ->orderByDesc('value')->get();
+                        ->selectRaw('IFNULL(a.id, "_none") as id, COALESCE(a.bank_name,"(Sem conta)") as label, SUM(t.amount) as value')
+                        ->groupBy(DB::raw('IFNULL(a.id, "_none")'), DB::raw('COALESCE(a.bank_name,"(Sem conta)")'))
+                        ->get()->keyBy('id');
 
-                    $items = $q->map(fn($r)=>[
-                        'id'=>$r->id,'label'=>$r->label,'value'=>(float)$r->value,'color'=>'#93c5fd','next'=>null
-                    ]);
+                    $payAcc = DB::table('payment_transactions as p')
+                        ->join('transactions as t','t.id','=','p.transaction_id')
+                        ->leftJoin('accounts as a','a.id','=','t.account_id') // conta vem da transação paga
+                        ->whereIn('t.user_id', $userIds)
+                        ->when($categoryId, fn($qq)=>$qq->where('t.transaction_category_id',$categoryId))
+                        ->whereBetween('p.payment_date', [$start, $end])
+                        ->where(function ($q) use ($start,$end) {
+                            $q->whereNull('t.date')
+                                ->orWhereNotBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start,$end]);
+                        })
+                        ->where('t.type', $pay) // garante mesmo tipo
+                        ->selectRaw('IFNULL(a.id, "_none") as id, COALESCE(a.bank_name,"(Sem conta)") as label, SUM(p.amount) as value')
+                        ->groupBy(DB::raw('IFNULL(a.id, "_none")'), DB::raw('COALESCE(a.bank_name,"(Sem conta)")'))
+                        ->get()->keyBy('id');
+
+                    $ids = collect($txAcc->keys())->merge($payAcc->keys())->unique();
+
+                    $items = $ids->map(function($id) use ($txAcc,$payAcc){
+                        $label = $txAcc[$id]->label ?? $payAcc[$id]->label ?? '(Sem conta)';
+                        $value = (float)($txAcc[$id]->value ?? 0) + (float)($payAcc[$id]->value ?? 0);
+                        return ['id'=>$id,'label'=>$label,'value'=>$value,'color'=>'#93c5fd','next'=>null];
+                    })->sortByDesc('value')->values();
 
                     return response()->json([
                         'mode'=>'tx','level'=>'instrument','title'=>'Contas',
@@ -356,9 +399,9 @@ class ChartController extends Controller
                     ->join('invoice_items as it','it.invoice_id','=','i.id')
                     ->join('cards as k','k.id','=','i.card_id')
                     ->whereIn('i.user_id', $userIds)
-                    ->whereBetween('it.date', [$start,$end])
+                    ->where('i.current_month', $currentMonth)       // << AQUI
                     ->selectRaw('k.id, CONCAT(k.cardholder_name," • ",LPAD(COALESCE(k.last_four_digits,0),4,"0")) as label,
-                     COALESCE(k.color_card,"#a78bfa") as color, SUM(it.amount) as value')
+               COALESCE(k.color_card,"#a78bfa") as color, SUM(it.amount) as value')
                     ->groupBy('k.id','k.cardholder_name','k.last_four_digits','k.color_card')
                     ->orderByDesc('value')->get()
                     ->map(fn($r)=>[
@@ -381,18 +424,26 @@ class ChartController extends Controller
 
                 $rows = DB::table('invoice_items as it')
                     ->join('invoices as i','i.id','=','it.invoice_id')
+                    ->join('transaction_categories as c','c.id','=','it.transaction_category_id')
                     ->whereIn('i.user_id', $userIds)
                     ->where('i.card_id', $cardId)
-                    ->whereBetween('it.date', [$start,$end])
-                    ->selectRaw('it.id, COALESCE(it.title,"Item") as label, it.amount as value, it.date')
+                    ->where('i.current_month', $currentMonth)
+                    ->selectRaw('
+        it.id,
+        COALESCE(it.title,c.name) as label,
+        it.amount as value,
+        it.date,
+        COALESCE(c.color,"#94a3b8") as color
+    ')
                     ->orderByDesc('it.date')->get()
                     ->map(fn($r)=>[
                         'id'=>$r->id,
                         'label'=>$r->label.' — '.\Carbon\Carbon::parse($r->date)->format('d/m'),
                         'value'=>(float)$r->value,
-                        'color'=>'#94a3b8',
+                        'color'=>$r->color,  // << aqui também
                         'next'=>null
                     ]);
+
 
                 return response()->json([
                     'mode'=>'tx','level'=>'invoice_items_tx','title'=>'Itens da fatura',
@@ -470,18 +521,24 @@ class ChartController extends Controller
                 $catName = $categoryId ? DB::table('transaction_categories')->where('id',$categoryId)->value('name') : null;
 
                 $rows = DB::table('invoice_items as it')
-                    ->leftJoin('transaction_categories as c','c.id','=','it.transaction_category_id')
+                    ->join('transaction_categories as c','c.id','=','it.transaction_category_id') // inner é ok (é not null)
                     ->where('it.invoice_id',$invoiceId)
                     ->when($categoryId, fn($q)=>$q->where('it.transaction_category_id',$categoryId))
-                    ->whereBetween('it.date', [$start, $end]) // << AQUI
-                    ->selectRaw('it.id, COALESCE(it.title,c.name) as label, it.amount as value, it.date')
+                    ->whereBetween('it.date', [$start, $end])
+                    ->selectRaw('
+        it.id,
+        COALESCE(it.title,c.name) as label,
+        it.amount as value,
+        it.date,
+        COALESCE(c.color,"#94a3b8") as color
+    ')
                     ->orderByDesc('it.date')->get()
                     ->map(fn($r)=>[
-                        'id'=>$r->id,
-                        'label'=>$r->label.' — '.Carbon::parse($r->date)->format('d/m'),
-                        'value'=>(float)$r->value,
-                        'color'=>'#94a3b8',
-                        'next'=>null
+                        'id'    => $r->id,
+                        'label' => $r->label.' — '.Carbon::parse($r->date)->format('d/m'),
+                        'value' => (float)$r->value,
+                        'color' => $r->color,   // << usa a cor da categoria
+                        'next'  => null,
                     ]);
 
                 return response()->json([

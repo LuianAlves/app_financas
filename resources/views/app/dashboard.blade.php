@@ -3,6 +3,11 @@
 @section('new-content')
     @push('styles')
         <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+
+        <style>
+            .no-scrollbar::-webkit-scrollbar{ display:none; }
+            .no-scrollbar{ -ms-overflow-style:none; scrollbar-width:none; }
+        </style>
     @endpush
 
     <section class="mt-6 space-y-4">
@@ -133,15 +138,32 @@
 
         <!-- Chart Despesas -->
         <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
+
             <div class="flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2 text-sm">
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <!-- Voltar -->
                     <button id="pieBack"
                             class="hidden inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-neutral-200/70 dark:border-neutral-800/70">
                         <i class="fa fa-arrow-left text-xs"></i><span>Voltar</span>
                     </button>
-                    <div id="pieCrumbs" class="flex items-center gap-1 text-neutral-500 dark:text-neutral-400"></div>
+
+                    <!-- Breadcrumbs (rola na horizontal) -->
+                    <nav class="relative flex-1 min-w-0 order-2 sm:order-none" aria-label="Breadcrumb">
+                        <ol id="pieCrumbs"
+                            class="flex items-center gap-1 overflow-x-auto whitespace-nowrap no-scrollbar pr-6 min-w-0">
+                            <!-- JS injeta os crumbs -->
+                        </ol>
+                        <!-- fade da direita (opcional) -->
+                        <div class="pointer-events-none absolute right-0 top-0 h-full w-6
+                bg-gradient-to-l from-white dark:from-neutral-900 to-transparent"></div>
+                    </nav>
+
+                    <!-- Título (não quebra, trunca) -->
+                    <span id="pieTitle"
+                          class="ml-auto text-sm font-semibold whitespace-nowrap truncate max-w-full sm:max-w-[40%]">
+    <!-- JS injeta o texto -->
+  </span>
                 </div>
-                <span id="pieTitle" class="text-sm font-medium">Distribuição</span>
             </div>
 
             <div class="mt-3 grid md:grid-cols-[360px_1fr] gap-4 items-start">
@@ -862,6 +884,7 @@
                     chart: null
                 };
 
+
                 function textColor() {
                     return document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#111827';
                 }
@@ -870,22 +893,24 @@
                     return (v ?? 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
                 }
 
-                function renderCrumbs(bc) {
-                    crumbsEl.innerHTML = '';
-                    bc.forEach((b, i) => {
-                        const a = document.createElement('button');
-                        a.className = 'px-2 py-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800';
-                        a.textContent = b.label;
-                        a.onclick = () => {
-                            state.stack = state.stack.slice(0, i); // volta até o nível
-                            load(b.level, b.params);
-                        };
-                        crumbsEl.appendChild(a);
-                        if (i < bc.length) {
+                function renderCrumbs(bc){
+                    const wrap = document.getElementById('pieCrumbs');
+                    wrap.innerHTML = '';
+                    if(!bc?.length) return;
+
+                    bc.forEach((b,i)=>{
+                        const btn = document.createElement('button');
+                        btn.className = 'px-2 py-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 shrink-0 max-w-[60vw] truncate';
+                        btn.title = b.label; // tooltip
+                        btn.textContent = b.label;
+                        btn.onclick = ()=>{ state.stack = []; load(b.level, b.params||{}); };
+                        wrap.appendChild(btn);
+
+                        if(i < bc.length-1){
                             const sep = document.createElement('span');
-                            sep.className = 'mx-1';
+                            sep.className = 'mx-1 shrink-0';
                             sep.textContent = '›';
-                            crumbsEl.appendChild(sep);
+                            wrap.appendChild(sep);
                         }
                     });
                 }

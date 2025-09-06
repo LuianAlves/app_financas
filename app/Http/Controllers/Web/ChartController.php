@@ -13,227 +13,284 @@ class ChartController extends Controller
 {
     public function pie(Request $req)
     {
-        $userId = Auth::id(); // se usa owner/additionals, ajuste aqui
+        $userId = Auth::id();
         [$start, $end] = $this->monthBounds($req->string('month')->toString());
+        $ym = $req->string('month')->toString();
+        $currentMonth = $ym && preg_match('/^\d{4}-\d{2}$/', $ym) ? $ym : now()->format('Y-m');
 
-        $level = $req->string('level', 'type')->toString();
+        $mode        = $req->string('mode', 'tx')->toString(); // tx | invoice
+        $level       = $req->string('level', $mode === 'invoice' ? 'invoice_cards' : 'type')->toString();
 
-        $type         = $req->string('type')->toString();                 // entrada|despesa|investimento
-        $categoryId   = $req->string('category_id')->toString();          // UUID
-        $pay          = $req->string('pay')->toString();                  // pix|card|money
-        $cardType     = $req->string('card_type')->toString();            // credit|debit
-        $instrumentId = $req->string('instrument_id')->toString();        // account_id ou card_id
+        // params comuns
+        $type         = $req->string('type')->toString();
+        $categoryId   = $req->string('category_id')->toString();
+        $pay          = $req->string('pay')->toString();
+        $cardType     = $req->string('card_type')->toString();
+        $invoiceId    = $req->string('invoice_id')->toString();
 
-        $breadcrumbs = [];
+        // =======================
+        // MODO: TRANSAÇÕES
+        // =======================
+        if ($mode === 'tx') {
+            $breadcrumbs = [];
 
-        // === NÍVEL 1: por tipo (entrada/despesa/investimento)
-        if ($level === 'type') {
-            $rows = Transaction::query()
-                ->join('transaction_categories as c', 'c.id', '=', 'transactions.transaction_category_id')
-                ->where('transactions.user_id', $userId)
-                ->whereBetween('transactions.date', [$start, $end])
-                ->selectRaw('c.type as label, SUM(transactions.amount) as value')
-                ->groupBy('c.type')
-                ->orderByDesc('value')
-                ->get()
-                ->map(function ($r) {
-                    $color = [
-                        'entrada'      => '#10b981',  // emerald-500
-                        'despesa'      => '#ef4444',  // red-500
-                        'investimento' => '#3b82f6',  // blue-500
-                    ][$r->label] ?? '#18dec7';
-
-                    return [
-                        'id'    => Str::uuid()->toString(),
-                        'label' => ucfirst($r->label),
-                        'value' => (float)$r->value,
-                        'color' => $color,
-                        'next'  => ['level' => 'category', 'params' => ['type' => $r->label]],
-                    ];
-                });
-
-            return response()->json([
-                'level'       => 'type',
-                'title'       => 'Tipos',
-                'breadcrumbs' => $breadcrumbs,
-                'items'       => $rows,
-                'total'       => $rows->sum('value'),
-            ]);
-        }
-
-        // === NÍVEL 2: categorias dentro do tipo
-        if ($level === 'category' && $type) {
-            $breadcrumbs[] = ['label' => 'Tipos', 'level' => 'type', 'params' => []];
-
-            $rows = Transaction::query()
-                ->join('transaction_categories as c', 'c.id', '=', 'transactions.transaction_category_id')
-                ->where('transactions.user_id', $userId)
-                ->where('c.type', $type)
-                ->whereBetween('transactions.date', [$start, $end])
-                ->selectRaw('c.id, c.name as label, COALESCE(c.color, "#18dec7") as color, SUM(transactions.amount) as value')
-                ->groupBy('c.id', 'c.name', 'c.color')
-                ->orderByDesc('value')
-                ->get()
-                ->map(function ($r) use ($type) {
-                    return [
-                        'id'    => $r->id,
-                        'label' => $r->label,
-                        'value' => (float)$r->value,
-                        'color' => $r->color,
-                        'next'  => ['level' => 'pay', 'params' => ['type' => $type, 'category_id' => $r->id]],
-                    ];
-                });
-
-            return response()->json([
-                'level'       => 'category',
-                'title'       => 'Categorias (' . ucfirst($type) . ')',
-                'breadcrumbs' => $breadcrumbs,
-                'items'       => $rows,
-                'total'       => $rows->sum('value'),
-            ]);
-        }
-
-        // === NÍVEL 3: tipo de pagamento dentro da categoria (pix/card/money)
-        if ($level === 'pay' && $categoryId) {
-            $breadcrumbs[] = ['label' => 'Tipos', 'level' => 'type', 'params' => []];
-            $breadcrumbs[] = ['label' => ucfirst($type), 'level' => 'category', 'params' => ['type' => $type]];
-
-            $rows = Transaction::query()
-                ->where('transactions.user_id', $userId)
-                ->where('transactions.transaction_category_id', $categoryId)
-                ->whereBetween('transactions.date', [$start, $end])
-                ->selectRaw('transactions.type as label, SUM(transactions.amount) as value')
-                ->groupBy('transactions.type')
-                ->orderByDesc('value')
-                ->get()
-                ->map(function ($r) use ($type, $categoryId) {
-                    $label = $r->label;
-                    $nice  = ['pix' => 'PIX', 'card' => 'Cartão', 'money' => 'Dinheiro'][$label] ?? strtoupper($label);
-                    return [
-                        'id'    => $label,
-                        'label' => $nice,
-                        'value' => (float)$r->value,
-                        'color' => $label === 'card' ? '#6366f1' : ($label === 'pix' ? '#22c55e' : '#f59e0b'),
-                        'next'  => [
-                            'level'  => $label === 'card' ? 'card_type' : 'instrument',
-                            'params' => ['type' => $type, 'category_id' => $categoryId, 'pay' => $label],
-                        ],
-                    ];
-                });
-
-            return response()->json([
-                'level'       => 'pay',
-                'title'       => 'Forma de pagamento',
-                'breadcrumbs' => $breadcrumbs,
-                'items'       => $rows,
-                'total'       => $rows->sum('value'),
-            ]);
-        }
-
-        // === NÍVEL 4a: cartão -> crédito x débito
-        if ($level === 'card_type' && $categoryId) {
-            $breadcrumbs[] = ['label' => 'Tipos', 'level' => 'type', 'params' => []];
-            $breadcrumbs[] = ['label' => ucfirst($type), 'level' => 'category', 'params' => ['type' => $type]];
-            $breadcrumbs[] = ['label' => 'Cartão', 'level' => 'pay', 'params' => ['type' => $type, 'category_id' => $categoryId]];
-
-            $rows = Transaction::query()
-                ->where('transactions.user_id', $userId)
-                ->where('transactions.transaction_category_id', $categoryId)
-                ->where('transactions.type', 'card')
-                ->whereBetween('transactions.date', [$start, $end])
-                ->selectRaw('transactions.type_card as label, SUM(transactions.amount) as value')
-                ->groupBy('transactions.type_card')
-                ->orderByDesc('value')
-                ->get()
-                ->map(function ($r) use ($type, $categoryId) {
-                    $lbl = $r->label ?: 'desconhecido';
-                    $nice = ['credit' => 'Crédito', 'debit' => 'Débito'][$lbl] ?? ucfirst($lbl);
-                    return [
-                        'id'    => $lbl,
-                        'label' => $nice,
-                        'value' => (float)$r->value,
-                        'color' => $lbl === 'credit' ? '#0ea5e9' : '#22d3ee',
-                        'next'  => [
-                            'level'  => 'instrument',
-                            'params' => ['type' => $type, 'category_id' => $categoryId, 'pay' => 'card', 'card_type' => $lbl],
-                        ],
-                    ];
-                });
-
-            return response()->json([
-                'level'       => 'card_type',
-                'title'       => 'Crédito x Débito',
-                'breadcrumbs' => $breadcrumbs,
-                'items'       => $rows,
-                'total'       => $rows->sum('value'),
-            ]);
-        }
-
-        // === NÍVEL 4b/5: instrumento (qual conta/cartão)
-        if ($level === 'instrument') {
-            $breadcrumbs[] = ['label' => 'Tipos', 'level' => 'type', 'params' => []];
-            if ($type)        $breadcrumbs[] = ['label' => ucfirst($type), 'level' => 'category', 'params' => ['type' => $type]];
-            if ($categoryId)  $breadcrumbs[] = ['label' => 'Pagamento', 'level' => 'pay', 'params' => ['type' => $type, 'category_id' => $categoryId]];
-
-            if ($pay === 'card') {
-                $q = Transaction::query()
-                    ->join('cards as k', 'k.id', '=', 'transactions.card_id')
-                    ->where('transactions.user_id', $userId)
-                    ->when($categoryId, fn($qq) => $qq->where('transactions.transaction_category_id', $categoryId))
-                    ->where('transactions.type', 'card')
-                    ->when($cardType, fn($qq) => $qq->where('transactions.type_card', $cardType))
-                    ->whereBetween('transactions.date', [$start, $end])
-                    ->selectRaw('k.id, k.name as label, SUM(transactions.amount) as value')
-                    ->groupBy('k.id', 'k.name')
+            if ($level === 'type') {
+                $rows = \DB::table('transactions as t')
+                    ->join('transaction_categories as c', 'c.id', '=', 't.transaction_category_id')
+                    ->where('t.user_id', $userId)
+                    ->whereBetween('t.date', [$start, $end])
+                    ->selectRaw('c.type as label, SUM(t.amount) as value')
+                    ->groupBy('c.type')
                     ->orderByDesc('value')
-                    ->get();
+                    ->get()
+                    ->map(function ($r) {
+                        $color = [
+                            'entrada' => '#10b981',
+                            'despesa' => '#ef4444',
+                            'investimento' => '#3b82f6',
+                        ][$r->label] ?? '#18dec7';
 
-                $items = $q->map(fn($r) => [
-                    'id'    => $r->id,
-                    'label' => $r->label,
-                    'value' => (float)$r->value,
-                    'color' => '#a78bfa',
-                    'next'  => null, // último nível
-                ]);
+                        return [
+                            'id'    => Str::uuid()->toString(),
+                            'label' => ucfirst($r->label),
+                            'value' => (float)$r->value,
+                            'color' => $color,
+                            'next'  => ['level' => 'category', 'params' => ['type' => $r->label]],
+                        ];
+                    });
 
                 return response()->json([
-                    'level'       => 'instrument',
-                    'title'       => 'Cartões',
+                    'mode'  => 'tx', 'level' => 'type', 'title' => 'Tipos',
                     'breadcrumbs' => $breadcrumbs,
-                    'items'       => $items,
-                    'total'       => $items->sum('value'),
+                    'items' => $rows, 'total' => $rows->sum('value'),
                 ]);
-            } else {
-                $q = Transaction::query()
-                    ->join('accounts as a', 'a.id', '=', 'transactions.account_id')
-                    ->where('transactions.user_id', $userId)
-                    ->when($categoryId, fn($qq) => $qq->where('transactions.transaction_category_id', $categoryId))
-                    ->where('transactions.type', $pay) // pix ou money
-                    ->whereBetween('transactions.date', [$start, $end])
-                    ->selectRaw('a.id, a.name as label, SUM(transactions.amount) as value')
-                    ->groupBy('a.id', 'a.name')
-                    ->orderByDesc('value')
-                    ->get();
+            }
 
-                $items = $q->map(fn($r) => [
-                    'id'    => $r->id,
-                    'label' => $r->label,
-                    'value' => (float)$r->value,
-                    'color' => '#93c5fd',
-                    'next'  => null,
-                ]);
+            if ($level === 'category' && $type) {
+                $breadcrumbs[] = ['label' => 'Tipos', 'level' => 'type', 'params' => []];
+
+                $rows = \DB::table('transactions as t')
+                    ->join('transaction_categories as c', 'c.id', '=', 't.transaction_category_id')
+                    ->where('t.user_id', $userId)
+                    ->where('c.type', $type)
+                    ->whereBetween('t.date', [$start, $end])
+                    ->selectRaw('c.id, c.name as label, COALESCE(c.color,"#18dec7") as color, SUM(t.amount) as value')
+                    ->groupBy('c.id','c.name','c.color')
+                    ->orderByDesc('value')->get()
+                    ->map(fn($r) => [
+                        'id'=>$r->id,'label'=>$r->label,'value'=>(float)$r->value,'color'=>$r->color,
+                        'next'=>['level'=>'pay','params'=>['type'=>$type,'category_id'=>$r->id]],
+                    ]);
 
                 return response()->json([
-                    'level'       => 'instrument',
-                    'title'       => 'Contas',
-                    'breadcrumbs' => $breadcrumbs,
-                    'items'       => $items,
-                    'total'       => $items->sum('value'),
+                    'mode'=>'tx','level'=>'category','title'=>'Categorias ('.ucfirst($type).')',
+                    'breadcrumbs'=>$breadcrumbs,'items'=>$rows,'total'=>$rows->sum('value'),
+                ]);
+            }
+
+            if ($level === 'pay' && $categoryId) {
+                $breadcrumbs[] = ['label'=>'Tipos','level'=>'type','params'=>[]];
+                $breadcrumbs[] = ['label'=>ucfirst($type),'level'=>'category','params'=>['type'=>$type]];
+
+                $rows = \DB::table('transactions as t')
+                    ->where('t.user_id',$userId)
+                    ->where('t.transaction_category_id',$categoryId)
+                    ->whereBetween('t.date',[$start,$end])
+                    ->selectRaw('t.type as label, SUM(t.amount) as value')
+                    ->groupBy('t.type')->orderByDesc('value')->get()
+                    ->map(function($r) use($type,$categoryId){
+                        $label = $r->label;
+                        $nice  = ['pix'=>'PIX','card'=>'Cartão','money'=>'Dinheiro'][$label] ?? strtoupper($label);
+                        return [
+                            'id'=>$label,'label'=>$nice,'value'=>(float)$r->value,
+                            'color'=> $label==='card' ? '#6366f1' : ($label==='pix'?'#22c55e':'#f59e0b'),
+                            'next'=>[
+                                'level'=> $label==='card' ? 'card_type' : 'instrument',
+                                'params'=>['type'=>$type,'category_id'=>$categoryId,'pay'=>$label],
+                            ],
+                        ];
+                    });
+
+                return response()->json([
+                    'mode'=>'tx','level'=>'pay','title'=>'Forma de pagamento',
+                    'breadcrumbs'=>$breadcrumbs,'items'=>$rows,'total'=>$rows->sum('value'),
+                ]);
+            }
+
+            if ($level === 'card_type' && $categoryId) {
+                $breadcrumbs[] = ['label'=>'Tipos','level'=>'type','params'=>[]];
+                $breadcrumbs[] = ['label'=>ucfirst($type),'level'=>'category','params'=>['type'=>$type]];
+                $breadcrumbs[] = ['label'=>'Cartão','level'=>'pay','params'=>['type'=>$type,'category_id'=>$categoryId]];
+
+                $rows = \DB::table('transactions as t')
+                    ->where('t.user_id',$userId)
+                    ->where('t.transaction_category_id',$categoryId)
+                    ->where('t.type','card')
+                    ->whereBetween('t.date',[$start,$end])
+                    ->selectRaw('t.type_card as label, SUM(t.amount) as value')
+                    ->groupBy('t.type_card')->orderByDesc('value')->get()
+                    ->map(function($r) use($type,$categoryId){
+                        $lbl = $r->label ?: 'desconhecido';
+                        $nice = ['credit'=>'Crédito','debit'=>'Débito'][$lbl] ?? ucfirst($lbl);
+                        return [
+                            'id'=>$lbl,'label'=>$nice,'value'=>(float)$r->value,
+                            'color'=> $lbl==='credit' ? '#0ea5e9' : '#22d3ee',
+                            'next'=>[
+                                'level'=>'instrument',
+                                'params'=>['type'=>$type,'category_id'=>$categoryId,'pay'=>'card','card_type'=>$lbl],
+                            ],
+                        ];
+                    });
+
+                return response()->json([
+                    'mode'=>'tx','level'=>'card_type','title'=>'Crédito x Débito',
+                    'breadcrumbs'=>$breadcrumbs,'items'=>$rows,'total'=>$rows->sum('value'),
+                ]);
+            }
+
+            if ($level === 'instrument') {
+                $breadcrumbs[] = ['label'=>'Tipos','level'=>'type','params'=>[]];
+                if ($type)       $breadcrumbs[] = ['label'=>ucfirst($type),'level'=>'category','params'=>['type'=>$type]];
+                if ($categoryId) $breadcrumbs[] = ['label'=>'Pagamento','level'=>'pay','params'=>['type'=>$type,'category_id'=>$categoryId]];
+
+                if ($pay === 'card') {
+                    $q = \DB::table('transactions as t')
+                        ->join('cards as k','k.id','=','t.card_id')
+                        ->where('t.user_id',$userId)
+                        ->when($categoryId, fn($qq)=>$qq->where('t.transaction_category_id',$categoryId))
+                        ->where('t.type','card')
+                        ->when($cardType, fn($qq)=>$qq->where('t.type_card',$cardType))
+                        ->whereBetween('t.date',[$start,$end])
+                        ->selectRaw('k.id, k.cardholder_name as label, SUM(t.amount) as value, COALESCE(k.color_card,"#a78bfa") as color')
+                        ->groupBy('k.id','k.cardholder_name','k.color_card')
+                        ->orderByDesc('value')->get();
+
+                    $items = $q->map(fn($r)=>[
+                        'id'=>$r->id,'label'=>$r->label,'value'=>(float)$r->value,'color'=>$r->color,'next'=>null
+                    ]);
+
+                    return response()->json([
+                        'mode'=>'tx','level'=>'instrument','title'=>'Cartões',
+                        'breadcrumbs'=>$breadcrumbs,'items'=>$items,'total'=>$items->sum('value'),
+                    ]);
+                } else {
+                    $q = \DB::table('transactions as t')
+                        ->join('accounts as a','a.id','=','t.account_id')
+                        ->where('t.user_id',$userId)
+                        ->when($categoryId, fn($qq)=>$qq->where('t.transaction_category_id',$categoryId))
+                        ->where('t.type',$pay)
+                        ->whereBetween('t.date',[$start,$end])
+                        ->selectRaw('a.id, a.bank_name as label, SUM(t.amount) as value')
+                        ->groupBy('a.id','a.bank_name')
+                        ->orderByDesc('value')->get();
+
+                    $items = $q->map(fn($r)=>[
+                        'id'=>$r->id,'label'=>$r->label,'value'=>(float)$r->value,'color'=>'#93c5fd','next'=>null
+                    ]);
+
+                    return response()->json([
+                        'mode'=>'tx','level'=>'instrument','title'=>'Contas',
+                        'breadcrumbs'=>$breadcrumbs,'items'=>$items,'total'=>$items->sum('value'),
+                    ]);
+                }
+            }
+        }
+
+        // =======================
+        // MODO: FATURAS
+        // =======================
+        if ($mode === 'invoice') {
+            // Nível 1: faturas por cartão no mês
+            if ($level === 'invoice_cards') {
+                $rows = \DB::table('invoices as i')
+                    ->leftJoin('invoice_items as it','it.invoice_id','=','i.id')
+                    ->leftJoin('invoice_payments as pay','pay.invoice_id','=','i.id')
+                    ->join('cards as k','k.id','=','i.card_id')
+                    ->where('i.user_id',$userId)
+                    ->where('i.current_month',$currentMonth)
+                    ->selectRaw('i.id, k.id as card_id,
+                    CONCAT(k.cardholder_name, " • ", LPAD(COALESCE(k.last_four_digits,0),4,"0")) as label,
+                    COALESCE(k.color_card,"#a78bfa") as color,
+                    SUM(it.amount) as items_total,
+                    COALESCE(MAX(pay.amount),0) as paid')
+                    ->groupBy('i.id','k.id','k.cardholder_name','k.last_four_digits','k.color_card')
+                    ->orderBy('label')->get()
+                    ->map(function($r){
+                        $open = max(0, (float)$r->items_total - (float)$r->paid);
+                        return [
+                            'id'    => $r->id,
+                            'label' => $r->label . ($open > 0 ? ' (aberto)' : ' (pago)'),
+                            'value' => $open, // valor em aberto
+                            'color' => $r->color,
+                            'next'  => ['level'=>'invoice_categories','params'=>['invoice_id'=>$r->id]],
+                        ];
+                    });
+
+                return response()->json([
+                    'mode'=>'invoice','level'=>'invoice_cards','title'=>'Faturas do mês',
+                    'breadcrumbs'=>[['label'=>'Faturas','level'=>'invoice_cards','params'=>[]]],
+                    'items'=>$rows,'total'=>$rows->sum('value'),
+                ]);
+            }
+
+            // Nível 2: categorias dentro da fatura
+            if ($level === 'invoice_categories' && $invoiceId) {
+                $card = \DB::table('invoices as i')
+                    ->join('cards as k','k.id','=','i.card_id')
+                    ->where('i.id',$invoiceId)
+                    ->selectRaw('CONCAT(k.cardholder_name," • ",LPAD(COALESCE(k.last_four_digits,0),4,"0")) as label')->first();
+
+                $rows = \DB::table('invoice_items as it')
+                    ->join('transaction_categories as c','c.id','=','it.transaction_category_id')
+                    ->where('it.invoice_id',$invoiceId)
+                    ->selectRaw('c.id, c.name as label, COALESCE(c.color,"#18dec7") as color, SUM(it.amount) as value')
+                    ->groupBy('c.id','c.name','c.color')
+                    ->orderByDesc('value')->get()
+                    ->map(fn($r)=>[
+                        'id'=>$r->id,'label'=>$r->label,'value'=>(float)$r->value,'color'=>$r->color,
+                        'next'=>['level'=>'invoice_items','params'=>['invoice_id'=>$invoiceId,'category_id'=>$r->id]],
+                    ]);
+
+                return response()->json([
+                    'mode'=>'invoice','level'=>'invoice_categories','title'=>'Categorias da fatura',
+                    'breadcrumbs'=>[
+                        ['label'=>'Faturas','level'=>'invoice_cards','params'=>[]],
+                        ['label'=>$card?->label ?? 'Cartão','level'=>'invoice_categories','params'=>['invoice_id'=>$invoiceId]],
+                    ],
+                    'items'=>$rows,'total'=>$rows->sum('value'),
+                ]);
+            }
+
+            // Nível 3: itens da fatura (opcionalmente filtrados por categoria)
+            if ($level === 'invoice_items' && $invoiceId) {
+                $catName = $categoryId ? \DB::table('transaction_categories')->where('id',$categoryId)->value('name') : null;
+
+                $rows = \DB::table('invoice_items as it')
+                    ->leftJoin('transaction_categories as c','c.id','=','it.transaction_category_id')
+                    ->where('it.invoice_id',$invoiceId)
+                    ->when($categoryId, fn($q)=>$q->where('it.transaction_category_id',$categoryId))
+                    ->selectRaw('it.id, COALESCE(it.title,c.name) as label, it.amount as value, it.date')
+                    ->orderByDesc('it.date')->get()
+                    ->map(fn($r)=>[
+                        'id'=>$r->id,
+                        'label'=>$r->label.' — '.\Carbon\Carbon::parse($r->date)->format('d/m'),
+                        'value'=>(float)$r->value,
+                        'color'=>'#94a3b8',
+                        'next'=>null
+                    ]);
+
+                return response()->json([
+                    'mode'=>'invoice','level'=>'invoice_items','title'=>$catName ? "Itens • $catName" : 'Itens da fatura',
+                    'breadcrumbs'=>[
+                        ['label'=>'Faturas','level'=>'invoice_cards','params'=>[]],
+                        ['label'=>'Categorias','level'=>'invoice_categories','params'=>['invoice_id'=>$invoiceId]],
+                    ],
+                    'items'=>$rows,'total'=>$rows->sum('value'),
                 ]);
             }
         }
 
-        return response()->json(['items' => [], 'level' => $level, 'breadcrumbs' => []]);
+        return response()->json(['mode'=>$mode,'level'=>$level,'items'=>[],'breadcrumbs'=>[],'total'=>0]);
     }
 
     private function monthBounds(?string $ym): array

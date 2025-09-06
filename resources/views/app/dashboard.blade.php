@@ -56,24 +56,15 @@
                 <div
                     class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/15 dark:bg-neutral-800/80 blur-2xl"></div>
 
-                <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start justify-between gap-1">
                     <div>
                         <p class="text-white/80 text-sm">Saldo total</p>
                         <p id="kpi-balanco" class="mt-1 text-3xl md:text-4xl font-semibold tracking-tight"
                            aria-live="polite">—</p>
                     </div>
-                    {{--                    <div class="grid gap-2 text-right">--}}
-                    {{--                        <p class="text-xs/none text-white/80">Última atualização agora</p>--}}
-                    {{--                        <button id="btnRefreshKpis"--}}
-                    {{--                                class="self-end inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 active:bg-white/15 dark:bg-neutral-800/80 transition px-3 py-1.5 rounded-xl backdrop-blur-md">--}}
-                    {{--                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"--}}
-                    {{--                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">--}}
-                    {{--                                <path d="M21 12a9 9 0 1 1-9-9"/>--}}
-                    {{--                                <path d="M21 3v6h-6"/>--}}
-                    {{--                            </svg>--}}
-                    {{--                            Atualizar--}}
-                    {{--                        </button>--}}
-                    {{--                    </div>--}}
+                    <a href="#">
+                        <i class="fa-solid fa-rotate-right mx-1"></i>
+                    </a>
                 </div>
 
                 <div class="mt-4 grid grid-cols-1 gap-3 text-sm/5">
@@ -294,8 +285,33 @@
         @endforeach
     </section>
 
+    <div
+        class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
+        <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 text-sm">
+                <button id="pieBack"
+                        class="hidden inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-neutral-200/70 dark:border-neutral-800/70">
+                    <i class="fa fa-arrow-left text-xs"></i><span>Voltar</span>
+                </button>
+                <div id="pieCrumbs" class="flex items-center gap-1 text-neutral-500 dark:text-neutral-400"></div>
+            </div>
+            <span id="pieTitle" class="text-sm font-medium">Distribuição</span>
+        </div>
+
+        <div class="mt-3 grid md:grid-cols-[360px_1fr] gap-4 items-start">
+            <div class="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50">
+                <canvas id="pieChart" class="w-full h-[280px]"></canvas>
+            </div>
+
+            <div>
+                <ul id="pieList" class="divide-y divide-neutral-200/70 dark:divide-neutral-800/70"></ul>
+            </div>
+        </div>
+    </div>
+
     <!-- Check Payment -->
-    <x-modal id="paymentModal" titleCreate="Registrar pagamento" titleEdit="Registrar pagamento" titleShow="Registrar pagamento" submitLabel="Salvar">
+    <x-modal id="paymentModal" titleCreate="Registrar pagamento" titleEdit="Registrar pagamento"
+             titleShow="Registrar pagamento" submitLabel="Salvar">
         @csrf
         <input type="hidden" name="transaction_id" id="payment_transaction_id">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -844,6 +860,151 @@
                 }
 
                 window.changeMonth = changeMonth;
+            })();
+        </script>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+        <script>
+            (() => {
+                const monthPicker = document.getElementById('monthPicker');
+                const ctx = document.getElementById('pieChart').getContext('2d');
+                const listEl = document.getElementById('pieList');
+                const titleEl = document.getElementById('pieTitle');
+                const backBtn = document.getElementById('pieBack');
+                const crumbsEl = document.getElementById('pieCrumbs');
+
+                const state = {
+                    stack: [],          // histórico p/ voltar
+                    lastPayload: null,  // dados atuais
+                    chart: null
+                };
+
+                function textColor() {
+                    return document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#111827';
+                }
+
+                function currencyBRL(v) {
+                    return (v ?? 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+                }
+
+                function renderCrumbs(bc) {
+                    crumbsEl.innerHTML = '';
+                    bc.forEach((b, i) => {
+                        const a = document.createElement('button');
+                        a.className = 'px-2 py-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800';
+                        a.textContent = b.label;
+                        a.onclick = () => {
+                            state.stack = state.stack.slice(0, i); // volta até o nível
+                            load(b.level, b.params);
+                        };
+                        crumbsEl.appendChild(a);
+                        if (i < bc.length) {
+                            const sep = document.createElement('span');
+                            sep.className = 'mx-1';
+                            sep.textContent = '›';
+                            crumbsEl.appendChild(sep);
+                        }
+                    });
+                }
+
+                function renderList(items) {
+                    listEl.innerHTML = items.map(i => `
+      <li class="py-2 flex items-center justify-between">
+        <button class="text-left flex-1 pr-3 hover:underline" data-next='${JSON.stringify(i.next || null)}'>
+          ${i.label}
+        </button>
+        <strong>${currencyBRL(i.value)}</strong>
+      </li>
+    `).join('');
+                    // clique na lista = mesmo drill do gráfico
+                    listEl.querySelectorAll('button[data-next]').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const next = JSON.parse(btn.getAttribute('data-next'));
+                            if (next && next.level) pushAndLoad(next.level, next.params || {});
+                        });
+                    });
+                }
+
+                function renderChart(payload) {
+                    const labels = payload.items.map(i => i.label);
+                    const values = payload.items.map(i => i.value);
+                    const colors = payload.items.map(i => i.color || '#18dec7');
+
+                    titleEl.textContent = payload.title || 'Distribuição';
+                    renderCrumbs(payload.breadcrumbs || []);
+                    backBtn.classList.toggle('hidden', state.stack.length === 0);
+
+                    if (state.chart) {
+                        state.chart.destroy();
+                    }
+                    state.chart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {labels, datasets: [{data: values, backgroundColor: colors, borderWidth: 0}]},
+                        options: {
+                            responsive: true,
+                            cutout: '60%',
+                            plugins: {
+                                legend: {position: 'bottom', labels: {color: textColor()}},
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => ` ${ctx.label}: ${currencyBRL(ctx.parsed)}`
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // clique em fatia = drill
+                    document.getElementById('pieChart').onclick = (evt) => {
+                        const points = state.chart.getElementsAtEventForMode(evt, 'nearest', {intersect: true}, true);
+                        if (!points.length) return;
+                        const i = points[0].index;
+                        const next = payload.items[i].next;
+                        if (next && next.level) pushAndLoad(next.level, next.params || {});
+                    };
+
+                    renderList(payload.items);
+                    state.lastPayload = payload;
+                }
+
+                function pushAndLoad(level, params) {
+                    const prev = {level: state.lastPayload?.level || 'type', params: state.stack.at(-1)?.params || {}};
+                    state.stack.push(prev);
+                    load(level, params);
+                }
+
+                function load(level = 'type', params = {}) {
+                    const month = monthPicker?.value;
+                    const qs = new URLSearchParams({level, month, ...params}).toString();
+                    fetch(`{{ route('analytics.pie') }}?` + qs)
+                        .then(r => r.json())
+                        .then(payload => renderChart(payload))
+                        .catch(() => {
+                            renderChart({level: 'type', title: 'Sem dados', breadcrumbs: [], items: []});
+                        });
+                }
+
+                backBtn.addEventListener('click', () => {
+                    const prev = state.stack.pop();
+                    if (!prev) return;
+                    load(prev.level, prev.params);
+                });
+
+                // recarrega quando muda o mês ou tema
+                monthPicker?.addEventListener('change', () => {
+                    state.stack = [];
+                    load('type', {});
+                });
+
+                // observador de tema (Tailwind dark class)
+                const obs = new MutationObserver(() => {
+                    if (!state.lastPayload) return;
+                    renderChart(state.lastPayload);
+                });
+                obs.observe(document.documentElement, {attributes: true, attributeFilter: ['class']});
+
+                // inicial
+                load('type', {});
             })();
         </script>
     @endpush

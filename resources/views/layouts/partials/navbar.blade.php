@@ -2,7 +2,7 @@
     <div class="max-w-7xl mx-auto flex items-center justify-between gap-3 px-4 py-3 md:py-4">
         <div class="flex items-center gap-3">
             <button id="btnMenu"
-                    class="md:hidden grid place-items-center size-10 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition"
+                    class="hidden grid place-items-center size-10 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition"
                     aria-label="Abrir menu">
                 <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

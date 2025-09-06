@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+{{--    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">--}}
 
     <title>Finanças Cliqis</title>
 
@@ -64,8 +64,8 @@
     @stack('styles')
 
     @php
-        $styleCssPath = public_path('assets/css/new_style.css');
+        $styleCssPath = public_path('assets/css/style.css');
     @endphp
 
-    <link href="{{ asset('assets/css/new_style.css') }}?v={{ file_exists($styleCssPath) ? filemtime($styleCssPath) : time() }}" rel="stylesheet">
+    <link href="{{ asset('assets/css/style.css') }}?v={{ file_exists($styleCssPath) ? filemtime($styleCssPath) : time() }}" rel="stylesheet">
 </head>

@@ -145,7 +145,7 @@
             </div>
 
             <div class="mt-3 grid md:grid-cols-[360px_1fr] gap-4 items-start">
-                <div class="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50">
+                <div class="p-3 rounded-xl">
                     <canvas id="pieChart" class="w-full h-[280px]"></canvas>
                 </div>
 

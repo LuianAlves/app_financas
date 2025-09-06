@@ -1,24 +1,18 @@
-@extends('layouts.templates.app')
-@section('new-content')
-    <x-card-header
-        prevRoute="{{ route('dashboard') }}"
-        iconRight="fa-solid fa-credit-card"
-        title="Cartões de Crédito"
-        description="Gerencie seus cartões e acompanhe seus limites e faturas."
-    ></x-card-header>
-
+@extends('layouts.templates.old')
+@section('content')
     <button id="openModal" class="create-btn"><i class="fa fa-plus text-white"></i></button>
 
     <a href="{{route('transaction-view.index')}}" class="create-btn create-other" title="Transações">
         <i class="fas fa-retweet text-white"></i>
     </a>
 
-    <x-modal
-        modalId="modalCard"
-        formId="formCard"
-        pathForm="app.cards.card_form"
-        :data="['accounts' => $accounts]"
-    ></x-modal>
+    <div id="modalCard" class="custom-modal">
+        <div class="custom-modal-content">
+            <span id="closeModal" class="close-btn">&times;</span>
+
+            <x-form id="formCard" path="app.cards.card_form" :data="['accounts' => $accounts]"></x-form>
+        </div>
+    </div>
 
     {{-- Confirm delete --}}
     <div id="confirmDeleteCard" class="x-confirm" hidden>

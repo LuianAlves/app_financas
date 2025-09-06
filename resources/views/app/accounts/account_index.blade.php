@@ -342,6 +342,12 @@
                     : (String(t) === '3' || String(t).toLowerCase() === 'investimento') ? 'Investimento'
                         : 'Conta corrente';
 
+                function toggleFab(hasAccounts) {
+                    if (!accFab) return;
+                    accFab.classList.toggle('md:hidden', hasAccounts);
+                    accFab.classList.remove('hidden');
+                }
+
                 function renderSkeletons(n = 4) {
                     const item = `
 <article class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft dark:shadow-softDark">
@@ -433,10 +439,13 @@
                         const map = buildSavingsMap(ensureArray(cached.savings || []));
                         grid.innerHTML = cached.accounts.map(a => cardTemplate(a, map)).join('');
                         showGridOverlay();
+                        toggleFab(true);
                     } else {
                         renderSkeletons();
+                        toggleFab(false);
                     }
                 })();
+
 
                 function buildSavingsMap(arr) {
                     const map = new Map();
@@ -589,6 +598,7 @@
                             try {
                                 await doDeleteAccount(id);
                                 card.remove();
+                                toggleFab(!!grid.querySelector('article[data-id]'));
                             } catch {
                                 alert('Erro ao excluir');
                             }
@@ -660,6 +670,7 @@
                             await doDeleteAccount(id);
                             const el = [...grid.querySelectorAll('article[data-id]')].find(n => n.dataset.id == id);
                             el?.remove();
+                            toggleFab(!!grid.querySelector('article[data-id]'));
                         } catch {
                             alert('Erro ao excluir');
                         }

@@ -885,19 +885,12 @@ class DashboardController extends Controller
                     $account->increment('current_balance', abs((float)$pt->amount));
                 }
             }
-
-            if (in_array($transaction->recurrence_type, ['monthly','yearly','custom'], true)) {
-                $next = Carbon::parse($transaction->date)->addMonthNoOverflow();
-                $transaction->update(['date' => $next]);
-            }
         });
 
         $shouldBump = false;
         if (in_array($transaction->recurrence_type, ['monthly','yearly'], true)) {
-            $rec = \App\Models\Recurrent::where('transaction_id', $transaction->id)->first();
-            $hasCustomItems = $rec
-                ? \Illuminate\Support\Facades\DB::table('custom_item_recurrents')->where('recurrent_id', $rec->id)->exists()
-                : false;
+            $rec = Recurrent::where('transaction_id', $transaction->id)->first();
+            $hasCustomItems = $rec ? DB::table('custom_item_recurrents')->where('recurrent_id', $rec->id)->exists() : false;
             $shouldBump = !$hasCustomItems;
         }
 
@@ -915,7 +908,7 @@ class DashboardController extends Controller
             ->pluck('linked_user_id')->push($ownerId)->unique()->values();
 
         $month      = $data['month'] ?? now()->format('Y-m');
-        $startMonth = \Carbon\Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $startMonth = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
         $endMonth   = (clone $startMonth)->endOfMonth();
 
         $kpis = $this->kpisForMonth($userIds, $startMonth, $endMonth);

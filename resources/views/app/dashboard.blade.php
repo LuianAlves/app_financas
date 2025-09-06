@@ -816,6 +816,8 @@
                     const ymStr = ym(next);
                     input.value = ymStr;
                     await syncMonthUI(ymStr);
+
+                    window.refreshPie?.(true);
                 }
 
                 window.changeMonth = changeMonth;
@@ -859,6 +861,8 @@
                             inst.redraw();
                             document.getElementById('monthPicker').value = ymStr;
                             atualizarKpisDoMes(ymStr);
+
+                            window.refreshPie?.(true);
                         },
 
                         onYearChange: async (_sd, _ds, inst) => {
@@ -868,6 +872,8 @@
                             inst.redraw();
                             document.getElementById('monthPicker').value = ymStr;
                             atualizarKpisDoMes(ymStr);
+
+                            window.refreshPie?.(true);
                         },
 
                         onReady: async (sd, _ds, inst) => {
@@ -897,6 +903,8 @@
                             exibirEventos(iso(sd?.[0] ?? new Date()));
                             const initialYm = document.getElementById('monthPicker').value || ymStr;
                             atualizarKpisDoMes(initialYm);
+
+                            window.refreshPie?.(true);
                         },
 
                         onChange: sd => {
@@ -1135,6 +1143,12 @@
                     }
                 }
 
+                window.refreshPie = (keepContext = true) => {
+                    // Recarrega mantendo o nível atual (type/category/pay/etc)
+                    const target = keepContext && state.current ? state.current : { level: 'type', params: {} };
+                    load(target.level, target.params || {});
+                };
+
                 backBtn.addEventListener('click', () => {
                     const prev = state.stack.pop();
                     if (!prev) return;
@@ -1142,10 +1156,7 @@
                 });
 
                 // recarrega quando muda o mês ou tema
-                monthPicker?.addEventListener('change', () => {
-                    state.stack = [];
-                    load('type', {});
-                });
+                monthPicker?.addEventListener('change', () => window.refreshPie(true));
 
                 // observador de tema (Tailwind dark class)
                 const obs = new MutationObserver(() => {

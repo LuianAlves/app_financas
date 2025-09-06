@@ -185,11 +185,11 @@
             </div>
 
             <div class="mt-3 grid md:grid-cols-[360px_1fr] gap-4 items-start">
-                <div class="p-3 rounded-xl">
+                <ul id="pieLegend" class="flex flex-wrap gap-3 max-h-24 overflow-auto"></ul>
+
+                <div class="rounded-xl">
                     <canvas id="pieChart" class="w-full h-[280px]"></canvas>
                 </div>
-                <ul id="pieLegend" class="flex flex-wrap gap-3 max-h-24 overflow-auto mb-2"></ul>
-
                 <div>
                     <ul id="pieList" class="divide-y divide-neutral-200/70 dark:divide-neutral-800/70"></ul>
                 </div>
@@ -816,6 +816,8 @@
                     const ymStr = ym(next);
                     input.value = ymStr;
                     await syncMonthUI(ymStr);
+
+                    window.refreshPie?.(true);
                 }
 
                 window.changeMonth = changeMonth;
@@ -859,6 +861,8 @@
                             inst.redraw();
                             document.getElementById('monthPicker').value = ymStr;
                             atualizarKpisDoMes(ymStr);
+
+                            window.refreshPie?.(true);
                         },
 
                         onYearChange: async (_sd, _ds, inst) => {
@@ -868,6 +872,8 @@
                             inst.redraw();
                             document.getElementById('monthPicker').value = ymStr;
                             atualizarKpisDoMes(ymStr);
+
+                            window.refreshPie?.(true);
                         },
 
                         onReady: async (sd, _ds, inst) => {
@@ -897,6 +903,8 @@
                             exibirEventos(iso(sd?.[0] ?? new Date()));
                             const initialYm = document.getElementById('monthPicker').value || ymStr;
                             atualizarKpisDoMes(initialYm);
+
+                            window.refreshPie?.(true);
                         },
 
                         onChange: sd => {
@@ -1135,6 +1143,12 @@
                     }
                 }
 
+                window.refreshPie = (keepContext = true) => {
+                    // Recarrega mantendo o nível atual (type/category/pay/etc)
+                    const target = keepContext && state.current ? state.current : { level: 'type', params: {} };
+                    load(target.level, target.params || {});
+                };
+
                 backBtn.addEventListener('click', () => {
                     const prev = state.stack.pop();
                     if (!prev) return;
@@ -1142,10 +1156,7 @@
                 });
 
                 // recarrega quando muda o mês ou tema
-                monthPicker?.addEventListener('change', () => {
-                    state.stack = [];
-                    load('type', {});
-                });
+                monthPicker?.addEventListener('change', () => window.refreshPie(true));
 
                 // observador de tema (Tailwind dark class)
                 const obs = new MutationObserver(() => {

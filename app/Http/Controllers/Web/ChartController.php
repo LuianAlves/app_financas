@@ -50,7 +50,7 @@ class ChartController extends Controller
                 // 2.1 Transações do mês (despesa sem 'card')
                 $txBase = DB::table('transactions as t')
                     ->join('transaction_categories as c', 'c.id', '=', 't.transaction_category_id')
-                    ->where('t.user_id', $userId)
+                    ->whereIn('t.user_id', $userIds)
                     ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
                     ->whereRaw("NOT (c.type = 'despesa' AND t.type = 'card')")
                     ->selectRaw('c.type as label, SUM(t.amount) as value')
@@ -61,7 +61,7 @@ class ChartController extends Controller
                 $payAdd = DB::table('payment_transactions as p')
                     ->join('transactions as t', 't.id', '=', 'p.transaction_id')
                     ->join('transaction_categories as c', 'c.id', '=', 't.transaction_category_id')
-                    ->where('t.user_id', $userId)
+                    ->whereIn('t.user_id', $userIds)
                     ->where('p.reference_month', $monthNum)
                     ->where('p.reference_year',  $yearNum)
                     ->whereRaw("NOT (c.type = 'despesa' AND t.type = 'card')")
@@ -113,32 +113,27 @@ class ChartController extends Controller
                     // 3.1 Transações do mês (sem 'card')
                     $txCat = DB::table('transactions as t')
                         ->join('transaction_categories as c','c.id','=','t.transaction_category_id')
-                        ->where('t.user_id',$userId)
-                        ->where('c.type','despesa')
-                        ->whereRaw("t.type <> 'card'")
-                        ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start,$end])
+                        ->whereIn('t.user_id', $userIds) // se usa adicionais: ->whereIn('t.user_id', $userIds)
+                        ->where('c.type', $type)      // 'entrada' ou 'investimento'
+                        ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
                         ->selectRaw('c.id, c.name, COALESCE(c.color,"#18dec7") as color, SUM(t.amount) as value')
                         ->groupBy('c.id','c.name','c.color')
-                        ->get()
-                        ->keyBy('id');
+                        ->get()->keyBy('id');
 
-                    // 3.2 Pagamentos do mês (de transações de despesa fora do mês)
                     $payCat = DB::table('payment_transactions as p')
                         ->join('transactions as t','t.id','=','p.transaction_id')
                         ->join('transaction_categories as c','c.id','=','t.transaction_category_id')
-                        ->where('t.user_id',$userId)
-                        ->where('c.type','despesa')
-                        ->whereRaw("t.type <> 'card'")
-                        ->where('p.reference_month',$monthNum)
-                        ->where('p.reference_year', $yearNum)
+                        ->whereIn('t.user_id', $userIds) // se usa adicionais: ->whereIn('t.user_id', $userIds)
+                        ->where('c.type', $type)
+                        ->where('p.reference_month', $monthNum)
+                        ->where('p.reference_year',  $yearNum)
                         ->where(function ($q) use ($start,$end) {
                             $q->whereNull('t.date')
                                 ->orWhereNotBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start,$end]);
                         })
                         ->selectRaw('c.id, c.name, COALESCE(c.color,"#18dec7") as color, SUM(p.amount) as value')
                         ->groupBy('c.id','c.name','c.color')
-                        ->get()
-                        ->keyBy('id');
+                        ->get()->keyBy('id');
 
                     // 3.3 Faturas do mês por categoria
                     $invCat = DB::table('invoice_items as it')
@@ -154,6 +149,7 @@ class ChartController extends Controller
 
                     // 3.4 Merge por categoria
                     $ids = collect($txCat->keys())->merge($payCat->keys())->merge($invCat->keys())->unique();
+
                     $rows = $ids->map(function ($id) use ($txCat,$payCat,$invCat) {
                         $name  = $txCat[$id]->name  ?? $payCat[$id]->name  ?? $invCat[$id]->name  ?? '—';
                         $color = $txCat[$id]->color ?? $payCat[$id]->color ?? $invCat[$id]->color ?? '#18dec7';
@@ -176,7 +172,7 @@ class ChartController extends Controller
                 // === entrada / investimento (original)
                 $rows = DB::table('transactions as t')
                     ->join('transaction_categories as c', 'c.id', '=', 't.transaction_category_id')
-                    ->where('t.user_id', $userId)
+                    ->whereIn('t.user_id', $userIds)
                     ->where('c.type', $type)
                     ->whereBetween(DB::raw('COALESCE(t.date, t.create_date)'), [$start, $end])
                     ->selectRaw('c.id, c.name as label, COALESCE(c.color,"#18dec7") as color, SUM(t.amount) as value')

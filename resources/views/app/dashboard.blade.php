@@ -939,9 +939,11 @@
                 const crumbsEl = document.getElementById('pieCrumbs');
 
                 const state = {
-                    stack: [],          // histórico p/ voltar
-                    lastPayload: null,  // dados atuais
-                    chart: null
+                    stack: [],
+                    current: { level: 'type', params: {} },   // <-- contexto atual
+                    lastPayload: null,
+                    chart: null,
+                    ac: null                                   // AbortController
                 };
 
                 function textColor() {
@@ -1108,26 +1110,35 @@
                 }
 
                 function pushAndLoad(level, params) {
-                    const prev = {level: state.lastPayload?.level || 'type', params: state.stack.at(-1)?.params || {}};
-                    state.stack.push(prev);
+                    state.stack.push({ ...state.current });    // salva de onde veio (com params)
                     load(level, params);
                 }
 
-                function load(level = 'type', params = {}) {
+                async function load(level = 'type', params = {}) {
+                    state.current = { level, params };         // atualiza contexto
+
+                    if (state.ac) state.ac.abort();            // cancela requisição anterior
+                    state.ac = new AbortController();
+                    const { signal } = state.ac;
+
                     const month = monthPicker?.value;
-                    const qs = new URLSearchParams({level, month, ...params}).toString();
-                    fetch(`{{ route('analytics.pie') }}?` + qs)
-                        .then(r => r.json())
-                        .then(payload => renderChart(payload))
-                        .catch(() => {
-                            renderChart({level: 'type', title: 'Sem dados', breadcrumbs: [], items: []});
-                        });
+                    const qs = new URLSearchParams({ level, month, ...params }).toString();
+
+                    try {
+                        const r = await fetch(`{{ route('analytics.pie') }}?` + qs, { signal });
+                        const payload = await r.json();
+                        if (signal.aborted) return;              // ignora resposta antiga
+                        renderChart(payload);
+                    } catch (e) {
+                        if (signal.aborted) return;
+                        renderChart({ level: 'type', title: 'Sem dados', breadcrumbs: [], items: [] });
+                    }
                 }
 
                 backBtn.addEventListener('click', () => {
                     const prev = state.stack.pop();
                     if (!prev) return;
-                    load(prev.level, prev.params);
+                    load(prev.level, prev.params || {});       // usa os params salvos
                 });
 
                 // recarrega quando muda o mês ou tema

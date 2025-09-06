@@ -156,9 +156,7 @@
              class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3"></div>
 
         <!-- Chart Despesas -->
-        <div
-            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
-
+        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
             <div class="flex items-center justify-between gap-2">
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <!-- Voltar -->
@@ -190,6 +188,7 @@
                 <div class="p-3 rounded-xl">
                     <canvas id="pieChart" class="w-full h-[280px]"></canvas>
                 </div>
+                <ul id="pieLegend" class="flex flex-wrap gap-3 max-h-24 overflow-auto mb-2"></ul>
 
                 <div>
                     <ul id="pieList" class="divide-y divide-neutral-200/70 dark:divide-neutral-800/70"></ul>
@@ -1057,20 +1056,38 @@
                                         label: ctx => `${ctx.label}: ${currencyBRL(ctx.parsed)}`
                                     }
                                 },
-                                legend: {
-                                    onClick: (e, item, legend) => {
-                                        // toggle do slice
-                                        const index = item.index;
-                                        const meta = legend.chart.getDatasetMeta(0);
-                                        const el = meta.data[index];
-                                        el.hidden = !el.hidden;
-                                        legend.chart.update();
-                                        updateListAndTotal(); // <- refaz lista/total
-                                    }
-                                }
+                                legend: { display: false }
                             }
                         }
                     });
+
+                    const legendEl = document.getElementById('pieLegend');
+                    function renderHtmlLegend() {
+                        const meta = state.chart.getDatasetMeta(0);
+                        legendEl.innerHTML = payload.items.map((it, idx) => `
+                            <li data-idx="${idx}" class="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <span class="inline-block w-4 h-3 rounded-sm"
+                                    style="background:${it.bg ?? it.color+'1a'};border:2px solid ${it.border ?? it.color};"></span>
+                              <span class="text-xs">${it.label}</span>
+                            </li>
+                          `).join('');
+                        legendEl.querySelectorAll('[data-idx]').forEach(li => {
+                            li.addEventListener('click', () => {
+                                const i = +li.dataset.idx;
+                                const el = meta.data[i];
+                                el.hidden = !el.hidden;             // alterna visibilidade
+                                state.chart.update();
+                                updateListAndTotal();               // refaz lista + total
+                                li.classList.toggle('opacity-40', el.hidden);
+                            });
+                        });
+                    }
+
+                    function updateListAndTotal() {
+                        const meta = state.chart.getDatasetMeta(0);
+                        const visible = payload.items.map((_, i) => !(meta.data[i]?.hidden));
+                        renderList(payload.items, visible);
+                    }
 
                     // clique em fatia = drill
                     document.getElementById('pieChart').onclick = (evt) => {
@@ -1081,16 +1098,12 @@
                         if (next && next.level) pushAndLoad(next.level, next.params || {});
                     };
 
-                    function updateListAndTotal() {
-                        const meta = state.chart.getDatasetMeta(0);
-                        const visibleMask = payload.items.map((_, i) => !(meta.data[i]?.hidden));
-                        renderList(payload.items, visibleMask); // só itens visíveis + total
-                    }
-
                     // primeira renderização
                     state.lastPayload = payload;
                     // expõe p/ reuso (ex.: re-render após tema)
                     window.updatePieListAndTotal = updateListAndTotal;
+
+                    renderHtmlLegend();
                     updateListAndTotal();
                 }
 

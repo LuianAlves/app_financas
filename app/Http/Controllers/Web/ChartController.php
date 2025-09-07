@@ -55,6 +55,12 @@ class ChartController extends Controller
             $rangeStart = $today->copy()->startOfDay(); // projeção: hoje→fim do mês alvo
         }
 
+// dentro de pie()
+$status = $req->string('status', 'all')->toString();
+if (!in_array($status, ['all','paid','unpaid'], true)) {
+    $status = 'all';
+}
+
         // =======================
         // MODO: TRANSAÇÕES
         // =======================
@@ -66,13 +72,12 @@ class ChartController extends Controller
 
                 if ($isProjection) {
                     $events = $this->projectEventsForRange($userIds, $rangeStart, $rangeEnd, $currentMonth);
-
-                    $sum = ['entrada' => 0.0, 'despesa' => 0.0, 'investimento' => 0.0];
-                    foreach ($events as $e) {
-                        // ignorar "payment" (quitação) — só lançamentos previstos e faturas
-                        if (!in_array($e['type'], ['entrada', 'despesa', 'investimento'], true)) continue;
-                        $sum[$e['type']] += abs((float)$e['amount']);
-                    }
+$events = $this->filterEventsByStatus($events, $status);
+                    $sum = ['entrada'=>0.0,'despesa'=>0.0,'investimento'=>0.0];
+foreach ($events as $e) {
+    if (!in_array($e['type'], ['entrada','despesa','investimento'], true)) continue;
+    $sum[$e['type']] += abs((float)$e['amount']);
+}
 
                     $rows = collect([
                         ['label' => 'Entrada', 'key' => 'entrada', 'color' => '#a6e3a1'],
@@ -169,17 +174,27 @@ class ChartController extends Controller
 
                 if ($isProjection) {
                     $events = $this->projectEventsForRange($userIds, $rangeStart, $rangeEnd, $currentMonth);
-
+$events = $this->filterEventsByStatus($events, $status);
                     // agrupa por categoria só do tipo solicitado
                     $byCat = [];
-                    foreach ($events as $e) {
-                        if ($e['type'] !== $type) continue;
-                        $cid = $e['category_id'] ?? '__none__';
-                        if (!isset($byCat[$cid])) {
-                            $byCat[$cid] = ['label' => $e['category_name'] ?? '—', 'color' => $e['color'] ?? '#94a3b8', 'value' => 0.0];
-                        }
-                        $byCat[$cid]['value'] += abs((float)$e['amount']);
-                    }
+foreach ($events as $e) {
+    if ($e['type'] !== $type) continue;
+
+    $isInv = !empty($e['is_invoice']);
+    $cid   = $isInv ? '__INVOICES__' : ($e['category_id'] ?? '__none__');
+    $label = $isInv ? 'Faturas' : ($e['category_name'] ?? '—');
+    $color = $isInv ? '#8b5cf6' : ($e['color'] ?? '#94a3b8');
+
+    if (!isset($byCat[$cid])) $byCat[$cid] = ['label'=>$label,'color'=>$color,'value'=>0.0];
+    $byCat[$cid]['value'] += abs((float)$e['amount']);
+}
+
+$rows = collect($byCat)->map(fn($v,$cid) => [
+    'id'=>$cid,'label'=>$v['label'],'value'=>round($v['value'],2),'color'=>$v['color'],
+    'next' => $cid==='__INVOICES__'
+        ? ['level'=>'invoice_cards_tx','params'=>[]]
+        : ['level'=>'pay','params'=>['type'=>$type,'category_id'=>$cid]],
+])->sortByDesc('value')->values()->map(fn($r)=>self::paint($r));
 
                     // DESPESA: injeta "Faturas" (sintético) do mês alvo (não pagas)
                     if ($type === 'despesa') {
@@ -344,6 +359,7 @@ class ChartController extends Controller
 
                 if ($isProjection) {
                     $events = $this->projectEventsForRange($userIds, $rangeStart, $rangeEnd, $currentMonth);
+$events = $this->filterEventsByStatus($events, $status);
 
                     $map = ['pix' => 0.0, 'money' => 0.0, 'card' => 0.0];
                     foreach ($events as $e) {
@@ -444,7 +460,7 @@ class ChartController extends Controller
 
                 if ($isProjection) {
                     $events = $this->projectEventsForRange($userIds, $rangeStart, $rangeEnd, $currentMonth);
-
+$events = $this->filterEventsByStatus($events, $status);
                     $map = ['credit' => 0.0, 'debit' => 0.0, 'desconhecido' => 0.0];
                     foreach ($events as $e) {
                         if (($e['category_id'] ?? null) != $categoryId || $e['pay'] !== 'card') continue;
@@ -510,6 +526,7 @@ class ChartController extends Controller
 
                 if ($isProjection) {
                     $events = $this->projectEventsForRange($userIds, $rangeStart, $rangeEnd, $currentMonth);
+$events = $this->filterEventsByStatus($events, $status);
 
                     if ($pay === 'card') {
                         // agrupa por card_id
@@ -644,19 +661,17 @@ class ChartController extends Controller
                 $breadcrumbs[] = ['label' => 'Despesa', 'level' => 'category', 'params' => ['type' => 'despesa']];
                 $breadcrumbs[] = ['label' => 'Faturas', 'level' => 'invoice_cards_tx', 'params' => []];
 
-                $rows = DB::table('invoices as i')
-                    ->join('invoice_items as it', 'it.invoice_id', '=', 'i.id')
-                    ->join('cards as k', 'k.id', '=', 'i.card_id')
-                    ->whereIn('i.user_id', $userIds)
-                    ->where('i.current_month', $currentMonth)       // << AQUI
-                    ->selectRaw('k.id, CONCAT(k.cardholder_name," • ",LPAD(COALESCE(k.last_four_digits,0),4,"0")) as label,
-               COALESCE(k.color_card,"#a78bfa") as color, SUM(it.amount) as value')
-                    ->groupBy('k.id', 'k.cardholder_name', 'k.last_four_digits', 'k.color_card')
-                    ->orderByDesc('value')->get()
-                    ->map(fn($r) => [
-                        'id' => $r->id, 'label' => $r->label, 'value' => (float)$r->value, 'color' => $r->color,
-                        'next' => ['level' => 'invoice_items_tx', 'params' => ['card_id' => $r->id]],
-                    ]);
+                // invoice_cards_tx
+$rows = DB::table('invoices as i')
+    ->join('invoice_items as it', 'it.invoice_id', '=', 'i.id')
+    ->join('cards as k', 'k.id', '=', 'i.card_id')
+    ->whereIn('i.user_id', $userIds)
+    ->where('i.current_month', $currentMonth)
+    ->when($status !== 'all', fn($q) => $q->where('i.paid', $status === 'paid'))
+    ->selectRaw('k.id, CONCAT(k.cardholder_name," • ",LPAD(COALESCE(k.last_four_digits,0),4,"0")) as label,
+                 COALESCE(k.color_card,"#a78bfa") as color, SUM(it.amount) as value')
+    ->groupBy('k.id','k.cardholder_name','k.last_four_digits','k.color_card')
+    ->orderByDesc('value')->get();
 
                 $rows = $rows->map(fn($r) => self::paint($r));
 
@@ -673,27 +688,17 @@ class ChartController extends Controller
                 $breadcrumbs[] = ['label' => 'Despesa', 'level' => 'category', 'params' => ['type' => 'despesa']];
                 $breadcrumbs[] = ['label' => 'Faturas', 'level' => 'invoice_cards_tx', 'params' => []];
 
-                $rows = DB::table('invoice_items as it')
-                    ->join('invoices as i', 'i.id', '=', 'it.invoice_id')
-                    ->join('transaction_categories as c', 'c.id', '=', 'it.transaction_category_id')
-                    ->whereIn('i.user_id', $userIds)
-                    ->where('i.card_id', $cardId)
-                    ->where('i.current_month', $currentMonth)
-                    ->selectRaw('
-        it.id,
-        COALESCE(it.title,c.name) as label,
-        it.amount as value,
-        it.date,
-        COALESCE(c.color,"#94a3b8") as color
-    ')
-                    ->orderByDesc('it.date')->get()
-                    ->map(fn($r) => [
-                        'id' => $r->id,
-                        'label' => $r->label . ' — ' . \Carbon\Carbon::parse($r->date)->format('d/m'),
-                        'value' => (float)$r->value,
-                        'color' => $r->color,  // << aqui também
-                        'next' => null
-                    ]);
+                // invoice_items_tx
+$rows = DB::table('invoice_items as it')
+    ->join('invoices as i', 'i.id', '=', 'it.invoice_id')
+    ->join('transaction_categories as c', 'c.id', '=', 'it.transaction_category_id')
+    ->whereIn('i.user_id', $userIds)
+    ->where('i.card_id', $cardId)
+    ->where('i.current_month', $currentMonth)
+    ->when($status !== 'all', fn($q) => $q->where('i.paid', $status === 'paid'))
+    ->selectRaw('it.id, COALESCE(it.title,c.name) as label, it.amount as value, it.date,
+                 COALESCE(c.color,"#94a3b8") as color')
+    ->orderByDesc('it.date')->get();
 
                 $rows = $rows->map(fn($r) => self::paint($r));
 
@@ -909,41 +914,46 @@ class ChartController extends Controller
         $monthStart = $rangeEnd->copy()->startOfMonth();
 
         // === ÚNICAS no intervalo (não pagas)
-        $unique = DB::table('transactions as t')
-            ->join('transaction_categories as c','c.id','=','t.transaction_category_id')
-            ->leftJoin('payment_transactions as pt','pt.transaction_id','=','t.id')
-            ->whereIn('t.user_id', $userIds)
-            ->where('t.recurrence_type','unique')
-            ->whereBetween('t.date', [$rangeStart->toDateString(), $rangeEnd->toDateString()])
-            ->whereNull('pt.id')
-            ->where(function ($q) {
-                $q->where('t.type','!=','card')
-                    ->orWhereNull('t.type')
-                    ->orWhere(fn($qq)=>$qq->where('t.type','card')->where('t.type_card','!=','credit'));
-            })
-            ->where(function ($q) {
-                $q->whereNull('t.title')
-                    ->orWhereRaw('LOWER(t.title) NOT IN (?, ?, ?)', ['total fatura','fatura total','total da fatura']);
-            })
-            ->get([
-                't.id','t.amount','t.type as pay','t.type_card','t.account_id','t.card_id',
-                'c.id as category_id','c.name as category_name','c.type as cat_type','c.color'
-            ]);
-        foreach ($unique as $r) {
-            $type = in_array($r->cat_type, ['entrada','despesa','investimento'], true) ? $r->cat_type : 'investimento';
-            $out[] = [
-                'type'         => $type,
-                'amount'       => abs((float)$r->amount),
-                'category_id'  => (string)$r->category_id,
-                'category_name'=> $r->category_name,
-                'color'        => $r->color,
-                'pay'          => $r->pay,
-                'type_card'    => $r->type_card,
-                'account_id'   => $r->account_id,
-                'card_id'      => $r->card_id,
-                'is_invoice'   => false,
-            ];
-        }
+        // === ÚNICAS no intervalo (agora SEM excluir pagas)
+$unique = DB::table('transactions as t')
+    ->join('transaction_categories as c','c.id','=','t.transaction_category_id')
+    ->whereIn('t.user_id', $userIds)
+    ->where('t.recurrence_type','unique')
+    ->whereBetween('t.date', [$rangeStart->toDateString(), $rangeEnd->toDateString()])
+    ->where(function ($q) {
+        $q->where('t.type','!=','card')
+          ->orWhereNull('t.type')
+          ->orWhere(fn($qq)=>$qq->where('t.type','card')->where('t.type_card','!=','credit'));
+    })
+    ->where(function ($q) {
+        $q->whereNull('t.title')
+          ->orWhereRaw('LOWER(t.title) NOT IN (?, ?, ?)', ['total fatura','fatura total','total da fatura']);
+    })
+    ->get([
+        't.id','t.amount','t.date as occ_date','t.type as pay','t.type_card','t.account_id','t.card_id',
+        'c.id as category_id','c.name as category_name','c.type as cat_type','c.color'
+    ]);
+
+foreach ($unique as $r) {
+    $type = in_array($r->cat_type, ['entrada','despesa','investimento'], true) ? $r->cat_type : 'investimento';
+    $ym   = \Carbon\Carbon::parse($r->occ_date)->format('Y-m');
+    $ymd  = \Carbon\Carbon::parse($r->occ_date)->toDateString();
+    $isPaid = !empty($paid[$r->id][$ym]) || !empty(($paid['_byDate'][$r->id] ?? [])[$ymd]);
+
+    $out[] = [
+        'type' => $type,
+        'amount' => abs((float)$r->amount),
+        'category_id' => (string)$r->category_id,
+        'category_name' => $r->category_name,
+        'color' => $r->color,
+        'pay' => $r->pay,
+        'type_card' => $r->type_card,
+        'account_id' => $r->account_id,
+        'card_id' => $r->card_id,
+        'is_invoice' => false,
+        'paid' => $isPaid,
+    ];
+}
 
         // === RECORRENTES monthly/yearly (sem itens custom)
         $recMY = DB::table('recurrents as r')
@@ -975,15 +985,18 @@ class ChartController extends Controller
             if ($r->recurrence_type === 'monthly') {
                 $occ = $monthStart->copy()->day(min((int)$r->payment_day, $monthStart->daysInMonth));
                 if ($occ->betweenIncluded($rangeStart, $rangeEnd) && $occ->gte($tStart)) {
-                    $ym = $occ->format('Y-m');
-                    if (empty($paid[$r->tid][$ym])) {
-                        $out[] = [
-                            'type'=>$type,'amount'=>abs((float)$r->amount),
-                            'category_id'=>(string)$r->category_id,'category_name'=>$r->category_name,'color'=>$r->color,
-                            'pay'=>$r->pay,'type_card'=>$r->type_card,'account_id'=>$r->account_id,'card_id'=>$r->card_id,
-                            'is_invoice'=>false,
-                        ];
-                    }
+                    $ym  = $occ->format('Y-m');
+$ymd = $occ->toDateString();
+$paidByMonth = !empty($paid[$r->tid][$ym]);
+$paidByDate  = !empty(($paid['_byDate'][$r->tid] ?? [])[$ymd]);
+$isPaid = $paidByMonth || $paidByDate;
+
+$out[] = [
+    'type'=>$type,'amount'=>abs((float)$r->amount),
+    'category_id'=>(string)$r->category_id,'category_name'=>$r->category_name,'color'=>$r->color,
+    'pay'=>$r->pay,'type_card'=>$r->type_card,'account_id'=>$r->account_id,'card_id'=>$r->card_id,
+    'is_invoice'=>false,'paid'=>$isPaid,
+];
                 }
             } else { // yearly
                 $anchorMonth = Carbon::parse($r->tdate)->month;
@@ -991,15 +1004,18 @@ class ChartController extends Controller
                     $daysIn = $monthStart->daysInMonth;
                     $occ = Carbon::create($monthStart->year, $anchorMonth, min((int)$r->payment_day, $daysIn));
                     if ($occ->betweenIncluded($rangeStart, $rangeEnd) && $occ->gte($tStart)) {
-                        $ym = $occ->format('Y-m');
-                        if (empty($paid[$r->tid][$ym])) {
-                            $out[] = [
-                                'type'=>$type,'amount'=>abs((float)$r->amount),
-                                'category_id'=>(string)$r->category_id,'category_name'=>$r->category_name,'color'=>$r->color,
-                                'pay'=>$r->pay,'type_card'=>$r->type_card,'account_id'=>$r->account_id,'card_id'=>$r->card_id,
-                                'is_invoice'=>false,
-                            ];
-                        }
+                        $ym  = $occ->format('Y-m');
+$ymd = $occ->toDateString();
+$paidByMonth = !empty($paid[$r->tid][$ym]);
+$paidByDate  = !empty(($paid['_byDate'][$r->tid] ?? [])[$ymd]);
+$isPaid = $paidByMonth || $paidByDate;
+
+$out[] = [
+    'type'=>$type,'amount'=>abs((float)$r->amount),
+    'category_id'=>(string)$r->category_id,'category_name'=>$r->category_name,'color'=>$r->color,
+    'pay'=>$r->pay,'type_card'=>$r->type_card,'account_id'=>$r->account_id,'card_id'=>$r->card_id,
+    'is_invoice'=>false,'paid'=>$isPaid,
+];
                     }
                 }
             }
@@ -1019,16 +1035,18 @@ class ChartController extends Controller
         foreach ($recC as $r) {
             $daysIn = Carbon::create($r->reference_year, $r->reference_month, 1)->daysInMonth;
             $occ    = Carbon::create($r->reference_year, $r->reference_month, min((int)$r->payment_day, $daysIn));
-            if (!$occ->betweenIncluded($rangeStart, $rangeEnd)) continue;
-            $ymd = $occ->toDateString();
-            if (!empty(($paid['_byDate'][$r->tid] ?? [])[$ymd])) continue;
-            $type = in_array($r->cat_type, ['entrada','despesa','investimento'], true) ? $r->cat_type : 'investimento';
-            $out[] = [
-                'type'=>$type,'amount'=>abs((float)$r->amount),
-                'category_id'=>(string)$r->category_id,'category_name'=>$r->category_name,'color'=>$r->color,
-                'pay'=>$r->pay,'type_card'=>$r->type_card,'account_id'=>$r->account_id,'card_id'=>$r->card_id,
-                'is_invoice'=>false,
-            ];
+            if (!$occ->betweenIncluded($rangeStart, $rangeEnd)) {
+                $ymd   = $occ->toDateString();
+$isPaid = !empty(($paid['_byDate'][$r->tid] ?? [])[$ymd]);
+
+$out[] = [
+    'type'=>$type,'amount'=>abs((float)$r->amount),
+    'category_id'=>(string)$r->category_id,'category_name'=>$r->category_name,'color'=>$r->color,
+    'pay'=>$r->pay,'type_card'=>$r->type_card,'account_id'=>$r->account_id,'card_id'=>$r->card_id,
+    'is_invoice'=>false,'paid'=>$isPaid,
+];
+            }
+            
         }
 
         // === RECORRENTES custom "a cada X dias" (sem itens)
@@ -1049,15 +1067,15 @@ class ChartController extends Controller
             $cursor = $this->firstAlignedDays($start, $rangeStart->copy()->startOfDay(), $interval);
             $cursor = $this->normalizeW($cursor, (bool)$r->include_sat, (bool)$r->include_sun);
             while ($cursor->lte($rangeEnd)) {
-                $ymd = $cursor->toDateString();
-                if (empty(($paid['_byDate'][$r->tid] ?? [])[$ymd])) {
-                    $out[] = [
-                        'type'=>$type,'amount'=>abs((float)$r->amount),
-                        'category_id'=>(string)$r->category_id,'category_name'=>$r->category_name,'color'=>$r->color,
-                        'pay'=>$r->pay,'type_card'=>$r->type_card,'account_id'=>$r->account_id,'card_id'=>$r->card_id,
-                        'is_invoice'=>false,
-                    ];
-                }
+                $ymd    = $cursor->toDateString();
+$isPaid = !empty(($paid['_byDate'][$r->tid] ?? [])[$ymd]);
+
+$out[] = [
+    'type'=>$type,'amount'=>abs((float)$r->amount),
+    'category_id'=>(string)$r->category_id,'category_name'=>$r->category_name,'color'=>$r->color,
+    'pay'=>$r->pay,'type_card'=>$r->type_card,'account_id'=>$r->account_id,'card_id'=>$r->card_id,
+    'is_invoice'=>false,'paid'=>$isPaid,
+];
                 $cursor = $this->normalizeW(
                     $cursor->copy()->addDays($interval),
                     (bool)$r->include_sat,
@@ -1068,29 +1086,38 @@ class ChartController extends Controller
 
         // === FATURAS a vencer no mês (não pagas)
         $rows = DB::table('invoices as inv')
-            ->join('cards as c','c.id','=','inv.card_id')
-            ->leftJoin('invoice_items as it','it.invoice_id','=','inv.id')
-            ->whereIn('inv.user_id', $userIds)
-            ->where('inv.current_month', $currentMonth)
-            ->where('inv.paid', false)
-            ->groupBy('inv.id','inv.card_id','inv.current_month','c.due_day')
-            ->select('inv.id','inv.card_id','inv.current_month','c.due_day', DB::raw('COALESCE(SUM(it.amount),0) as total'))
-            ->get();
+    ->join('cards as c','c.id','=','inv.card_id')
+    ->leftJoin('invoice_items as it','it.invoice_id','=','inv.id')
+    ->whereIn('inv.user_id', $userIds)
+    ->where('inv.current_month', $currentMonth)
+    ->groupBy('inv.id','inv.card_id','inv.current_month','c.due_day','inv.paid')
+    ->select('inv.id','inv.card_id','inv.current_month','c.due_day','inv.paid',
+             DB::raw('COALESCE(SUM(it.amount),0) as total'))
+    ->get();
 
-        foreach ($rows as $r) {
-            $base = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
-            $due  = $base->copy()->day(min((int)($r->due_day ?: 1), $base->daysInMonth));
-            $total = (float)$r->total;
-            if ($total > 0 && $due->betweenIncluded($rangeStart, $rangeEnd)) {
-                $out[] = [
-                    'type'=>'despesa','amount'=>abs($total),
-                    'category_id'=>null,'category_name'=>'Fatura Cartão','color'=>'#8b5cf6',
-                    'pay'=>'card','type_card'=>'credit','account_id'=>null,'card_id'=>$r->card_id,
-                    'is_invoice'=>true,'current_month'=>$r->current_month,
-                ];
-            }
-        }
+foreach ($rows as $r) {
+    $base = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
+    $due  = $base->copy()->day(min((int)($r->due_day ?: 1), $base->daysInMonth));
+    $total = (float)$r->total;
+    if ($total > 0 && $due->betweenIncluded($rangeStart, $rangeEnd)) {
+        $out[] = [
+            'type'=>'despesa','amount'=>abs($total),
+            // manter category_id nulo e tratar como "Faturas" na agregação
+            'category_id'=>null,'category_name'=>'Faturas','color'=>'#8b5cf6',
+            'pay'=>'card','type_card'=>'credit','account_id'=>null,'card_id'=>$r->card_id,
+            'is_invoice'=>true,'current_month'=>$r->current_month,
+            'paid'=>(bool)$r->paid,
+        ];
+    }
+}
 
         return $out;
     }
+    
+    private function filterEventsByStatus(array $events, string $status): array
+{
+    if ($status === 'all') return $events;
+    $want = ($status === 'paid');
+    return array_values(array_filter($events, fn($e) => (bool)($e['paid'] ?? false) === $want));
+}
 }

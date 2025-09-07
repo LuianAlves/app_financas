@@ -405,12 +405,15 @@
             let CURRENT_ID = null, CURRENT_TITLE = null, CURRENT_DUE_DATE = null;
 
             function getPaymentEls() {
-                const modal = document.getElementById('paymentModal');
-                const form = modal?.querySelector('form');
-                const inAmt = modal?.querySelector('#payment_amount,[name="amount"]');
-                const inDate = modal?.querySelector('#payment_date,[name="payment_date"],[name="date"]');
-                return {modal, form, inAmt, inDate};
-            }
+    const modal = document.getElementById('paymentModal');
+    const form  = modal?.querySelector('form');
+    const inAmt = modal?.querySelector('#payment_amount,[name="amount"]');
+    const inDate= modal?.querySelector('#payment_date,[name="payment_date"],[name="date"]');
+    const dueHidden = modal?.querySelector('#payment_due_date,[name="due_date"]'); // NOVO
+    return {modal, form, inAmt, inDate, dueHidden};
+}
+
+
 
             function showPaymentModal() {
                 const {modal} = getPaymentEls();
@@ -477,30 +480,31 @@
             }
 
             document.addEventListener('click', (e) => {
-                const btnPayTx = e.target.closest('[data-open-payment]');
-                if (btnPayTx) {
-                    const {form, inAmt, inDate} = getPaymentEls();
-                    if (!form) {
-                        alert('Formulário do pagamento não encontrado.');
-                        return;
-                    }
+    const btnPayTx = e.target.closest('[data-open-payment]');
+    if (btnPayTx) {
+        const {form, inAmt, inDate, dueHidden} = getPaymentEls();
+        if (!form) {
+            alert('Formulário do pagamento não encontrado.');
+            return;
+        }
 
-                    CURRENT_TX_CARD = btnPayTx.closest('.transaction-card') || null;
-                    CURRENT_ID = btnPayTx.dataset.id;
-                    CURRENT_TITLE = btnPayTx.dataset.title || 'Pagamento';
-                    CURRENT_DUE_DATE = (btnPayTx.dataset.date || '').slice(0, 10);
+        CURRENT_TX_CARD = btnPayTx.closest('.transaction-card') || null;
+        CURRENT_ID      = btnPayTx.dataset.id;
+        CURRENT_TITLE   = btnPayTx.dataset.title || 'Pagamento';
+        CURRENT_DUE_DATE= (btnPayTx.dataset.date || '').slice(0, 10);
 
-                    form.action = PAY_TPL.replace('__ID__', CURRENT_ID);
-                    if (inAmt) inAmt.value = btnPayTx.dataset.amount || '0';
-                    if (inDate) inDate.value = CURRENT_DUE_DATE;
+        form.action = PAY_TPL.replace('__ID__', CURRENT_ID);
+        if (inAmt)      inAmt.value = btnPayTx.dataset.amount || '0';
+        if (inDate)     inDate.value = CURRENT_DUE_DATE;
+        if (dueHidden)  dueHidden.value = CURRENT_DUE_DATE; // NOVO: envia vencimento
 
-                    showPaymentModal();
-                    return;
-                }
+        showPaymentModal();
+        return;
+    }
 
-                const btnPayInv = e.target.closest('[data-pay-invoice]');
-                if (btnPayInv) payInvoice(btnPayInv);
-            });
+    const btnPayInv = e.target.closest('[data-pay-invoice]');
+    if (btnPayInv) payInvoice(btnPayInv);
+});
 
             async function payInvoice(btn) {
                 const cardEl = btn.closest('.transaction-card');

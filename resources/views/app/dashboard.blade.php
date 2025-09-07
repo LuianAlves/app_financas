@@ -157,7 +157,7 @@
 
         <!-- Chart Despesas -->
         <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
-            <div class="flex items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <!-- Voltar -->
                     <button id="pieBack"
@@ -179,9 +179,30 @@
                     <!-- Título (não quebra, trunca) -->
                     <span id="pieTitle"
                           class="ml-auto text-sm font-semibold whitespace-nowrap truncate max-w-full sm:max-w-[40%]">
-    <!-- JS injeta o texto -->
-  </span>
+                        <!-- JS injeta o texto -->
+                    </span>
                 </div>
+
+                <!-- ====== Filtros do Gráfico ====== -->
+                <div class="flex items-center gap-2 ml-auto">
+                    <label class="sr-only" for="pieTypeFilter">Tipo</label>
+                    <select id="pieTypeFilter"
+                            class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-2 py-1 text-sm">
+                        <option value="all">Todos os tipos</option>
+                        <option value="entrada">Entradas</option>
+                        <option value="despesa">Despesas</option>
+                        <option value="investimento">Investimentos</option>
+                    </select>
+
+                    <label class="sr-only" for="pieStatus">Status</label>
+                    <select id="pieStatus"
+                            class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-2 py-1 text-sm">
+                        <option value="all">Todos</option>
+                        <option value="paid">Pagos</option>
+                        <option value="unpaid">Não pagos</option>
+                    </select>
+                </div>
+                <!-- ====== /Filtros do Gráfico ====== -->
             </div>
 
             <div class="mt-3 grid md:grid-cols-[360px_1fr] gap-4 items-start">
@@ -940,6 +961,9 @@
         <script>
             (() => {
                 const monthPicker = document.getElementById('monthPicker');
+                const statusSel   = document.getElementById('pieStatus');
+                const typeSel     = document.getElementById('pieTypeFilter');
+
                 const ctx = document.getElementById('pieChart').getContext('2d');
                 const listEl = document.getElementById('pieList');
                 const titleEl = document.getElementById('pieTitle');
@@ -948,7 +972,7 @@
 
                 const state = {
                     stack: [],
-                    current: { level: 'type', params: {} },   // <-- contexto atual
+                    current: { level: 'type', params: {} },   // contexto atual do gráfico
                     lastPayload: null,
                     chart: null,
                     ac: null                                   // AbortController
@@ -995,22 +1019,19 @@
                     const total = rows.reduce((s, r) => s + (r.value || 0), 0);
 
                     listEl.innerHTML = [
-                        // 1ª linha: somatória dinâmica
                         `<li class="py-2 flex items-center justify-between font-semibold">
-       <span>Total visível</span><span>${currencyBRL(total)}</span>
-     </li>`,
-                        // Demais linhas
+                           <span>Total visível</span><span>${currencyBRL(total)}</span>
+                         </li>`,
                         ...rows.map(i => `
-      <li class="py-2 flex items-center justify-between">
-        <button class="text-left flex-1 pr-3 hover:underline" data-next='${JSON.stringify(i.next || null)}'>
-          ${i.label}
-        </button>
-        <strong>${currencyBRL(i.value)}</strong>
-      </li>
-    `)
+                          <li class="py-2 flex items-center justify-between">
+                            <button class="text-left flex-1 pr-3 hover:underline" data-next='${JSON.stringify(i.next || null)}'>
+                              ${i.label}
+                            </button>
+                            <strong>${currencyBRL(i.value)}</strong>
+                          </li>
+                        `)
                     ].join('');
 
-                    // drill pela lista
                     listEl.querySelectorAll('button[data-next]').forEach(btn => {
                         btn.addEventListener('click', () => {
                             const next = JSON.parse(btn.getAttribute('data-next'));
@@ -1028,7 +1049,6 @@
                     const values = payload.items.map(i => Number(i.value || 0));
                     const total  = values.reduce((s,v)=>s+v,0);
 
-                    // <<< Fallback quando não há dados (itens vazios ou somatório 0)
                     if (!values.length || total <= 0) {
                         if (state.chart) state.chart.destroy();
                         state.chart = new Chart(ctx, {
@@ -1036,7 +1056,7 @@
                             data: {
                                 labels: ['Sem dados'],
                                 datasets: [{
-                                    data: [1],                   // placeholder
+                                    data: [1],
                                     backgroundColor: ['#e5e7eb'],
                                     borderColor: ['#cbd5e1'],
                                     borderWidth: 1
@@ -1053,24 +1073,17 @@
                             }
                         });
 
-                        // zera legenda e lista
                         document.getElementById('pieLegend').innerHTML = '';
                         listEl.innerHTML = `
-      <li class="py-2 flex items-center justify-between font-semibold">
-        <span>Total visível</span><span>R$ 0,00</span>
-      </li>
-      <li class="py-2 text-sm text-neutral-500 dark:text-neutral-400">Nenhum dado neste mês.</li>
-    `;
+                          <li class="py-2 flex items-center justify-between font-semibold">
+                            <span>Total visível</span><span>R$ 0,00</span>
+                          </li>
+                          <li class="py-2 text-sm text-neutral-500 dark:text-neutral-400">Nenhum dado neste mês.</li>
+                        `;
 
                         state.lastPayload = payload;
-                        // sem registrar handlers/legend para o caso vazio
                         return;
                     }
-
-                    // --- resto do renderChart original (com cores, criação do chart, legenda, clique, etc.)
-                    const bg     = payload.items.map(i => i.bg);
-                    const border = payload.items.map(i => i.border);
-                    if (state.chart) state.chart.destroy();
 
                     const withAlpha = c => {
                         if (!c) return undefined;
@@ -1082,6 +1095,7 @@
                     const colorsBg     = payload.items.map(i => i.bg ?? withAlpha(i.color));
                     const colorsBorder = payload.items.map(i => i.border ?? i.color ?? '#94a3b8');
 
+                    if (state.chart) state.chart.destroy();
                     state.chart = new Chart(ctx, {
                         type: 'doughnut',
                         data: { labels, datasets: [{ data: values, backgroundColor: colorsBg, borderColor: colorsBorder, borderWidth: 1 }] },
@@ -1099,11 +1113,11 @@
                     function renderHtmlLegend() {
                         const meta = state.chart.getDatasetMeta(0);
                         legendEl.innerHTML = payload.items.map((it, idx) => `
-      <li data-idx="${idx}" class="inline-flex items-center gap-2 cursor-pointer select-none">
-        <span class="inline-block w-4 h-3 rounded-sm"
-              style="background:${it.bg ?? it.color+'1a'};border:2px solid ${it.border ?? it.color};"></span>
-        <span class="text-xs">${it.label}</span>
-      </li>`).join('');
+                          <li data-idx="${idx}" class="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <span class="inline-block w-4 h-3 rounded-sm"
+                                  style="background:${it.bg ?? it.color+'1a'};border:2px solid ${it.border ?? it.color};"></span>
+                            <span class="text-xs">${it.label}</span>
+                          </li>`).join('');
                         legendEl.querySelectorAll('[data-idx]').forEach(li => {
                             li.addEventListener('click', () => {
                                 const i = +li.dataset.idx;
@@ -1138,24 +1152,26 @@
                 }
 
                 function pushAndLoad(level, params) {
-                    state.stack.push({ ...state.current });    // salva de onde veio (com params)
+                    state.stack.push({ ...state.current });
                     load(level, params);
                 }
 
                 async function load(level = 'type', params = {}) {
-                    state.current = { level, params };         // atualiza contexto
+                    state.current = { level, params };
 
-                    if (state.ac) state.ac.abort();            // cancela requisição anterior
+                    if (state.ac) state.ac.abort();
                     state.ac = new AbortController();
                     const { signal } = state.ac;
 
-                    const month = monthPicker?.value;
-                    const qs = new URLSearchParams({ level, month, ...params }).toString();
+                    const month  = monthPicker?.value;
+                    const status = statusSel?.value || 'all';
+
+                    const searchParams = new URLSearchParams({ level, month, status, ...params });
 
                     try {
-                        const r = await fetch(`{{ route('analytics.pie') }}?` + qs, { signal });
+                        const r = await fetch(`{{ route('analytics.pie') }}?` + searchParams.toString(), { signal });
                         const payload = await r.json();
-                        if (signal.aborted) return;              // ignora resposta antiga
+                        if (signal.aborted) return;
                         renderChart(payload);
                     } catch (e) {
                         if (signal.aborted) return;
@@ -1172,13 +1188,28 @@
                 backBtn.addEventListener('click', () => {
                     const prev = state.stack.pop();
                     if (!prev) return;
-                    load(prev.level, prev.params || {});       // usa os params salvos
+                    load(prev.level, prev.params || {});
+                });
+
+                // Filtro de Status: só recarrega mantendo contexto atual
+                statusSel?.addEventListener('change', () => window.refreshPie(true));
+
+                // Filtro de Tipo:
+                // - all  => nível "type"
+                // - outro => nível "category" já com o type selecionado
+                typeSel?.addEventListener('change', () => {
+                    state.stack = [];
+                    const t = (typeSel.value || 'all');
+                    if (t === 'all') {
+                        load('type', {});
+                    } else {
+                        load('category', { type: t });
+                    }
                 });
 
                 // recarrega quando muda o mês ou tema
                 monthPicker?.addEventListener('change', () => window.refreshPie(true));
 
-                // observador de tema (Tailwind dark class)
                 const obs = new MutationObserver(() => {
                     if (!state.lastPayload) return;
                     renderChart(state.lastPayload);

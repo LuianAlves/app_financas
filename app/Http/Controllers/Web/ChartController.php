@@ -7,21 +7,12 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use App\Models\AdditionalUser;
-
-use App\Models\Transaction;
-use App\Models\Recurrent;
-use App\Models\CustomItemRecurrents;
-use App\Models\PaymentTransaction;
-use App\Models\Account;
-use App\Models\Card;
 
 class ChartController extends Controller
 {
     public function pie(Request $req)
     {
-        $userId = Auth::id();
         $ownerId = AdditionalUser::ownerIdFor();
         $userIds = AdditionalUser::query()
             ->where('user_id', $ownerId)
@@ -367,6 +358,7 @@ class ChartController extends Controller
 
             // Nível 3: itens da fatura (opcionalmente filtrados por categoria)
             if ($level === 'invoice_items' && $invoiceId) {
+                $categoryId = $req->string('category_id')->toString();
                 $catName = $categoryId ? DB::table('transaction_categories')->where('id', $categoryId)->value('name') : null;
 
                 $q = DB::table('invoice_items as it')
@@ -455,11 +447,11 @@ class ChartController extends Controller
         foreach ($rows as $r) {
             if ($r->reference_year && $r->reference_month) {
                 $ym = sprintf('%04d-%02d', (int)$r->reference_year, (int)$r->reference_month);
-                $idx[$r->transaction_id][$ym] = true;
+                $idx[$r->transaction_id][$ym] = true;     // por mês de referência (vencimento)
             }
             if (!empty($r->payment_date)) {
                 $d = Carbon::parse($r->payment_date)->toDateString();
-                $byDate[$r->transaction_id][$d] = true;
+                $byDate[$r->transaction_id][$d] = true;   // por data exata de pagamento
             }
         }
         $idx['_byDate'] = $byDate;
@@ -488,6 +480,9 @@ class ChartController extends Controller
      * Gera eventos (pagos e não pagos) do intervalo, + faturas do mês.
      * Retorna rows canônicos:
      * ['type','amount','category_id','category_name','color','pay','type_card','account_id','card_id','is_invoice','paid']
+     *
+     * FIX: recorrências mensais/anuais agora entram mesmo se a âncora (t.date) já tiver sido "pulada"
+     * pelo pagamento adiantado — desde que a ocorrência esteja no mês alvo OU já conste como paga.
      */
     private function projectEventsForRange($userIds, Carbon $rangeStart, Carbon $rangeEnd, string $currentMonth): array
     {
@@ -536,7 +531,7 @@ class ChartController extends Controller
             ];
         }
 
-        // === RECORRENTES monthly/yearly (sem itens custom)
+        // === RECORRENTES monthly/yearly (sem itens custom) — FIX âncora x pagamento adiantado
         $recMY = DB::table('recurrents as r')
             ->join('transactions as t','t.id','=','r.transaction_id')
             ->join('transaction_categories as c','c.id','=','t.transaction_category_id')
@@ -557,44 +552,51 @@ class ChartController extends Controller
             })
             ->get([
                 'r.id as rid','r.payment_day','r.amount',
-                't.id as tid','t.date as tdate','t.type as pay','t.type_card','t.account_id','t.card_id','t.recurrence_type',
+                't.id as tid','t.date as tdate','t.created_at as tcreated','t.type as pay','t.type_card','t.account_id','t.card_id','t.recurrence_type',
                 'c.id as category_id','c.name as category_name','c.type as cat_type','c.color'
             ]);
 
         foreach ($recMY as $r) {
-            $tStart = Carbon::parse($r->tdate);
-            $type   = in_array($r->cat_type, ['entrada','despesa','investimento'], true) ? $r->cat_type : 'investimento';
+            $created  = Carbon::parse($r->tcreated)->startOfDay();
+            $tStart   = Carbon::parse($r->tdate)->startOfDay();
+            $anchor   = $created->lt($tStart) ? $created : $tStart; // usa a mais antiga para não perder mês pago adiantado
+            $type     = in_array($r->cat_type, ['entrada','despesa','investimento'], true) ? $r->cat_type : 'investimento';
 
             if ($r->recurrence_type === 'monthly') {
                 $occ = $monthStart->copy()->day(min((int)$r->payment_day, $monthStart->daysInMonth));
-                if ($occ->betweenIncluded($rangeStart, $rangeEnd) && $occ->gte($tStart)) {
+                if ($occ->betweenIncluded($rangeStart, $rangeEnd)) {
                     $ym  = $occ->format('Y-m');
                     $ymd = $occ->toDateString();
                     $isPaid = !empty($paid[$r->tid][$ym]) || !empty(($paid['_byDate'][$r->tid] ?? [])[$ymd]);
 
-                    $out[] = [
-                        'type'=>$type,'amount'=>abs((float)$r->amount),
-                        'category_id'=>(string)$r->category_id,'category_name'=>$r->category_name,'color'=>$r->color,
-                        'pay'=>$r->pay,'type_card'=>$r->type_card,'account_id'=>$r->account_id,'card_id'=>$r->card_id,
-                        'is_invoice'=>false,'paid'=>$isPaid,
-                    ];
-                }
-            } else { // yearly
-                $anchorMonth = Carbon::parse($r->tdate)->month;
-                if ((int)$monthStart->month === (int)$anchorMonth) {
-                    $daysIn = $monthStart->daysInMonth;
-                    $occ = Carbon::create($monthStart->year, $anchorMonth, min((int)$r->payment_day, $daysIn));
-                    if ($occ->betweenIncluded($rangeStart, $rangeEnd) && $occ->gte($tStart)) {
-                        $ym  = $occ->format('Y-m');
-                        $ymd = $occ->toDateString();
-                        $isPaid = !empty($paid[$r->tid][$ym]) || !empty(($paid['_byDate'][$r->tid] ?? [])[$ymd]);
-
+                    // inclui se (ocorrência >= âncora) OU se já constar como paga
+                    if ($occ->gte($anchor) || $isPaid) {
                         $out[] = [
                             'type'=>$type,'amount'=>abs((float)$r->amount),
                             'category_id'=>(string)$r->category_id,'category_name'=>$r->category_name,'color'=>$r->color,
                             'pay'=>$r->pay,'type_card'=>$r->type_card,'account_id'=>$r->account_id,'card_id'=>$r->card_id,
                             'is_invoice'=>false,'paid'=>$isPaid,
                         ];
+                    }
+                }
+            } else { // yearly
+                $anchorMonth = (int) Carbon::parse($r->tdate)->month;
+                if ((int)$monthStart->month === $anchorMonth) {
+                    $daysIn = $monthStart->daysInMonth;
+                    $occ = Carbon::create($monthStart->year, $anchorMonth, min((int)$r->payment_day, $daysIn));
+                    if ($occ->betweenIncluded($rangeStart, $rangeEnd)) {
+                        $ym  = $occ->format('Y-m');
+                        $ymd = $occ->toDateString();
+                        $isPaid = !empty($paid[$r->tid][$ym]) || !empty(($paid['_byDate'][$r->tid] ?? [])[$ymd]);
+
+                        if ($occ->gte($anchor) || $isPaid) {
+                            $out[] = [
+                                'type'=>$type,'amount'=>abs((float)$r->amount),
+                                'category_id'=>(string)$r->category_id,'category_name'=>$r->category_name,'color'=>$r->color,
+                                'pay'=>$r->pay,'type_card'=>$r->type_card,'account_id'=>$r->account_id,'card_id'=>$r->card_id,
+                                'is_invoice'=>false,'paid'=>$isPaid,
+                            ];
+                        }
                     }
                 }
             }

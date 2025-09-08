@@ -72,9 +72,9 @@
                         <p id="kpi-balanco" class="mt-1 text-3xl md:text-4xl font-semibold tracking-tight"
                            aria-live="polite">—</p>
                     </div>
-                    <a href="#">
-                        <i class="fa-solid fa-rotate-right mx-1"></i>
-                    </a>
+                    <a href="#" id="btnRefreshKpis">
+    <i class="fa-solid fa-rotate-right mx-1"></i>
+</a>
                 </div>
 
                 <div class="mt-4 grid grid-cols-1 gap-3 text-sm/5">

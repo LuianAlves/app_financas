@@ -1,5 +1,5 @@
 @extends('layouts.templates.app')
-@section('content')
+@section('new-content')
     <div class="login-container">
         <div class="login-card">
             <h2>Entrar</h2>

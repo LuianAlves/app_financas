@@ -80,9 +80,9 @@ class CardController extends Controller
         }
     }
 
-    public function update(Request $request, Card $card)
+    public function update(Request $request, $id)
     {
-        $data = $request->validate([
+        $request->validate([
             'name' => 'sometimes|string|max:255',
             'credit_limit' => 'sometimes|numeric',
             'closing_day' => 'sometimes|integer|min:1|max:31',
@@ -90,7 +90,18 @@ class CardController extends Controller
             'account_id' => 'nullable|uuid|exists:accounts,id',
         ]);
 
-        $card->update($data);
+        $card = Card::where('id', $id)->first();
+
+        $card->update([
+            'account_id' => $request->account_id,
+            'cardholder_name' => $request->cardholder_name,
+            'last_four_digits' => $request->last_four_digits,
+            'brand' => $request->brand,
+            'color_card' => $request->color_card,
+            'credit_limit' => $request->credit_limit,
+            'closing_day' => $request->closing_day,
+            'due_day' => $request->due_day,
+        ]);
 
         return response()->json($card);
     }

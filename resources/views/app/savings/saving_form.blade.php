@@ -29,6 +29,13 @@
     </x-select>
 </div>
 
+<label class="block">
+    <span class="text-xs text-neutral-500 dark:text-neutral-400">Cor do cartão</span>
+    <input id="color_card" name="color_card" type="color"
+           class="mt-1 w-28 h-10 rounded-lg border border-neutral-200/70 dark:border-neutral-800/70 cursor-pointer"
+           value="#00BFA6" />
+</label>
+
 <div class="row">
     <x-input col="6" set="" type="date" title="Início (opcional)" id="start_date" name="start_date"></x-input>
     <x-input col="6" set="" type="text" title="Observações" id="notes" name="notes" placeholder="Opcional"></x-input>

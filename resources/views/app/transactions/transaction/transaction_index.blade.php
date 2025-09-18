@@ -3,159 +3,35 @@
 @section('new-content')
     @push('styles')
         <style>
-            .skel {
-                position: relative;
-                overflow: hidden;
-                border-radius: .5rem;
-                background: #e5e7eb
-            }
+            .skel{position:relative;overflow:hidden;border-radius:.5rem;background:#e5e7eb}
+            .dark .skel{background:#262626}
+            .skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:skel 1.1s infinite}
+            @keyframes skel{100%{transform:translateX(100%)}}
 
-            .dark .skel {
-                background: #262626
-            }
+            .grid-loading{position:relative}
+            .grid-loading::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:skel 1.1s infinite;opacity:.35}
+            .dark .grid-loading::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);opacity:.6}
 
-            .skel::after {
-                content: "";
-                position: absolute;
-                inset: 0;
-                transform: translateX(-100%);
-                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent);
-                animation: skel 1.1s infinite
-            }
+            :root{--ink:#1F2937;--muted:#6B7280;--line:rgba(0,0,0,.08);--accent:#00BFA6}
 
-            @keyframes skel {
-                100% {
-                    transform: translateX(100%)
-                }
-            }
+            .tx-tab{font-size:.78rem;letter-spacing:.02em;font-weight:600;color:var(--muted);padding:.5rem .75rem;border-radius:.5rem}
+            .tx-tab.active{background:#2563eb;color:#fff}
 
-            .grid-loading {
-                position: relative
-            }
+            #stSubcats{display:flex;gap:.5rem;flex-wrap:wrap}
+            #stSubcats .chip{font-size:.75rem;letter-spacing:.02em;font-weight:600;display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .6rem;border:1px solid var(--line);border-radius:.45rem;background:#fff;color:#334155}
+            #stSubcats .chip.active{background:#2563eb1a;color:#2563eb;border-color:#2563eb}
+            #stSubcats .dot{width:.5rem;height:.5rem;border-radius:999px;background:currentColor;display:inline-block}
 
-            .grid-loading::after {
-                content: "";
-                position: absolute;
-                inset: 0;
-                pointer-events: none;
-                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .5), transparent);
-                animation: skel 1.1s infinite;
-                opacity: .35
-            }
+            #txModal [data-crud-body]{max-height:70vh;overflow:auto}
 
-            .dark .grid-loading::after {
-                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .08), transparent);
-                opacity: .6
-            }
-
-            :root {
-                --ink: #1F2937;
-                --muted: #6B7280;
-                --line: rgba(0, 0, 0, .08);
-                --accent: #00BFA6
-            }
-
-            .tx-tab {
-                font-size: .78rem;
-                letter-spacing: .02em;
-                font-weight: 600;
-                color: var(--muted);
-                padding: .5rem .75rem;
-                border-radius: .5rem
-            }
-
-            .tx-tab.active {
-                background: #2563eb;
-                color: #fff
-            }
-
-            #stSubcats {
-                display: flex;
-                gap: .5rem;
-                flex-wrap: wrap
-            }
-
-            #stSubcats .chip {
-                font-size: .75rem;
-                letter-spacing: .02em;
-                font-weight: 600;
-                display: inline-flex;
-                align-items: center;
-                gap: .4rem;
-                padding: .35rem .6rem;
-                border: 1px solid var(--line);
-                border-radius: .45rem;
-                background: #fff;
-                color: #334155
-            }
-
-            #stSubcats .chip.active {
-                background: #2563eb1a;
-                color: #2563eb;
-                border-color: #2563eb
-            }
-
-            #stSubcats .dot {
-                width: .5rem;
-                height: .5rem;
-                border-radius: 999px;
-                background: currentColor;
-                display: inline-block
-            }
-
-            #txModal [data-crud-body] {
-                max-height: 70vh;
-                overflow: auto
-            }
-
-            .tx-chip {
-                --chip-border: rgba(0, 0, 0, .10);
-                display: inline-flex;
-                align-items: center;
-                gap: .5rem;
-                padding: .55rem .8rem;
-                border: 1px solid var(--chip-border);
-                border-radius: .9rem;
-                background: transparent;
-                color: inherit;
-                transition: background .18s ease, color .18s ease, border-color .18s ease, box-shadow .18s ease
-            }
-
-            .tx-chip .size-4 {
-                width: 1rem;
-                height: 1rem;
-                border-radius: 999px;
-                border: 2px solid currentColor
-            }
-
-            .tx-chip:has(input:checked) {
-                background: #2563eb;
-                color: #fff;
-                border-color: transparent;
-                box-shadow: 0 6px 16px rgba(37, 99, 235, .25)
-            }
-
-            .tx-chip:has(input:checked) .size-4 {
-                border-color: #fff;
-                background: #fff
-            }
-
-            .tx-chip:has(input:focus-visible) {
-                outline: 2px solid #2563eb;
-                outline-offset: 2px
-            }
-
-            .tx-chip.tx-chip--thin {
-                --chip-border: rgba(0, 0, 0, .06)
-            }
-
-            .dark .tx-chip.tx-chip--thin {
-                --chip-border: rgba(255, 255, 255, .10)
-            }
-
-            .tx-chip.tx-chip--noborder {
-                border-color: transparent
-            }
+            .tx-chip{--chip-border:rgba(0,0,0,.10);display:inline-flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border:1px solid var(--chip-border);border-radius:.9rem;background:transparent;color:inherit;transition:background .18s ease,color .18s ease,border-color .18s ease,box-shadow .18s ease}
+            .tx-chip .size-4{width:1rem;height:1rem;border-radius:999px;border:2px solid currentColor}
+            .tx-chip:has(input:checked){background:#2563eb;color:#fff;border-color:transparent;box-shadow:0 6px 16px rgba(37,99,235,.25)}
+            .tx-chip:has(input:checked) .size-4{border-color:#fff;background:#fff}
+            .tx-chip:has(input:focus-visible){outline:2px solid #2563eb;outline-offset:2px}
+            .tx-chip.tx-chip--thin{--chip-border:rgba(0,0,0,.06)}
+            .dark .tx-chip.tx-chip--thin{--chip-border:rgba(255,255,255,.10)}
+            .tx-chip.tx-chip--noborder{border-color:transparent}
         </style>
     @endpush
 
@@ -163,15 +39,21 @@
         <div class="flex items-center justify-between mb-4">
             <div>
                 <h2 class="text-xl font-semibold">Transações</h2>
-                <p class="text-sm text-neutral-500 dark:text-neutral-400">Acompanhe suas transações por categoria e
-                    tipo.</p>
+                <p class="text-sm text-neutral-500 dark:text-neutral-400">Acompanhe suas transações por categoria e tipo.</p>
             </div>
             <div class="hidden md:flex items-center gap-2">
+                {{-- CATEGORIAS (mesmo tamanho/cor) --}}
+                <a
+                    href="{{ \Illuminate\Support\Facades\Route::has('transactionCategory.index') ? route('transactionCategory.index') : url('/transaction-category') }}"
+                    class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
+                    <i class="fa-solid fa-list-ul text-[12px]"></i>
+                    Categorias
+                </a>
+
+                {{-- NOVA TRANSAÇÃO --}}
                 <button data-open-modal="tx"
                         class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
-                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 5v14M5 12h14"/>
-                    </svg>
+                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
                     Nova transação
                 </button>
             </div>
@@ -212,43 +94,41 @@
 
         <div id="txGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"></div>
 
+        {{-- FAB Nova transação --}}
         <x-fab id="txFab" target="tx"/>
+
+        {{-- FAB Categorias (mesma base visual do FAB acima) --}}
+        <a
+            href="{{ \Illuminate\Support\Facades\Route::has('transactionCategory.index') ? route('transactionCategory.index') : url('/transaction-category') }}"
+            class="md:hidden fixed bottom-36 right-4 z-[79] size-14 rounded-2xl grid place-items-center text-white shadow-lg
+                 bg-brand-600 hover:bg-brand-700 active:scale-95 transition"
+            aria-label="Categorias">
+            <i class="fa-solid fa-list-ul text-base"></i>
+        </a>
 
         <div id="txMenu"
              class="hidden fixed z-[75] min-w-40 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 shadow-soft p-1">
-            <button data-menu-action="edit"
-                    class="w-full text-left px-4 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800">Editar
-            </button>
-            <button data-menu-action="show"
-                    class="w-full text-left px-4 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800">Ver
-                detalhes
-            </button>
-            <button data-menu-action="delete"
-                    class="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
-                Excluir
-            </button>
+            <button data-menu-action="edit"  class="w-full text-left px-4 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800">Editar</button>
+            <button data-menu-action="show"  class="w-full text-left px-4 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800">Ver detalhes</button>
+            <button data-menu-action="delete" class="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Excluir</button>
         </div>
 
-        <x-modal id="txModal" titleCreate="Nova transação" titleEdit="Editar transação"
-                 titleShow="Detalhes da transação" submitLabel="Salvar">
+        {{-- MODAL (mantido igual) --}}
+        <x-modal id="txModal" titleCreate="Nova transação" titleEdit="Editar transação" titleShow="Detalhes da transação" submitLabel="Salvar">
             <input type="hidden" name="id"/>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label class="block">
                     <span class="text-xs text-neutral-500 dark:text-neutral-400">Título</span>
                     <input name="title" type="text" placeholder="Ex: Pagamento aluguel"
-                           class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
-                           required/>
+                           class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2" required/>
                     <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
                 </label>
-
                 <label class="block">
                     <span class="text-xs text-neutral-500 dark:text-neutral-400">Categoria</span>
                     <select name="transaction_category_id" id="tx_cat"
                             class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2">
                         @foreach($categories as $category)
-                            <option value="{{ $category->id }}"
-                                    data-type="{{ $category->type }}">{{ $category->name }}</option>
+                            <option value="{{ $category->id }}" data-type="{{ $category->type }}">{{ $category->name }}</option>
                         @endforeach
                     </select>
                     <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
@@ -262,7 +142,6 @@
                            class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"/>
                     <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
                 </label>
-
                 <label class="block">
                     <span class="text-xs text-neutral-500 dark:text-neutral-400">Data (início)</span>
                     <input name="date" type="date"
@@ -286,46 +165,26 @@
             <div class="mt-3">
                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Forma de pagamento</span>
                 <div class="mt-1 grid grid-cols-3 gap-2">
-                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="pix" type="radio" name="type" value="pix" class="hidden">
-                        <span class="size-4 rounded-full border"></span><span>Pix</span>
-                    </label>
-                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="card" type="radio" name="type" value="card" class="hidden">
-                        <span class="size-4 rounded-full border"></span><span>Cartão</span>
-                    </label>
-                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="money" type="radio" name="type" value="money" class="hidden">
-                        <span class="size-4 rounded-full border"></span><span>Dinheiro</span>
-                    </label>
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl"><input id="pix" type="radio" name="type" value="pix" class="hidden"><span class="size-4 rounded-full border"></span><span>Pix</span></label>
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl"><input id="card" type="radio" name="type" value="card" class="hidden"><span class="size-4 rounded-full border"></span><span>Cartão</span></label>
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl"><input id="money" type="radio" name="type" value="money" class="hidden"><span class="size-4 rounded-full border"></span><span>Dinheiro</span></label>
                 </div>
             </div>
 
             <div id="tx_card_type" class="mt-3 hidden">
                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Tipo de cartão</span>
                 <div class="mt-1 grid grid-cols-2 gap-2">
-                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="credit" type="radio" name="type_card" value="credit" class="hidden">
-                        <span class="size-4 rounded-full border"></span><span>Crédito</span>
-                    </label>
-                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="debit" type="radio" name="type_card" value="debit" class="hidden">
-                        <span class="size-4 rounded-full border"></span><span>Débito</span>
-                    </label>
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl"><input id="credit" type="radio" name="type_card" value="credit" class="hidden"><span class="size-4 rounded-full border"></span><span>Crédito</span></label>
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl"><input id="debit" type="radio" name="type_card" value="debit" class="hidden"><span class="size-4 rounded-full border"></span><span>Débito</span></label>
                 </div>
             </div>
 
             <div id="tx_alt_row" class="mt-3 hidden">
                 <div class="flex items-center justify-between">
-                    <div class="text-xs text-neutral-500 dark:text-neutral-400">Alternar entre cartões? (crédito +
-                        recorrente)
-                    </div>
+                    <div class="text-xs text-neutral-500 dark:text-neutral-400">Alternar entre cartões? (crédito + recorrente)</div>
                     <label class="inline-flex items-center cursor-pointer">
-                        <input id="alternate_cards" name="alternate_cards" type="checkbox" value="1"
-                               class="peer hidden">
-                        <span class="w-11 h-6 bg-neutral-200 rounded-full relative transition
-                          after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:size-5 after:bg-white after:rounded-full after:transition
-                          peer-checked:bg-brand-600 peer-checked:after:left-5"></span>
+                        <input id="alternate_cards" name="alternate_cards" type="checkbox" value="1" class="peer hidden">
+                        <span class="w-11 h-6 bg-neutral-200 rounded-full relative transition after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:size-5 after:bg-white after:rounded-full after:transition peer-checked:bg-brand-600 peer-checked:after:left-5"></span>
                     </label>
                 </div>
             </div>
@@ -366,22 +225,10 @@
             <div class="mt-3">
                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Recorrência</span>
                 <div class="mt-1 grid grid-cols-2 gap-2">
-                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="unique" type="radio" name="recurrence_type" value="unique" class="hidden">
-                        <span class="size-4 rounded-full border"></span><span>Única</span>
-                    </label>
-                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="monthly" type="radio" name="recurrence_type" value="monthly" class="hidden">
-                        <span class="size-4 rounded-full border"></span><span>Mensal</span>
-                    </label>
-                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="yearly" type="radio" name="recurrence_type" value="yearly" class="hidden">
-                        <span class="size-4 rounded-full border"></span><span>Anual</span>
-                    </label>
-                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="custom" type="radio" name="recurrence_type" value="custom" class="hidden">
-                        <span class="size-4 rounded-full border"></span><span>Personalizado</span>
-                    </label>
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl"><input id="unique" type="radio" name="recurrence_type" value="unique" class="hidden"><span class="size-4 rounded-full border"></span><span>Única</span></label>
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl"><input id="monthly" type="radio" name="recurrence_type" value="monthly" class="hidden"><span class="size-4 rounded-full border"></span><span>Mensal</span></label>
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl"><input id="yearly" type="radio" name="recurrence_type" value="yearly" class="hidden"><span class="size-4 rounded-full border"></span><span>Anual</span></label>
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl"><input id="custom" type="radio" name="recurrence_type" value="custom" class="hidden"><span class="size-4 rounded-full border"></span><span>Personalizado</span></label>
                 </div>
             </div>
 
@@ -396,12 +243,8 @@
                     <div class="block">
                         <span class="text-xs text-neutral-500 dark:text-neutral-400">Contar fim de semana?</span>
                         <div class="mt-2 flex items-center gap-4">
-                            <label class="inline-flex items-center gap-2"><input type="checkbox" name="include_sat"
-                                                                                 id="include_sat" value="1" checked>
-                                <span>Sábado</span></label>
-                            <label class="inline-flex items-center gap-2"><input type="checkbox" name="include_sun"
-                                                                                 id="include_sun" value="1" checked>
-                                <span>Domingo</span></label>
+                            <label class="inline-flex items-center gap-2"><input type="checkbox" name="include_sat" id="include_sat" value="1" checked><span>Sábado</span></label>
+                            <label class="inline-flex items-center gap-2"><input type="checkbox" name="include_sun" id="include_sun" value="1" checked><span>Domingo</span></label>
                         </div>
                     </div>
                 </div>
@@ -410,14 +253,8 @@
             <div id="tx_term_row" class="mt-3 hidden">
                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Término</span>
                 <div class="mt-1 grid grid-cols-2 gap-2">
-                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="no_end" type="radio" name="termination" value="no_end" class="hidden" checked>
-                        <span class="size-4 rounded-full border"></span><span>Sem término</span>
-                    </label>
-                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
-                        <input id="has_end" type="radio" name="termination" value="has_end" class="hidden">
-                        <span class="size-4 rounded-full border"></span><span>Com término</span>
-                    </label>
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl"><input id="no_end" type="radio" name="termination" value="no_end" class="hidden" checked><span class="size-4 rounded-full border"></span><span>Sem término</span></label>
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl"><input id="has_end" type="radio" name="termination" value="has_end" class="hidden"><span class="size-4 rounded-full border"></span><span>Com término</span></label>
                 </div>
             </div>
 
@@ -436,18 +273,9 @@
             <div class="absolute inset-x-0 bottom-0 rounded-t-2xl border border-neutral-200/60 dark:border-neutral-800/60 bg-white dark:bg-neutral-900 shadow-soft p-2">
                 <div class="mx-auto h-1 w-10 rounded-full bg-neutral-300/70 dark:bg-neutral-700/70 mb-2"></div>
                 <div class="grid gap-1 p-1">
-                    <button data-sheet-action="edit"
-                            class="w-full text-left px-4 py-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                        Editar
-                    </button>
-                    <button data-sheet-action="show"
-                            class="w-full text-left px-4 py-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800">
-                        Ver detalhes
-                    </button>
-                    <button data-sheet-action="delete"
-                            class="w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
-                        Excluir
-                    </button>
+                    <button data-sheet-action="edit"  class="w-full text-left px-4 py-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800">Editar</button>
+                    <button data-sheet-action="show"  class="w-full text-left px-4 py-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800">Ver detalhes</button>
+                    <button data-sheet-action="delete" class="w-full text-left px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Excluir</button>
                 </div>
             </div>
         </div>
@@ -465,10 +293,7 @@
                     destroy: "{{ url('/transactions') }}/:id"
                 };
 
-                const brl = (n) => (isNaN(+n) ? 'R$ 0,00' : Number(n).toLocaleString('pt-BR', {
-                    style: 'currency',
-                    currency: 'BRL'
-                }));
+                const brl = (n) => (isNaN(+n) ? 'R$ 0,00' : Number(n).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}));
                 const normType = (t) => {
                     const s = String(t ?? '').toLowerCase();
                     if (s === '1' || s.includes('entrada')) return 'entrada';
@@ -479,94 +304,68 @@
                 const RAW_CATS = @json($categories->map(fn($c)=>['id'=>$c->id,'name'=>$c->name,'type'=>$c->type])->values());
                 const ALL_CATS = (RAW_CATS || []).map(c => ({id: c.id, name: c.name, type: normType(c.type)}));
 
-                const state = {type: 'all', catIds: new Set(), start: '', end: ''};
+                const state = {type:'all', catIds:new Set(), start:'', end:''};
                 const fx = document.getElementById('stFilters');
                 const tabs = fx.querySelector('#stTabs');
-                const sub = fx.querySelector('#stSubcats');
-                const inS = fx.querySelector('#stStart');
-                const inE = fx.querySelector('#stEnd');
+                const sub  = fx.querySelector('#stSubcats');
+                const inS  = fx.querySelector('#stStart');
+                const inE  = fx.querySelector('#stEnd');
 
                 const BASE_INDEX = "{{ route('transactions.index') }}";
 
-                function buildQS() {
+                function buildQS(){
                     const p = new URLSearchParams();
-                    if (state.type !== 'all') p.set('type', state.type);
+                    if (state.type!=='all') p.set('type', state.type);
                     if (state.start) p.set('start', state.start);
-                    if (state.end) p.set('end', state.end);
+                    if (state.end)   p.set('end', state.end);
                     if (state.catIds.size) [...state.catIds].forEach(id => p.append('category_ids[]', id));
                     return p.toString();
                 }
-
-                function reloadWithFilters() {
+                function reloadWithFilters(){
                     const q = buildQS();
                     ROUTES.index = q ? `${BASE_INDEX}?${q}` : BASE_INDEX;
                     txCrud.reload();
                 }
-
-                function renderSubcats() {
-                    sub.innerHTML = '';
-                    if (state.type === 'all') return;
-                    const cats = ALL_CATS.filter(c => c.type === state.type);
-                    if (!cats.length) {
-                        sub.innerHTML = '<small class="text-neutral-500">Sem categorias</small>';
-                        return;
-                    }
-                    const all = document.createElement('button');
-                    all.className = 'chip ' + (state.catIds.size ? '' : 'active');
-                    all.textContent = 'Todas';
-                    all.onclick = () => {
-                        state.catIds.clear();
-                        renderSubcats();
-                    };
+                function renderSubcats(){
+                    sub.innerHTML=''; if(state.type==='all') return;
+                    const cats = ALL_CATS.filter(c=>c.type===state.type);
+                    if (!cats.length){ sub.innerHTML='<small class="text-neutral-500">Sem categorias</small>'; return; }
+                    const all=document.createElement('button'); all.className='chip '+(state.catIds.size?'':'active'); all.textContent='Todas';
+                    all.onclick=()=>{ state.catIds.clear(); renderSubcats(); };
                     sub.appendChild(all);
-                    for (const c of cats) {
-                        const b = document.createElement('button');
-                        b.className = 'chip ' + (state.catIds.has(c.id) ? 'active' : '');
-                        b.innerHTML = `<span class="dot"></span>${c.name}`;
-                        b.onclick = () => {
-                            state.catIds.has(c.id) ? state.catIds.delete(c.id) : state.catIds.add(c.id);
-                            renderSubcats();
-                        };
+                    for(const c of cats){
+                        const b=document.createElement('button');
+                        b.className='chip '+(state.catIds.has(c.id)?'active':'');
+                        b.innerHTML=`<span class="dot"></span>${c.name}`;
+                        b.onclick=()=>{ state.catIds.has(c.id)?state.catIds.delete(c.id):state.catIds.add(c.id); renderSubcats(); };
                         sub.appendChild(b);
                     }
                 }
-
-                tabs.addEventListener('click', (e) => {
-                    const btn = e.target.closest('.tx-tab');
-                    if (!btn) return;
-                    tabs.querySelectorAll('.tx-tab').forEach(b => b.classList.remove('active'));
+                tabs.addEventListener('click',(e)=>{
+                    const btn=e.target.closest('.tx-tab'); if(!btn) return;
+                    tabs.querySelectorAll('.tx-tab').forEach(b=>b.classList.remove('active'));
                     btn.classList.add('active');
-                    state.type = btn.dataset.type || 'all';
-                    state.catIds.clear();
-                    renderSubcats();
-                    reloadWithFilters();
+                    state.type=btn.dataset.type||'all'; state.catIds.clear(); renderSubcats(); reloadWithFilters();
                 });
-
-                fx.querySelector('#stApply').addEventListener('click', () => {
-                    state.start = inS.value || '';
-                    state.end = inE.value || '';
-                    reloadWithFilters();
+                fx.querySelector('#stApply').addEventListener('click',()=>{
+                    state.start=inS.value||''; state.end=inE.value||''; reloadWithFilters();
                 });
-
                 renderSubcats();
 
-                const TYPE_COLOR = {pix: '#2ecc71', card: '#3498db', money: '#f39c12'};
-                const TYPE_LABEL = {pix: 'Pix', card: 'Cartão', money: 'Dinheiro'};
+                const TYPE_COLOR={pix:'#2ecc71',card:'#3498db',money:'#f39c12'};
+                const TYPE_LABEL={pix:'Pix',card:'Cartão',money:'Dinheiro'};
 
-                function cardTemplate(tx) {
-                    const id = tx.id ?? tx.uuid ?? tx._id ?? tx.transaction_id;
-                    const src = tx.create_date ?? tx.date;
-                    const d = src ? new Date(src) : null;
-                    const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-                    const date = (d && !isNaN(d)) ? (d.toLocaleString('pt-BR', {
-                        day: '2-digit',
-                        timeZone: 'America/Sao_Paulo'
-                    }) + ' ' + meses[d.getMonth()]) : '';
-                    const type = tx.type ?? 'money';
-                    const color = TYPE_COLOR[type] || '#777';
-                    const label = TYPE_LABEL[type] || type;
-                    const amount = (typeof tx.amount === 'string') ? tx.amount : brl(tx.amount ?? tx.value ?? 0);
-                    const catName = tx.category?.name ?? tx.transaction_category?.name ?? tx.category_name ?? '';
+                function cardTemplate(tx){
+                    const id=tx.id??tx.uuid??tx._id??tx.transaction_id;
+                    const src=tx.create_date??tx.date;
+                    const d=src?new Date(src):null;
+                    const meses=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+                    const date=(d&&!isNaN(d))?(d.toLocaleString('pt-BR',{day:'2-digit',timeZone:'America/Sao_Paulo'})+' '+meses[d.getMonth()]):'';
+                    const type=tx.type??'money';
+                    const color=TYPE_COLOR[type]||'#777';
+                    const label=TYPE_LABEL[type]||type;
+                    const amount=(typeof tx.amount==='string')?tx.amount:brl(tx.amount??tx.value??0);
+                    const catName=tx.category?.name??tx.transaction_category?.name??tx.category_name??'';
 
                     return `
 <article data-id="${id}" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft">
@@ -581,8 +380,7 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <span class="inline-flex items-center h-8 px-2 rounded-lg text-[11px] font-medium"
-            style="color:${color};border:1px solid ${color};background:${color}1a">${label}</span>
+      <span class="inline-flex items-center h-8 px-2 rounded-lg text-[11px] font-medium" style="color:${color};border:1px solid ${color};background:${color}1a">${label}</span>
       <button data-action="more" class="inline-grid size-10 place-items-center rounded-lg border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800" aria-label="Mais ações">
         <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
       </button>
@@ -603,97 +401,67 @@
                 }
 
                 const txCrud = CrudLite({
-                    key: 'tx',
-                    csrf: '{{ csrf_token() }}',
-                    routes: ROUTES,
-                    selectors: {
-                        grid: '#txGrid',
-                        modal: '#txModal',
-                        form: '#txModal form',
-                        title: '#txModal [data-crud-title]',
-                        overlay: '#txModal [data-crud-overlay]',
-                        openers: '[data-open-modal="tx"]',
-                        btnClose: '#txModal [data-crud-close]',
-                        btnCancel: '#txModal [data-crud-cancel]',
-                        menu: '#txMenu'
+                    key:'tx', csrf:'{{ csrf_token() }}', routes:ROUTES,
+                    selectors:{
+                        grid:'#txGrid', modal:'#txModal', form:'#txModal form', title:'#txModal [data-crud-title]',
+                        overlay:'#txModal [data-crud-overlay]', openers:'[data-open-modal="tx"]',
+                        btnClose:'#txModal [data-crud-close]', btnCancel:'#txModal [data-crud-cancel]', menu:'#txMenu'
                     },
-                    template: cardTemplate,
-                    parseIndex: (json) => {
-                        if (Array.isArray(json)) return json;
-                        if (Array.isArray(json?.data)) return json.data;
-                        if (Array.isArray(json?.transactions?.data)) return json.transactions.data;
-                        if (Array.isArray(json?.transactions)) return json.transactions;
-                        if (Array.isArray(json?.items)) return json.items;
-                        if (Array.isArray(json?.results)) return json.results;
-                        if (Array.isArray(json?.data?.data)) return json.data.data;
+                    template:cardTemplate,
+                    parseIndex:(json)=>{
+                        if(Array.isArray(json)) return json;
+                        if(Array.isArray(json?.data)) return json.data;
+                        if(Array.isArray(json?.transactions?.data)) return json.transactions.data;
+                        if(Array.isArray(json?.transactions)) return json.transactions;
+                        if(Array.isArray(json?.items)) return json.items;
+                        if(Array.isArray(json?.results)) return json.results;
+                        if(Array.isArray(json?.data?.data)) return json.data.data;
                         return [];
                     },
-                    parseShow: (json) => json?.data ?? json?.transaction ?? json,
-                    onModeChange: (m, form, titleEl) => {
-                        if (titleEl) titleEl.textContent = m === 'edit' ? 'Editar transação' : (m === 'show' ? 'Detalhes da transação' : 'Nova transação');
-                        form.querySelectorAll('input,select,textarea,[type="radio"]').forEach(el => el.disabled = (m === 'show'));
-                        const submit = form.querySelector('button[type="submit"]');
-                        if (submit) submit.classList.toggle('hidden', m === 'show');
-                        requestAnimationFrame(() => toggleUI(form));
+                    parseShow:(json)=> json?.data ?? json?.transaction ?? json,
+                    onModeChange:(m,form,titleEl)=>{
+                        if(titleEl) titleEl.textContent = m==='edit' ? 'Editar transação' : (m==='show' ? 'Detalhes da transação' : 'Nova transação');
+                        form.querySelectorAll('input,select,textarea,[type="radio"]').forEach(el=> el.disabled=(m==='show'));
+                        const submit=form.querySelector('button[type="submit"]');
+                        if(submit) submit.classList.toggle('hidden', m==='show');
+                        requestAnimationFrame(()=> toggleUI(form));
                     },
-                    fillForm: (form, tx) => {
-                        const set = (name, val) => {
-                            const el = form.querySelector(`[name="${name}"]`);
-                            if (el) el.value = (val ?? '');
-                        };
-                        const setC = (id, on) => {
-                            const el = form.querySelector('#' + id);
-                            if (el) {
-                                el.checked = !!on;
-                                el.dispatchEvent(new Event('change'));
-                            }
-                        };
+                    fillForm:(form,tx)=>{
+                        const set=(name,val)=>{ const el=form.querySelector(`[name="${name}"]`); if(el) el.value=(val??''); };
+                        const setC=(id,on)=>{ const el=form.querySelector('#'+id); if(el){ el.checked=!!on; el.dispatchEvent(new Event('change')); } };
 
                         form.querySelector('[name="id"]')?.setAttribute('value', tx.id ?? tx.uuid ?? '');
-                        set('title', tx.title);
-                        set('description', tx.description);
-                        set('amount', tx.amount);
-                        set('date', String(tx.date ?? '').slice(0, 10));
+                        set('title', tx.title); set('description', tx.description);
+                        set('amount', tx.amount); set('date', String(tx.date ?? '').slice(0,10));
                         set('transaction_category_id', tx.transaction_category_id ?? tx.category_id);
-                        if (tx.account_id) set('account_id', tx.account_id);
-                        if (tx.card_id) set('card_id', tx.card_id);
+                        if(tx.account_id) set('account_id', tx.account_id);
+                        if(tx.card_id) set('card_id', tx.card_id);
 
-                        const type = tx.type || 'pix';
-                        setC('pix', type === 'pix');
-                        setC('card', type === 'card');
-                        setC('money', type === 'money');
+                        const type=tx.type||'pix'; setC('pix',type==='pix'); setC('card',type==='card'); setC('money',type==='money');
+                        if(tx.type_card){ setC('credit',tx.type_card==='credit'); setC('debit',tx.type_card==='debit'); }
 
-                        if (tx.type_card) {
-                            setC('credit', tx.type_card === 'credit');
-                            setC('debit', tx.type_card === 'debit');
-                        }
+                        const rec=tx.recurrence_type||'unique';
+                        setC('unique',rec==='unique'); setC('monthly',rec==='monthly'); setC('yearly',rec==='yearly'); setC('custom',rec==='custom');
 
-                        const rec = tx.recurrence_type || 'unique';
-                        setC('unique', rec === 'unique');
-                        setC('monthly', rec === 'monthly');
-                        setC('yearly', rec === 'yearly');
-                        setC('custom', rec === 'custom');
-
-                        if (tx.custom_occurrences) set('custom_occurrences', tx.custom_occurrences);
-                        if (tx.interval_value) set('interval_value', tx.interval_value);
-                        if (tx.include_sat != null) form.querySelector('#include_sat').checked = !!+tx.include_sat;
-                        if (tx.include_sun != null) form.querySelector('#include_sun').checked = !!+tx.include_sun;
+                        if(tx.custom_occurrences) set('custom_occurrences', tx.custom_occurrences);
+                        if(tx.interval_value) set('interval_value', tx.interval_value);
+                        if(tx.include_sat!=null) form.querySelector('#include_sat').checked=!!+tx.include_sat;
+                        if(tx.include_sun!=null) form.querySelector('#include_sun').checked=!!+tx.include_sun;
 
                         toggleUI(form);
                     },
-                    clearForm: (form) => {
+                    clearForm:(form)=>{
                         form.reset();
-                        form.querySelector('[name="id"]')?.setAttribute('value', '');
-                        ['pix', 'card', 'money', 'credit', 'debit', 'unique', 'monthly', 'yearly', 'custom'].forEach(id => {
-                            const el = form.querySelector('#' + id);
-                            if (el) el.dispatchEvent(new Event('change'));
+                        form.querySelector('[name="id"]')?.setAttribute('value','');
+                        ['pix','card','money','credit','debit','unique','monthly','yearly','custom'].forEach(id=>{
+                            const el=form.querySelector('#'+id); if(el) el.dispatchEvent(new Event('change'));
                         });
                         toggleUI(form);
                     },
-                    onBeforeSubmit: (fd) => {
-                        const raw = fd.get('amount');
-                        if (raw != null) {
-                            const cleaned = String(raw).replace(/[^\d,.,-]/g, '').replace(/\.(?=\d{3}(?:\D|$))/g, '').replace(',', '.');
+                    onBeforeSubmit:(fd)=>{
+                        const raw=fd.get('amount');
+                        if(raw!=null){
+                            const cleaned=String(raw).replace(/[^\d,.,-]/g,'').replace(/\.(?=\d{3}(?:\D|$))/g,'').replace(',', '.');
                             fd.set('amount', cleaned);
                         }
                         return fd;
@@ -701,276 +469,159 @@
                 });
 
                 (function bindModalUI(){
-                    const modal = document.getElementById('txModal');
-                    if (!modal) return;
+                    const modal=document.getElementById('txModal'); if(!modal) return;
+                    const groups={pay:['pix','card','money'], card:['credit','debit'], rec:['unique','monthly','yearly','custom']};
 
-                    const groups = {
-                        pay:  ['pix','card','money'],
-                        card: ['credit','debit'],
-                        rec:  ['unique','monthly','yearly','custom'],
-                    };
-
-                    modal.addEventListener('change', (e) => {
-                        const id = e.target?.id;
-                        if (!id) return;
-
-                        // exclusividade por grupo
-                        Object.values(groups).forEach(g => {
-                            if (g.includes(id) && modal.querySelector('#'+id)?.checked){
-                                g.forEach(other => {
-                                    if (other !== id){
-                                        const el = modal.querySelector('#'+other);
-                                        if (el) el.checked = false;
-                                    }
+                    modal.addEventListener('change',(e)=>{
+                        const id=e.target?.id; if(!id) return;
+                        Object.values(groups).forEach(g=>{
+                            if(g.includes(id) && modal.querySelector('#'+id)?.checked){
+                                g.forEach(other=>{
+                                    if(other!==id){ const el=modal.querySelector('#'+other); if(el) el.checked=false; }
                                 });
                             }
                         });
-
-                        // re-render das seções condicionais
                         toggleUI(modal);
                     });
 
-                    modal.querySelector('#tx_cat')?.addEventListener('change', () => toggleUI(modal));
-                    modal.querySelector('#alternate_cards')?.addEventListener('change', () => toggleUI(modal));
+                    modal.querySelector('#tx_cat')?.addEventListener('change',()=>toggleUI(modal));
+                    modal.querySelector('#alternate_cards')?.addEventListener('change',()=>toggleUI(modal));
                 })();
 
-                function toggleUI(scope) {
-                    const $ = (sel) => scope.querySelector(sel);
+                function toggleUI(scope){
+                    const $=(sel)=>scope.querySelector(sel);
                     const pay = $('#pix')?.checked ? 'pix' : ($('#card')?.checked ? 'card' : ($('#money')?.checked ? 'money' : null));
                     const rec = $('#custom')?.checked ? 'custom' : ($('#monthly')?.checked ? 'monthly' : ($('#yearly')?.checked ? 'yearly' : 'unique'));
-                    const catSel = document.getElementById('tx_cat');
-                    const catType = normType(catSel?.selectedOptions?.[0]?.dataset?.type);
-                    const invest = (catType === 'investimento');
+                    const catSel=document.getElementById('tx_cat');
+                    const catType=((catSel?.selectedOptions?.[0]?.dataset?.type)||'');
+                    const typeNorm=(t)=>{t=String(t).toLowerCase(); if(t==='1'||t.includes('entrada'))return 'entrada'; if(t==='3'||t.includes('invest'))return 'investimento'; return 'despesa';}
+                    const invest=(typeNorm(catType)==='investimento');
 
-                    const cardType = document.getElementById('tx_card_type');
-                    const pixAcc = document.getElementById('tx_pix_acc');
-                    const cardSel = document.getElementById('tx_card_select');
-                    const altRow = document.getElementById('tx_alt_row');
-                    const altSel = document.getElementById('tx_alt_select');
-                    const savingW = document.getElementById('tx_saving_wrap');
-                    const termRow = document.getElementById('tx_term_row');
-                    const occWrap = document.getElementById('tx_occ');
+                    const cardType=document.getElementById('tx_card_type');
+                    const pixAcc=document.getElementById('tx_pix_acc');
+                    const cardSel=document.getElementById('tx_card_select');
+                    const altRow=document.getElementById('tx_alt_row');
+                    const altSel=document.getElementById('tx_alt_select');
+                    const savingW=document.getElementById('tx_saving_wrap');
+                    const termRow=document.getElementById('tx_term_row');
+                    const occWrap=document.getElementById('tx_occ');
 
-                    const credit = document.getElementById('credit');
-                    const debit = document.getElementById('debit');
+                    const credit=document.getElementById('credit');
+                    const debit=document.getElementById('debit');
+                    if(credit){ credit.disabled=invest; if(invest && credit.checked){ credit.checked=false; if(debit) debit.checked=true; } }
 
-                    if (credit) {
-                        credit.disabled = invest;
-                        if (invest && credit.checked) {
-                            credit.checked = false;
-                            if (debit) debit.checked = true;
-                        }
-                    }
-
-                    const isCard = (pay === 'card');
-                    const isCred = isCard && credit?.checked;
-                    const isRec = (rec !== 'unique');
+                    const isCard=(pay==='card');
+                    const isCred=isCard && credit?.checked;
+                    const isRec=(rec!=='unique');
 
                     cardType?.classList.toggle('hidden', !isCard);
-                    pixAcc?.classList.toggle('hidden', !(pay === 'pix' || pay === 'money'));
+                    pixAcc?.classList.toggle('hidden', !(pay==='pix' || pay==='money'));
 
-                    const showAlt = !!(isCred && isRec);
-                    const altOn = document.getElementById('alternate_cards')?.checked;
+                    const showAlt=!!(isCred && isRec);
+                    const altOn=document.getElementById('alternate_cards')?.checked;
                     altRow?.classList.toggle('hidden', !showAlt);
                     altSel?.classList.toggle('hidden', !(showAlt && altOn));
                     cardSel?.classList.toggle('hidden', !(isCard && !(showAlt && altOn)));
 
-                    termRow?.classList.toggle('hidden', rec === 'unique');
-                    const hasEnd = document.getElementById('has_end')?.checked;
-                    occWrap?.classList.toggle('hidden', !(hasEnd && rec !== 'unique'));
+                    termRow?.classList.toggle('hidden', rec==='unique');
+                    const hasEnd=document.getElementById('has_end')?.checked;
+                    occWrap?.classList.toggle('hidden', !(hasEnd && rec!=='unique'));
 
-                    document.getElementById('tx_custom_rec')?.classList.toggle('hidden', rec !== 'custom');
+                    document.getElementById('tx_custom_rec')?.classList.toggle('hidden', rec!=='custom');
                     savingW?.classList.toggle('hidden', !invest);
                 }
 
-                const CSRF = '{{ csrf_token() }}';
-                const u = (t, id) => t.replace(':id', id);
-                const txGrid = document.getElementById('txGrid');
+                const CSRF='{{ csrf_token() }}';
+                const u=(t,id)=>t.replace(':id', id);
+                const txGrid=document.getElementById('txGrid');
+                const isMobile=()=>window.matchMedia('(max-width: 767px)').matches;
 
-                const isMobile = () => window.matchMedia('(max-width: 767px)').matches;
-
-                txGrid.addEventListener('click', async (e) => {
-                    const btn = e.target.closest('[data-action="more"]');
-                    if (!btn) return;
-                    if (isMobile()) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-                        const card = btn.closest('article[data-id]');
-                        if (!card) return;
-                        openTxSheet(card.dataset.id);
+                txGrid.addEventListener('click', async (e)=>{
+                    const btn=e.target.closest('[data-action="more"]'); if(!btn) return;
+                    if(isMobile()){
+                        e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+                        const card=btn.closest('article[data-id]'); if(!card) return; openTxSheet(card.dataset.id);
                     }
                 }, true);
 
-                const txSheet = document.getElementById('txSheet');
-                const txSheetOv = document.getElementById('txSheetOv');
-                let txSheetId = null;
+                const txSheet=document.getElementById('txSheet');
+                const txSheetOv=document.getElementById('txSheetOv');
+                let txSheetId=null;
 
-                function openTxSheet(id) {
-                    txSheetId = id;
-                    txSheet.classList.remove('hidden');
-                    document.body.classList.add('overflow-hidden', 'ui-sheet-open');
+                function openTxSheet(id){ txSheetId=id; txSheet.classList.remove('hidden'); document.body.classList.add('overflow-hidden','ui-sheet-open'); }
+                function closeTxSheet(){ txSheet.classList.add('hidden'); document.body.classList.remove('overflow-hidden','ui-sheet-open'); }
+
+                async function fetchTx(id){
+                    const res=await fetch(u(ROUTES.show,id),{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});
+                    if(!res.ok) throw new Error('Erro ao carregar');
+                    const json=await res.json(); return (json?.data ?? json?.transaction ?? json);
+                }
+                async function deleteTx(id){
+                    const fd=new FormData(); fd.append('_method','DELETE'); fd.append('id', id);
+                    const res=await fetch(u(ROUTES.destroy, encodeURIComponent(id)),{method:'POST',headers:{'X-CSRF-TOKEN': CSRF,'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},body:fd});
+                    if(!res.ok) throw new Error('Falha ao excluir');
                 }
 
-                function closeTxSheet() {
-                    txSheet.classList.add('hidden');
-                    document.body.classList.remove('overflow-hidden', 'ui-sheet-open');
-                }
-
-                async function fetchTx(id) {
-                    const res = await fetch(u(ROUTES.show, id), {
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-                    if (!res.ok) throw new Error('Erro ao carregar');
-                    const json = await res.json();
-                    return (json?.data ?? json?.transaction ?? json);
-                }
-
-                async function deleteTx(id) {
-                    const fd = new FormData();
-                    fd.append('_method', 'DELETE');
-                    fd.append('id', id);
-                    const res = await fetch(u(ROUTES.destroy, encodeURIComponent(id)), {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': CSRF,
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: fd
-                    });
-                    if (!res.ok) throw new Error('Falha ao excluir');
-                }
-
-                txSheet.addEventListener('click', async (e) => {
-                    const b = e.target.closest('[data-sheet-action]');
-                    if (!b) return;
-                    if (!txSheetId) return;
-                    const act = b.dataset.sheetAction;
-
-                    if (act === 'edit') {
-                        try {
-                            const data = await fetchTx(txSheetId);
-                            closeTxSheet();
-                            openTxModal('edit', data);
-                        } catch {
-                            alert('Erro ao carregar transação');
-                        }
-                        return;
-                    }
-                    if (act === 'show') {
-                        try {
-                            const data = await fetchTx(txSheetId);
-                            closeTxSheet();
-                            openTxModal('show', data);
-                        } catch {
-                            alert('Erro ao carregar transação');
-                        }
-                        return;
-                    }
-                    if (act === 'delete') {
-                        closeTxSheet();
-                        if (!confirm('Excluir esta transação?')) return;
-                        try {
-                            await deleteTx(txSheetId);
-                            txCrud.reload();
-                        } catch {
-                            alert('Erro ao excluir');
-                        }
-                        return;
-                    }
+                txSheet.addEventListener('click', async (e)=>{
+                    const b=e.target.closest('[data-sheet-action]'); if(!b||!txSheetId) return;
+                    const act=b.dataset.sheetAction;
+                    if(act==='edit'){ try{ const data=await fetchTx(txSheetId); closeTxSheet(); openTxModal('edit', data); }catch{ alert('Erro ao carregar transação'); } return; }
+                    if(act==='show'){ try{ const data=await fetchTx(txSheetId); closeTxSheet(); openTxModal('show', data); }catch{ alert('Erro ao carregar transação'); } return; }
+                    if(act==='delete'){ closeTxSheet(); if(!confirm('Excluir esta transação?')) return; try{ await deleteTx(txSheetId); txCrud.reload(); }catch{ alert('Erro ao excluir'); } return; }
                 });
 
-                function openTxModal(mode, tx) {
-                    const modal = document.getElementById('txModal');
-                    const form = modal.querySelector('form');
-                    const title = modal.querySelector('[data-crud-title]');
-                    const submit = form.querySelector('button[type="submit"]');
-
-                    const isShow = mode === 'show';
-                    if (title) title.textContent = mode === 'edit' ? 'Editar transação' : 'Detalhes da transação';
-                    form.querySelectorAll('input,select,textarea,[type="radio"]').forEach(el => el.disabled = isShow);
-                    if (submit) submit.classList.toggle('hidden', isShow);
-
+                function openTxModal(mode, tx){
+                    const modal=document.getElementById('txModal');
+                    const form=modal.querySelector('form');
+                    const title=modal.querySelector('[data-crud-title]');
+                    const submit=form.querySelector('button[type="submit"]');
+                    const isShow=(mode==='show');
+                    if(title) title.textContent = mode==='edit' ? 'Editar transação' : 'Detalhes da transação';
+                    form.querySelectorAll('input,select,textarea,[type="radio"]').forEach(el=> el.disabled=isShow);
+                    if(submit) submit.classList.toggle('hidden', isShow);
                     fillTxForm(form, tx);
                     modal.classList.remove('hidden');
-                    document.body.classList.add('overflow-hidden', 'ui-modal-open');
+                    document.body.classList.add('overflow-hidden','ui-modal-open');
                 }
-
-                function fillTxForm(form, tx) {
-                    const set = (name, val) => {
-                        const el = form.querySelector(`[name="${name}"]`);
-                        if (el) el.value = (val ?? '');
-                    };
-                    const setC = (id, on) => {
-                        const el = form.querySelector('#' + id);
-                        if (el) {
-                            el.checked = !!on;
-                            el.dispatchEvent(new Event('change'));
-                        }
-                    };
+                function fillTxForm(form, tx){
+                    const set=(name,val)=>{ const el=form.querySelector(`[name="${name}"]`); if(el) el.value=(val??''); };
+                    const setC=(id,on)=>{ const el=form.querySelector('#'+id); if(el){ el.checked=!!on; el.dispatchEvent(new Event('change')); } };
 
                     form.querySelector('[name="id"]')?.setAttribute('value', tx.id ?? tx.uuid ?? '');
-                    set('title', tx.title);
-                    set('description', tx.description);
-                    set('amount', tx.amount);
-                    set('date', String(tx.date ?? '').slice(0, 10));
-                    set('transaction_category_id', tx.transaction_category_id ?? tx.category_id);
-                    if (tx.account_id) set('account_id', tx.account_id);
-                    if (tx.card_id) set('card_id', tx.card_id);
+                    set('title', tx.title); set('description', tx.description); set('amount', tx.amount);
+                    set('date', String(tx.date ?? '').slice(0,10)); set('transaction_category_id', tx.transaction_category_id ?? tx.category_id);
+                    if(tx.account_id) set('account_id', tx.account_id); if(tx.card_id) set('card_id', tx.card_id);
 
-                    const type = tx.type || 'pix';
-                    setC('pix', type === 'pix');
-                    setC('card', type === 'card');
-                    setC('money', type === 'money');
+                    const type=tx.type||'pix'; setC('pix',type==='pix'); setC('card',type==='card'); setC('money',type==='money');
+                    if(tx.type_card){ setC('credit',tx.type_card==='credit'); setC('debit',tx.type_card==='debit'); }
 
-                    if (tx.type_card) {
-                        setC('credit', tx.type_card === 'credit');
-                        setC('debit', tx.type_card === 'debit');
-                    }
+                    const rec=tx.recurrence_type||'unique';
+                    setC('unique',rec==='unique'); setC('monthly',rec==='monthly'); setC('yearly',rec==='yearly'); setC('custom',rec==='custom');
 
-                    const rec = tx.recurrence_type || 'unique';
-                    setC('unique', rec === 'unique');
-                    setC('monthly', rec === 'monthly');
-                    setC('yearly', rec === 'yearly');
-                    setC('custom', rec === 'custom');
-
-                    if (tx.custom_occurrences) set('custom_occurrences', tx.custom_occurrences);
-                    if (tx.interval_value) set('interval_value', tx.interval_value);
-                    if (tx.include_sat != null) form.querySelector('#include_sat').checked = !!+tx.include_sat;
-                    if (tx.include_sun != null) form.querySelector('#include_sun').checked = !!+tx.include_sun;
+                    if(tx.custom_occurrences) set('custom_occurrences', tx.custom_occurrences);
+                    if(tx.interval_value) set('interval_value', tx.interval_value);
+                    if(tx.include_sat!=null) form.querySelector('#include_sat').checked=!!+tx.include_sat;
+                    if(tx.include_sun!=null) form.querySelector('#include_sun').checked=!!+tx.include_sun;
 
                     toggleUI(form);
                 }
 
                 txSheetOv.addEventListener('click', closeTxSheet);
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape' && !txSheet.classList.contains('hidden')) closeTxSheet();
-                });
+                document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && !txSheet.classList.contains('hidden')) closeTxSheet(); });
 
-                (function boot() {
-                    const g = document.getElementById('txGrid');
-                    const sk = `
-<article class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft">
+                (function boot(){
+                    const g=document.getElementById('txGrid');
+                    const sk=`<article class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft">
   <div class="flex items-start justify-between gap-3">
     <div class="flex items-center gap-3">
       <span class="size-12 rounded-xl skel"></span>
-      <div class="w-40 space-y-2">
-        <div class="h-4 skel"></div>
-        <div class="h-3 w-24 skel"></div>
-      </div>
+      <div class="w-40 space-y-2"><div class="h-4 skel"></div><div class="h-3 w-24 skel"></div></div>
     </div>
     <div class="h-8 w-24 rounded-lg skel"></div>
   </div>
-  <div class="mt-4 grid grid-cols-2 gap-3">
-    <div class="h-16 rounded-xl skel"></div>
-    <div class="h-16 rounded-xl skel"></div>
-  </div>
+  <div class="mt-4 grid grid-cols-2 gap-3"><div class="h-16 rounded-xl skel"></div><div class="h-16 rounded-xl skel"></div></div>
 </article>`;
-                    g.innerHTML = sk + sk + sk + sk;
+                    g.innerHTML=sk+sk+sk+sk;
                     reloadWithFilters();
                 })();
             })();

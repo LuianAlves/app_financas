@@ -14,7 +14,7 @@ class CardController extends Controller
     public function index()
     {
         $accounts = Account::all();
-
-        return view('app.cards.card_index', compact('accounts'));
+        $cards = Card::all();
+        return view('app.cards.card_index', compact('accounts',  'cards'));
     }
 }

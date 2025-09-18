@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\DB;
 
 class ProjectionService
 {
+    protected array $paidIdx = [];
+
     public function build(?string $userId, string $start, string $end): array
     {
         $uid  = $userId ?: Auth::id();
@@ -24,24 +26,27 @@ class ProjectionService
         $from = Carbon::parse($start, $tz)->startOfDay();
         $to   = Carbon::parse($end,   $tz)->endOfDay();
 
+        $this->paidIdx = $this->paymentsIndex($userIds); // ← carrega índice
+
         $opening = $this->openingBalance($userIds);
 
-        // 1) Lançamentos: únicos + recorrentes (monthly/yearly/custom)
         $occ = collect()
+            // PAGAMENTOS EFETUADOS entram primeiro, no dia do pagamento
+            ->merge($this->expandPaymentTransactions($userIds, $from, $to))
+            // lançamentos previstos
             ->merge($this->expandUnique($userIds, $from, $to))
             ->merge($this->expandRecurrentsMonthlyYearly($userIds, $from, $to))
             ->merge($this->expandRecurrentsCustom($userIds, $from, $to))
-            ->merge($this->expandRecurrentsCustomDays($userIds, $from, $to)); // << NOVO
+            ->merge($this->expandRecurrentsCustomDays($userIds, $from, $to));
 
         $occ = $occ
             ->reject(fn($o) => ($o['type'] ?? null) === 'card' && ($o['type_card'] ?? null) === 'credit')
             ->unique(fn($o) => (($o['id'] ?? $o['title']).'@'.$o['date']))
             ->values();
 
-        // 2) Faturas de cartão
+        // FATURAS (paga = cai no paid_at; aberta = cai no vencimento)
         $bills = $this->cardBillsFromInvoices($userIds, $from, $to);
 
-        // 3) Extrato diário consolidado
         $days = $this->consolidateDays($from, $to, $opening, $occ, $bills);
 
         return [
@@ -53,49 +58,63 @@ class ProjectionService
         ];
     }
 
-    protected function cardBillsFromInvoices(array $userIds, Carbon $from, Carbon $to): array
+    protected function paymentsIndex(array $userIds): array
     {
-        // agrega total por invoice
-        $rows = DB::table('invoices as inv')
-            ->join('cards as c', 'c.id', '=', 'inv.card_id')
-            ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
-            ->whereIn('inv.user_id', $userIds)
-            ->groupBy('inv.id','inv.card_id','inv.current_month','inv.paid','c.cardholder_name','c.due_day')
-            ->get([
-                'inv.id',
-                'inv.card_id',
-                'inv.current_month',
-                'inv.paid',
-                'c.cardholder_name',
-                'c.due_day',
-                DB::raw('COALESCE(SUM(it.amount),0) as total')
-            ]);
+        $rows = DB::table('payment_transactions as pt')
+            ->join('transactions as t', 't.id', '=', 'pt.transaction_id')
+            ->whereIn('t.user_id', $userIds)
+            ->get(['pt.transaction_id','pt.payment_date','pt.reference_year','pt.reference_month']);
 
-        $bills = [];
+        $byMonth = [];
+        $byDate  = [];
+        $anyMin  = [];
 
         foreach ($rows as $r) {
-            // current_month = 'Y-m' → calcula due_date com due_day do cartão
-            $base = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
-            $due  = $base->copy()->day(min((int)$r->due_day ?: 1, $base->daysInMonth));
-
-            // considera no período selecionado
-            if ($due->betweenIncluded($from, $to) && $r->total > 0) {
-                $bills[] = [
-                    'id'        => (string)$r->id,
-                    'title'     => 'Fatura '.$r->cardholder_name.' (venc. '.$due->format('d/m').')',
-                    'amount'    => -round((float)$r->total, 2), // sai do saldo
-                    'date'      => $due->toDateString(),
-                    'type'      => 'invoice',
-                    'type_card' => 'credit',
-                    'card_id'   => (string)$r->card_id,
-                    'category'  => 'Fatura Cartão',
-                    'is_invoice'=> true,
-                    'paid'      => (bool)$r->paid,
-                ];
+            if ($r->reference_year && $r->reference_month) {
+                $ym = sprintf('%04d-%02d', (int)$r->reference_year, (int)$r->reference_month);
+                $byMonth[$r->transaction_id][$ym] = true;
+            }
+            if ($r->payment_date) {
+                $d = Carbon::parse($r->payment_date)->toDateString();
+                $byDate[$r->transaction_id][$d] = true;
+                $anyMin[$r->transaction_id] = isset($anyMin[$r->transaction_id])
+                    ? min($anyMin[$r->transaction_id], $d)
+                    : $d;
             }
         }
 
-        return $bills;
+        return ['byMonth' => $byMonth, 'byDate' => $byDate, 'anyMin' => $anyMin];
+    }
+
+    protected function expandPaymentTransactions(array $userIds, Carbon $from, Carbon $to): \Illuminate\Support\Collection
+    {
+        $rows = DB::table('payment_transactions as pt')
+            ->join('transactions as t', 't.id', '=', 'pt.transaction_id')
+            ->leftJoin('transaction_categories as tc', 'tc.id', '=', 't.transaction_category_id')
+            ->whereIn('t.user_id', $userIds)
+            ->whereBetween('pt.payment_date', [$from->toDateString(), $to->toDateString()])
+            ->get([
+                'pt.id as pid','pt.amount as pamount','pt.payment_date',
+                't.id as tid','t.title','t.type','t.type_card','t.card_id',
+                'tc.name as cat','tc.type as cat_type'
+            ]);
+
+        return collect($rows)->map(function($r){
+            $amt = (float)$r->pamount;
+            $amt = ($r->cat_type === 'entrada') ? abs($amt) : -abs($amt);
+
+            return [
+                'id'         => "pay_{$r->pid}",
+                'title'      => $r->title ?: ($r->cat ?: 'Pagamento'),
+                'amount'     => round($amt, 2),
+                'date'       => Carbon::parse($r->payment_date)->toDateString(),
+                'type'       => $r->type,
+                'type_card'  => $r->type_card,
+                'card_id'    => $r->card_id,
+                'category'   => $r->cat ?: 'Pagamento',
+                'is_invoice' => false,
+            ];
+        });
     }
 
     private function resolveOwnerAndAdditionals(string $uid): array
@@ -120,7 +139,7 @@ class ProjectionService
             ->sum('current_balance');
     }
 
-    protected function expandUnique(array $userIds, Carbon $from, Carbon $to): Collection
+    protected function expandUnique(array $userIds, Carbon $from, Carbon $to): \Illuminate\Support\Collection
     {
         $rows = Transaction::withoutGlobalScopes()
             ->with(['transactionCategory:id,name,type'])
@@ -128,6 +147,11 @@ class ProjectionService
             ->where('recurrence_type', 'unique')
             ->whereBetween('transactions.date', [$from->toDateString(), $to->toDateString()])
             ->get(['id','user_id','transaction_category_id','title','amount','date','type','type_card','card_id']);
+
+        // se pagou (em qualquer data), não mostra no vencimento
+        $rows = $rows->reject(function ($t) {
+            return !empty($this->paidIdx['anyMin'][$t->id]);
+        });
 
         return $rows->map(fn($t) => $this->mapTx($t, Carbon::parse($t->date)));
     }
@@ -165,15 +189,26 @@ class ProjectionService
 
             if ($t->recurrence_type === 'monthly') {
                 while ($cursor->lte($to)) {
-                    $out->push($this->mapTxLike($t, $cursor, $amount, 'monthly'));
+                    $ym = $cursor->format('Y-m');
+
+                    if (empty($this->paidIdx['byMonth'][$t->id][$ym])) {
+                        $out->push($this->mapTxLike($t, $cursor, $amount, 'monthly'));
+                    }
+                    // AVANÇA MÊS SEMPRE
                     $cursor->addMonthNoOverflow()->day($paymentDay);
                 }
-            } else {
+            } else { // yearly
                 $monthAnchor = (int) $startBase->month;
                 $cursor = Carbon::create($cursor->year, $monthAnchor, min($paymentDay, 28))->startOfDay();
                 if ($cursor->lt($from)) $cursor->addYear();
+
                 while ($cursor->lte($to)) {
-                    $out->push($this->mapTxLike($t, $cursor, $amount, 'yearly'));
+                    $ym = $cursor->format('Y-m');
+
+                    if (empty($this->paidIdx['byMonth'][$t->id][$ym])) {
+                        $out->push($this->mapTxLike($t, $cursor, $amount, 'yearly')); // ← label correta
+                    }
+                    // AVANÇA ANO
                     $cursor->addYear();
                 }
             }
@@ -212,7 +247,12 @@ class ProjectionService
             foreach ($items as $ci) {
                 $dt = $this->dateFromRefs((int)$ci->payment_day, (int)$ci->reference_month, (int)$ci->reference_year);
                 if ($dt->betweenIncluded($from,$to)) {
-                    $out->push($this->mapTxLike($t, $dt, (float)$ci->amount, 'custom', $ci->custom_occurrence_number));
+                    $occ = $this->mapTxLike($t, $dt, (float)$ci->amount, 'custom', $ci->custom_occurrence_number);
+                    if (!empty($ci->paid_at)) {
+                        $p = Carbon::parse($ci->paid_at)->startOfDay();
+                        if ($p->lt($dt)) $occ['date'] = $p->toDateString();
+                    }
+                    $out->push($occ);
                 }
             }
 
@@ -340,55 +380,44 @@ class ProjectionService
         return Carbon::create($year ?: now()->year, $m, $d)->startOfDay();
     }
 
-    /** ===== Fatura de cartão ===== */
-    protected function cardBillsFromOccurrences(array $userIds, Carbon $from, Carbon $to, Collection $occ): array
+    protected function cardBillsFromInvoices(array $userIds, Carbon $from, Carbon $to): array
     {
-        $cards = Card::withoutGlobalScopes()
-            ->whereIn('cards.user_id', $userIds)
-            ->get(['id','cardholder_name','closing_day','due_day']);
-
-        if ($cards->isEmpty()) return [];
-
-        $firstMonth = $from->copy()->startOfMonth();
-        $lastMonth  = $to->copy()->startOfMonth()->addMonth();
+        $rows = DB::table('invoices as inv')
+            ->join('cards as c', 'c.id', '=', 'inv.card_id')
+            ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
+            ->leftJoin('invoice_payments as ip', 'ip.invoice_id', '=', 'inv.id') // pega paid_at
+            ->whereIn('inv.user_id', $userIds)
+            ->groupBy('inv.id','inv.card_id','inv.current_month','inv.paid','c.cardholder_name','c.due_day','ip.paid_at')
+            ->get([
+                'inv.id','inv.card_id','inv.current_month','inv.paid',
+                'c.cardholder_name','c.due_day',
+                DB::raw('COALESCE(SUM(it.amount),0) as total'),
+                'ip.paid_at'
+            ]);
 
         $bills = [];
-        foreach ($cards as $card) {
-            $m = $firstMonth->copy();
-            while ($m->lte($lastMonth)) {
-                $closeDay = (int)($card->closing_day ?: $m->daysInMonth);
-                $dueDay   = (int)($card->due_day ?: 1);
 
-                $cycleStart = $m->copy()->subMonth()->day(min($closeDay, $m->copy()->subMonth()->daysInMonth))->addDay();
-                $cycleEnd   = $m->copy()->day(min($closeDay, $m->daysInMonth));
-                $dueDate    = $m->copy()->day(min($dueDay, $m->daysInMonth));
+        foreach ($rows as $r) {
+            $base = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
+            $due  = $base->copy()->day(min((int)$r->due_day ?: 1, $base->daysInMonth));
+            $total = (float)$r->total;
+            if ($total <= 0) continue;
 
-                $sum = $occ->filter(function($o) use ($card, $cycleStart, $cycleEnd){
-                    if (($o['type'] ?? null) !== 'card') return false;
-                    if (($o['type_card'] ?? null) !== 'credit') return false;
-                    if (($o['card_id'] ?? null) != $card->id) return false;
-                    $dt = Carbon::parse($o['date']);
-                    return $dt->betweenIncluded($cycleStart, $cycleEnd);
-                })
-                    ->sum(fn($o) => (float)$o['amount']);
+            $eventDate = ($r->paid && $r->paid_at) ? Carbon::parse($r->paid_at) : $due;
 
-                $total = abs(min(0, $sum));
-
-                if ($total > 0 && $dueDate->betweenIncluded($from, $to)) {
-                    $bills[] = [
-                        'id'        => "bill_{$card->id}_".$dueDate->format('Ym'),
-                        'title'     => 'Fatura '.$card->cardholder_name.' (venc. '.$dueDate->format('d/m').')',
-                        'amount'    => -$total,
-                        'date'      => $dueDate->toDateString(),
-                        'type'      => 'invoice',
-                        'type_card' => 'credit',
-                        'card_id'   => $card->id,
-                        'category'  => 'Fatura Cartão',
-                        'is_invoice'=> true,
-                    ];
-                }
-
-                $m->addMonth();
+            if ($eventDate->betweenIncluded($from, $to)) {
+                $bills[] = [
+                    'id'        => (string)$r->id,
+                    'title'     => 'Fatura '.$r->cardholder_name.' (venc. '.$due->format('d/m').')',
+                    'amount'    => -round($total, 2),
+                    'date'      => $eventDate->toDateString(),
+                    'type'      => 'invoice',
+                    'type_card' => 'credit',
+                    'card_id'   => (string)$r->card_id,
+                    'category'  => 'Fatura Cartão',
+                    'is_invoice'=> true,
+                    'paid'      => (bool)$r->paid,
+                ];
             }
         }
 

@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\AdditionalUser;
 use App\Models\Card;
 use App\Models\Saving;
+use App\Services\LedgerService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -115,76 +116,51 @@ class AccountController extends Controller
         return response()->json(null, 204);
     }
 
-    public function transfer(Request $request)
+    public function transfer(Request $request, LedgerService $ledger)
     {
-        // dono do grupo (se o logado for adicional, retorna o owner)
-        $ownerId = AdditionalUser::ownerIdFor(); // ou ownerIdFor(Auth::id())
+        $ownerId = AdditionalUser::ownerIdFor();
         $userIds = AdditionalUser::query()
             ->where('user_id', $ownerId)
             ->pluck('linked_user_id')
-            ->push($ownerId)
-            ->unique()
-            ->values()
-            ->all(); // array puro para whereIn/Rule::exists
+            ->push($ownerId)->unique()->values()->all();
 
-        $data = $request->validate([
-            'from_id' => [
-                'required',
-                Rule::exists('accounts', 'id')->where(function ($q) use ($userIds) {
-                    $q->whereIn('user_id', $userIds);
-                }),
-            ],
-            'to_id' => [
-                'required',
-                'different:from_id',
-                Rule::exists('accounts', 'id')->where(function ($q) use ($userIds) {
-                    $q->whereIn('user_id', $userIds);
-                }),
-            ],
-            'amount' => ['required', 'numeric', 'min:0.01'],
+        // valida, mas sem obrigar 'date'
+        $request->validate([
+            'from_id'     => ['required', Rule::exists('accounts','id')->where(fn($q)=>$q->whereIn('user_id',$userIds))],
+            'to_id'       => ['required','different:from_id', Rule::exists('accounts','id')->where(fn($q)=>$q->whereIn('user_id',$userIds))],
+            'amount'      => ['required','numeric','min:0.01'],
+            'date'        => ['sometimes','date'],
+            'description' => ['sometimes','string','max:255'],
         ]);
 
-        return DB::transaction(function () use ($data, $userIds) {
-            // trava linhas e garante que são do mesmo grupo (owner + adicionais)
-            $from = Account::whereKey($data['from_id'])
-                ->whereIn('user_id', $userIds)
-                ->lockForUpdate()
-                ->firstOrFail();
+        return DB::transaction(function () use ($request, $ledger, $userIds, $ownerId) {
+            $from = Account::whereKey($request->input('from_id'))
+                ->whereIn('user_id',$userIds)->lockForUpdate()->firstOrFail();
 
-            $to = Account::whereKey($data['to_id'])
-                ->whereIn('user_id', $userIds)
-                ->lockForUpdate()
-                ->firstOrFail();
+            $to   = Account::whereKey($request->input('to_id'))
+                ->whereIn('user_id',$userIds)->lockForUpdate()->firstOrFail();
 
-            $amount = round((float)$data['amount'], 2);
-
-            if ($amount <= 0) {
-                throw ValidationException::withMessages(['amount' => 'Valor inválido.']);
-            }
-
-            if ((float)$from->current_balance < $amount) {
+            $amount = round((float)$request->input('amount'), 2);
+            if ($amount <= 0) throw ValidationException::withMessages(['amount' => 'Valor inválido.']);
+            if ((float)$from->current_balance < $amount)
                 throw ValidationException::withMessages(['amount' => 'Saldo insuficiente na conta de origem.']);
-            }
 
-            // atualiza saldos (2 casas)
-            $from->current_balance = round(((float)$from->current_balance) - $amount, 2);
-            $to->current_balance   = round(((float)$to->current_balance)   + $amount, 2);
+            // se não veio 'date', usa agora (timezone BR)
+            $when = $request->filled('date')
+                ? Carbon::parse($request->input('date'), 'America/Sao_Paulo')
+                : now('America/Sao_Paulo');
 
-            $from->save();
-            $to->save();
+            $desc = $request->input('description', 'Transferência');
+
+            // grava no livro-razão + ajusta saldos
+            $ledger->transferBetweenAccounts($ownerId, $from->id, $to->id, $amount, $when, $desc);
+
+            $from->refresh(); $to->refresh();
 
             return response()->json([
-                'ok' => true,
-                'from' => [
-                    'id' => $from->id,
-                    'bank_name' => $from->bank_name,
-                    'current_balance' => $from->current_balance,
-                ],
-                'to' => [
-                    'id' => $to->id,
-                    'bank_name' => $to->bank_name,
-                    'current_balance' => $to->current_balance,
-                ],
+                'ok'   => true,
+                'from' => ['id'=>$from->id,'bank_name'=>$from->bank_name,'current_balance'=>$from->current_balance],
+                'to'   => ['id'=>$to->id,'bank_name'=>$to->bank_name,'current_balance'=>$to->current_balance],
             ]);
         });
     }

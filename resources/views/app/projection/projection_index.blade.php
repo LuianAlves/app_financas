@@ -284,6 +284,8 @@
                                     if (it.type === 'money') badges.push('<span class="badge-soft">Dinheiro</span>');
                                     if (it.type === 'card' && it.type_card) badges.push(`<span class="badge-soft">Cartão ${esc(it.type_card)}</span>`);
                                     if (it.category) badges.push(`<span class="badge-soft">${esc(it.category)}</span>`);
+                                    if (it.account_name)         badges.push(`<span class="badge-soft">Conta: ${esc(it.account_name)}</span>`);
+                                    if (it.counter_account_name) badges.push(`<span class="badge-soft">↔ ${esc(it.counter_account_name)}</span>`);
 
                                     html += `
     <div class="grid grid-cols-[130px_1fr_130px] max-sm:grid-cols-[1fr_110px] items-center border-b border-neutral-200/70 dark:border-neutral-800/70 bg-neutral-50/40 dark:bg-neutral-900 px-4 py-3">

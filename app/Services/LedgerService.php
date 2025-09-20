@@ -67,4 +67,25 @@ class LedgerService
         DB::table('savings')->where('id',$savingId)->decrement('current_amount', abs($amount));
         DB::table('accounts')->where('id',$toAccountId)->increment('current_balance', abs($amount));
     }
+
+    public function transferBetweenAccounts(
+        string $userId,
+        string $fromAccountId,
+        string $toAccountId,
+        float $amount,
+        \DateTimeInterface $when,
+        ?string $desc = null
+    ): void {
+        $g = (string) \Illuminate\Support\Str::uuid();
+        $val = abs($amount);
+
+        // saída na origem
+        $this->recordAccount($userId, $fromAccountId, 'transfer_out', -$val, $when, $desc, [], $g);
+        // entrada no destino
+        $this->recordAccount($userId, $toAccountId, 'transfer_in',  $val, $when, $desc, [], $g);
+
+        // espelho opcional nos saldos atuais (se você mantém)
+        DB::table('accounts')->where('id',$fromAccountId)->decrement('current_balance', $val);
+        DB::table('accounts')->where('id',$toAccountId)->increment('current_balance', $val);
+    }
 }

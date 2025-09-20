@@ -1,305 +1,160 @@
 <x-app-layout>
     @push('styles')
         <style>
-            .profile {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                flex-direction: column;
-            }
-
-            .user-profile-image {
-                position: relative;
-                width: auto;
-                padding: 45px 20px 0 20px;
-            }
-
-            .user-profile-image img {
-                width: 125px;
-                height: 125px;
-            }
-
-            .user-profile-image a {
-                position: absolute;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                text-decoration: none;
-                background: #fff;
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                color: black;
-                bottom: 0;
-                right: 5%;
-                box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.25);
-            }
-
-            .user-profile-image a i {
-                color: #cd7e03;
-            }
-
-            .profile .user-profile-info {
-                margin-top: 25px;
-            }
-
-            .profile .user-profile-info h2 {
-                font-size: 16px;
-                font-weight: 600;
-                letter-spacing: .35px;
-            }
-
-            .profile .user-profile-info p {
-                font-size: 14px;
-                color: #888;
-                letter-spacing: .25px;
-            }
-
-            .other-infos, .additional-users .nav-tab-info {
-                border-radius: 12.5px;
-                margin: auto 5px;
-                box-shadow: 1px 1px 2.5px rgba(0, 0, 0, 0.2);
-            }
-
-            .other-infos {
-                margin-top: 15px;
-                padding: 15px 20px;
-                background: #cd7e03;
-            }
-
-            .other-infos .row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .other-infos .row .col-6 {
-                text-align: center;
-            }
-
-            .other-infos i {
-                padding: 10px;
-                font-size: 18px;
-                color: #fff;
-                background: rgba(255, 255, 255, 0.4);
-                box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.25);
-                border-radius: 50%;
-            }
-
-            .other-infos span {
-                font-size: 14px;
-                font-weight: 300;
-                color: #fff;
-                letter-spacing: .25px;
-                margin-left: 5px;
-            }
-
-            .additional-users .nav-tab-info {
-                margin-top: 15px;
-                padding: 15px 12.5px;
-                background: #fff;
-            }
-
-            .additional-users .nav {
-                border: none;
-            }
-
-            .additional-users .nav .nav-link {
-                margin-top: 35px;
-                padding: 7.5px 15px;
-                border: none;
-                font-size: 14.5px;
-                border-radius: 7.5px;
-                letter-spacing: .6px;
-            }
-
-            .additional-users .nav .nav-link.active {
-                background: none;
-                font-weight: 600;
-                color: #222;
-            }
-
-            .additional-profile-detail {
-                display: flex;
-                align-items: flex-start;
-            }
-
-            .additional-profile-image img {
-                width: 40px;
-                height: 40px;
-            }
-
-            .addition-profile-info {
-                margin: 0;
-                padding: 0;
-                margin-left: 15px;
-                letter-spacing: .25px;
-            }
-
-            .addition-profile-info h2 {
-                font-size: 14.5px;
-                font-weight: 600;
-                margin: 0;
-            }
-
-            .addition-profile-info .profile-email {
-                font-size: 13.5px;
-                color: rgba(174, 174, 174, 0.65);
-            }
-
-            .addition-profile-info .profile-status-active {
-                background: rgba(0, 191, 166, 0.12);
-                color: #00bfa6;
-                border-radius: 2.5px;
-            }
-
-            .addition-profile-info .profile-status-inactive {
-                background: rgba(191, 0, 0, 0.12);
-                color: #bf0000;
-                border-radius: 2.5px;
-            }
-
-            .additional-profile-image img, .user-profile-image img {
-                border-radius: 100%;
-            }
+            /* Avatar com overlay de câmera */
+            .avatar-wrap{position:relative;display:grid;place-items:center;padding-top:10px}
+            .avatar{width:120px;height:120px;border-radius:9999px;object-fit:cover;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+            .avatar-edit{position:absolute;right:10px;bottom:2px;width:40px;height:40px;border-radius:9999px;display:grid;place-items:center;background:#fff;color:#111;border:1px solid rgba(0,0,0,.08);box-shadow:0 8px 20px rgba(0,0,0,.18)}
+            .dark .avatar-edit{background:#0a0a0a;color:#fafafa;border-color:rgba(255,255,255,.12)}
+            /* Badges de status */
+            .badge-active{background:rgba(0,191,166,.12);color:#00bfa6}
+            .badge-inactive{background:rgba(191,0,0,.12);color:#bf0000}
+            /* Card do item de usuário adicional */
+            .user-row{display:flex;gap:.75rem;align-items:flex-start}
+            .user-row img{width:44px;height:44px;border-radius:9999px;object-fit:cover}
         </style>
     @endpush
 
     @section('new-content')
-        <div class="d-flex justify-content-between align-items-center">
-            <a href="{{route('dashboard')}}"><i class="fas fa-chevron-left text-dark" style="font-size: 16px;"></i></a>
-            <h2 class="m-0 mx-3 fw-semi-bold" style="font-size: 14px; letter-spacing: .75px;">Meu perfil</h2>
-            <a href="{{route('logout')}}">
-                <i class="fa-solid fa-right-from-bracket text-danger"></i>
+        <!-- Header padrão -->
+        <div class="flex items-center justify-between mb-4">
+            <a href="{{ route('dashboard') }}" class="inline-grid size-10 place-items-center rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800" aria-label="Voltar">
+                <i class="fas fa-chevron-left text-neutral-700 dark:text-neutral-200"></i>
+            </a>
+            <h2 class="text-base md:text-lg font-semibold">Meu perfil</h2>
+            <a href="{{ route('logout') }}" class="inline-grid size-10 place-items-center rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-red-50 dark:hover:bg-red-900/20" title="Sair" aria-label="Sair">
+                <i class="fa-solid fa-right-from-bracket text-red-600"></i>
             </a>
         </div>
 
-        <div class="profile">
-            <div class="user-profile-image">
+        <!-- Card do perfil -->
+        <section class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-6 shadow-soft">
+            <div class="avatar-wrap">
                 @if(auth()->user()->image)
-                    <img src="data:image/jpeg;base64,{{auth()->user()->image }}" alt="{{auth()->user()->name}}">
+                    <img class="avatar" src="data:image/jpeg;base64,{{ auth()->user()->image }}" alt="{{ auth()->user()->name }}">
                 @else
-                    <img src="{{ asset('assets/img/user_profile/profile_example.png')}}" alt="{{auth()->user()->name}}">
+                    <img class="avatar" src="{{ asset('assets/img/user_profile/profile_example.png') }}" alt="{{ auth()->user()->name }}">
                 @endif
-                <a href="#">
-                    <i class="fa-solid fa-camera-retro"></i>
-                </a>
+                <button type="button" class="avatar-edit" title="Trocar foto">
+                    <i class="fa-solid fa-camera-retro text-amber-600"></i>
+                </button>
             </div>
-            <div class="user-profile-info text-center">
-                <h2>{{auth()->user()->name}}</h2>
-                <p>{{auth()->user()->email}}</p>
-            </div>
-        </div>
 
-        <div class="other-infos">
-            <div class="row">
-                <div class="col-6">
-                    <i class="fa-solid fa-file-waveform"></i>
-                    <span>Histórico</span>
+            <div class="text-center mt-4">
+                <h3 class="text-sm font-semibold tracking-wide">{{ auth()->user()->name }}</h3>
+                <p class="text-xs text-neutral-500 dark:text-neutral-400">{{ auth()->user()->email }}</p>
+            </div>
+
+            <!-- Ações rápidas -->
+            <div class="mt-5 grid grid-cols-2 gap-3">
+                <button type="button" class="w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-waveform text-brand-600"></i>
+                    <span class="text-sm font-medium">Histórico</span>
+                </button>
+                <button id="openModal" type="button" class="w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3 hover:bg-neutral-50 dark:hover:bg-neutral-800 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-user-plus text-brand-600"></i>
+                    <span class="text-sm font-medium">Adicionar usuário</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Lista de usuários adicionais -->
+        <section class="mt-4">
+            <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-semibold">Usuários adicionais</h4>
                 </div>
-
-                <div class="col-6">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                    <span>Editar</span>
+                <div id="userList" class="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    <!-- itens renderizados via JS -->
                 </div>
             </div>
-        </div>
+        </section>
 
-        <div class="additional-users">
-            <div class="nav-tab-title">
-                <ul class="nav nav-tabs" id="myTab" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="home-tab" data-bs-toggle="tab"
-                                data-bs-target="#home-tab-pane" type="button" role="tab" aria-controls="home-tab-pane"
-                                aria-selected="true">Usuários Adicionais
-                        </button>
-                    </li>
-                </ul>
-            </div>
+        <!-- FAB (mobile) -->
+        <button id="fabUser" type="button" class="md:hidden fixed bottom-20 right-4 z-[80] size-14 rounded-2xl grid place-items-center text-white shadow-lg bg-brand-600 hover:bg-brand-700 active:scale-95 transition" aria-label="Adicionar usuário">
+            <i class="fa fa-plus"></i>
+        </button>
 
-            <div id="userList"></div>
-        </div>
-
-        <button id="openModal" class="create-btn"><i class="fa fa-plus text-white"></i></button>
-
+        <!-- Modal (mantém seu componente) -->
         <x-modal modalId="modalUser" formId="formUser" pathForm="app.users.user_form"></x-modal>
 
         @push('scripts')
             <script>
-                const list = document.getElementById('userList');
-                const modal = document.getElementById('modalUser');
-                const formEl = document.getElementById('formUser');
-                const openBtn = document.getElementById('openModal');
+                (() => {
+                    const list   = document.getElementById('userList');
+                    const modal  = document.getElementById('modalUser');
+                    const formEl = document.getElementById('formUser');
+                    const openBtn= document.getElementById('openModal');
+                    const fab    = document.getElementById('fabUser');
 
-                openBtn.addEventListener('click', () => modal.classList.add('show'));
+                    const assetUrl = "{{ asset('assets/img/user_profile/profile_example.png') }}";
 
-                const assetUrl = "{{ asset('assets/img/user_profile/profile_example.png') }}";
+                    const openModal = () => modal.classList.add('show');
+                    openBtn?.addEventListener('click', openModal);
+                    fab?.addEventListener('click', openModal);
 
-                formEl.addEventListener('submit', async function (e) {
-                    e.preventDefault();
-                    const formData = new FormData(formEl);
+                    formEl.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const formData = new FormData(formEl);
+                        try{
+                            const resp = await fetch("{{ route('users.store') }}", {
+                                method: "POST",
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json'
+                                },
+                                body: formData
+                            });
+                            if(!resp.ok) throw new Error('Erro ao salvar registro.');
+                            const payload = await resp.json();
 
-                    try {
-                        const resp = await fetch("{{ route('users.store') }}", {
-                            method: "POST",
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json'
-                            },
-                            body: formData
-                        });
-                        if (!resp.ok) throw new Error('Erro ao salvar registro.');
+                            // fecha e reseta
+                            modal.classList.remove('show');
+                            formEl.reset();
 
-                        const payload = await resp.json();
+                            // renderiza
+                            storeRow(payload);
+                        }catch(err){
+                            alert(err.message);
+                        }
+                    });
 
-                        modal.classList.remove('show');
+                    function storeRow(row){
+                        if(!list) return;
+                        const imgSrc = row.image ? `data:image/jpeg;base64,${row.image}` : assetUrl;
+                        const statusClass = row.is_active ? 'badge-active' : 'badge-inactive';
+                        const statusText  = row.is_active ? 'Ativo' : 'Inativo';
 
-                        formEl.reset();
-
-                        storeData(payload);
-                    } catch (err) {
-                        alert(err.message);
+                        const html = `
+<article class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-3">
+  <div class="user-row">
+    <img src="${imgSrc}" alt="${row.name}">
+    <div class="min-w-0">
+      <div class="flex items-center gap-2">
+        <h5 class="text-sm font-semibold truncate">${row.name}</h5>
+        <span class="px-2 py-0.5 text-[11px] rounded ${statusClass}">${statusText}</span>
+      </div>
+      <div class="text-xs text-neutral-500 dark:text-neutral-400 truncate">${row.email}</div>
+    </div>
+  </div>
+</article>`;
+                        list.insertAdjacentHTML('beforeend', html);
                     }
-                });
 
-                function storeData(row) {
-                    if (!list) return;
-
-                    const imgSrc = row.image
-                        ? `data:image/jpeg;base64,${row.image}`
-                        : assetUrl;
-
-                    const statusColor = row.is_active ? 'active' : 'inactive';
-                    const statusUser = row.is_active ? 'Ativo' : 'Inativo';
-
-                    const html = `
-        <div class="nav-tab-info additional-profile-detail">
-            <div class="additional-profile-image">
-                <img src="${imgSrc}" alt="${row.name}">
-            </div>
-            <div class="addition-profile-info">
-                <h2>${row.name}</h2>
-                <span class="profile-email">${row.email}</span><br>
-                <span class="badge profile-status-${statusColor}">${statusUser}</span>
-            </div>
-        </div>`;
-                    list.insertAdjacentHTML('beforeend', html);
-                }
-
-                async function loadData() {
-                    try {
-                        const resp = await fetch("{{ route('users.index') }}", {
-                            headers: {'Accept': 'application/json'}
-                        });
-                        if (!resp.ok) throw new Error('Erro ao carregar registros.');
-                        const rows = await resp.json();
-                        rows.forEach(storeData);
-                    } catch (err) {
-                        console.error(err);
+                    async function loadData(){
+                        try{
+                            const resp = await fetch("{{ route('users.index') }}", { headers:{'Accept':'application/json'} });
+                            if(!resp.ok) throw new Error('Erro ao carregar registros.');
+                            const rows = await resp.json();
+                            list.innerHTML = '';
+                            rows.forEach(storeRow);
+                        }catch(err){
+                            console.error(err);
+                        }
                     }
-                }
 
-                window.addEventListener('DOMContentLoaded', loadData);
+                    window.addEventListener('DOMContentLoaded', loadData);
+                })();
             </script>
         @endpush
     @endsection

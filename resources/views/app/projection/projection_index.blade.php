@@ -478,7 +478,7 @@
                         html += `
           <div class="tr saldo">
             <div class="td col-date"></div>
-            <div class="td col-hist"><div class="title">ATUAL</div></div>
+            <div class="td col-hist"><div class="title">Saldo anterior</div></div>
             <div class="td col-amt ${openingBalance >= 0 ? 'pos' : 'neg'}">${fmtBRL(openingBalance)}</div>
           </div>
         `;

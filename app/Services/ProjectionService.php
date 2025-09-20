@@ -19,21 +19,23 @@ class ProjectionService
 
     public function build(?string $userId, string $start, string $end): array
     {
-        $uid  = $userId ?: Auth::id();
+        $uid  = $userId ?: \Illuminate\Support\Facades\Auth::id();
         [$ownerId, $userIds] = $this->resolveOwnerAndAdditionals($uid);
-
         $tz   = 'America/Sao_Paulo';
-        $from = Carbon::parse($start, $tz)->startOfDay();
-        $to   = Carbon::parse($end,   $tz)->endOfDay();
+        $from = \Carbon\Carbon::parse($start, $tz)->startOfDay();
+        $to   = \Carbon\Carbon::parse($end,   $tz)->endOfDay();
 
-        $this->paidIdx = $this->paymentsIndex($userIds); // ← carrega índice
+        $this->paidIdx = $this->paymentsIndex($userIds);
 
-        $opening = $this->openingBalance($userIds);
+        // *** saldo anterior correto ***
+        $opening = $this->openingBalance($userIds, $from);
 
         $occ = collect()
-            // PAGAMENTOS EFETUADOS entram primeiro, no dia do pagamento
+            // 1) movimentos de conta (manuais, juros, tarifas, cofrinho, transferências)
+            ->merge($this->expandAccountMovements($userIds, $from, $to))
+            // 2) pagos (já realizados)
             ->merge($this->expandPaymentTransactions($userIds, $from, $to))
-            // lançamentos previstos
+            // 3) previstos (projeções)
             ->merge($this->expandUnique($userIds, $from, $to))
             ->merge($this->expandRecurrentsMonthlyYearly($userIds, $from, $to))
             ->merge($this->expandRecurrentsCustom($userIds, $from, $to))
@@ -44,7 +46,6 @@ class ProjectionService
             ->unique(fn($o) => (($o['id'] ?? $o['title']).'@'.$o['date']))
             ->values();
 
-        // FATURAS (paga = cai no paid_at; aberta = cai no vencimento)
         $bills = $this->cardBillsFromInvoices($userIds, $from, $to);
 
         $days = $this->consolidateDays($from, $to, $opening, $occ, $bills);
@@ -132,11 +133,64 @@ class ProjectionService
         return [$ownerId, $ids];
     }
 
-    protected function openingBalance(array $userIds): float
+    protected function openingBalance(array $userIds, \Carbon\Carbon $from = null): float
     {
+        // Se $from informado → saldo até dia anterior pela soma do livro-razão.
+        if ($from) {
+            $accIds = DB::table('accounts')->whereIn('user_id', $userIds)->pluck('id');
+            if ($accIds->isEmpty()) return 0.0;
+
+            $sum = DB::table('account_movements')
+                ->whereIn('account_id', $accIds)
+                ->where('occurred_at', '<', $from->copy()->startOfDay()) // saldo anterior
+                ->sum('amount');
+
+            return (float) $sum;
+        }
+
         return (float) Account::withoutGlobalScopes()
             ->whereIn('accounts.user_id', $userIds)
             ->sum('current_balance');
+    }
+
+    protected function expandAccountMovements(array $userIds, \Carbon\Carbon $from, \Carbon\Carbon $to): \Illuminate\Support\Collection
+    {
+        $accIds = DB::table('accounts')->whereIn('user_id', $userIds)->pluck('id');
+        if ($accIds->isEmpty()) return collect();
+
+        $rows = DB::table('account_movements')
+            ->whereIn('account_id', $accIds)
+            ->whereBetween('occurred_at', [$from->startOfDay(), $to->endOfDay()])
+            // evite duplicar com expandPaymentTransactions/invoices:
+            ->whereNull('payment_transaction_id')
+            ->whereNull('invoice_id')
+            ->get();
+
+        return collect($rows)->map(function($r){
+            $title = match($r->type){
+                'opening'         => 'Saldo inicial',
+                'deposit'         => 'Depósito',
+                'withdraw'        => 'Saque',
+                'transfer_in'     => 'Transferência (entrada)',
+                'transfer_out'    => 'Transferência (saída)',
+                'fee'             => 'Tarifa',
+                'interest'        => 'Juros/Rendimento',
+                'correction'      => 'Ajuste',
+                'saving_in'       => 'Cofrinho → Conta',
+                'saving_out'      => 'Conta → Cofrinho',
+                default           => ucfirst(str_replace('_',' ',$r->type)),
+            };
+
+            return [
+                'id'         => (string)$r->id,
+                'title'      => $r->description ?: $title,
+                'amount'     => round((float)$r->amount, 2),
+                'date'       => \Carbon\Carbon::parse($r->occurred_at)->toDateString(),
+                'type'       => 'ledger',
+                'category'   => 'Movimentação de conta',
+                'is_invoice' => false,
+            ];
+        });
     }
 
     protected function expandUnique(array $userIds, Carbon $from, Carbon $to): \Illuminate\Support\Collection

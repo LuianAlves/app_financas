@@ -308,17 +308,15 @@ class ProjectionService
 
             // 2.1) Itens explícitos
             $items = CustomItemRecurrents::where('recurrent_id',$r->id)
-                ->get(['payment_day','reference_month','reference_year','amount','custom_occurrence_number','paid_at']);
+                ->get(['payment_day','reference_month','reference_year','amount','custom_occurrence_number']);
 
-            // índices de pagamento
             $paidByDate  = $this->paidIdx['byDate'][$t->id] ?? [];
             $paidByMonth = $this->paidIdx['byMonth'][$t->id] ?? [];
 
             foreach ($items as $ci) {
                 $dt = $this->dateFromRefs((int)$ci->payment_day, (int)$ci->reference_month, (int)$ci->reference_year);
 
-                // SE JÁ PAGO (tem paid_at) OU EXISTE PT NO MÊS/DATA → NÃO EMITE
-                if (!empty($ci->paid_at)) continue;
+                // já pago? corta por data/mês via payment_transactions
                 if (!empty($paidByDate[$dt->toDateString()])) continue;
                 if (!empty($paidByMonth[$dt->format('Y-m')])) continue;
 

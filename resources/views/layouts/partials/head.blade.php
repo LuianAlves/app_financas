@@ -62,7 +62,23 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%233b82f6' d='M16 2l14 8v12l-14 8-14-8V10z'/%3E%3Cpath fill='%23fff' d='M16 7l9 5v8l-9 5-9-5v-8z'/%3E%3C/svg%3E"/>
 
     @stack('styles')
+<style>
 
+@supports (-webkit-touch-callout: none) {
+  #bottomNav{
+    position: fixed;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    transform: translateZ(0);
+    will-change: transform;
+  }
+  .ios-no-blur #bottomNav{
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background-color: rgba(255,255,255,.96) !important;
+  }
+}
+</style>
     @php
         $styleCssPath = public_path('assets/css/style.css');
     @endphp

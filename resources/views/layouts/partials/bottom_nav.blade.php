@@ -1,4 +1,4 @@
-<nav aria-label="Navegação inferior" class="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200/70 dark:border-neutral-800/70 bg-white/70 dark:bg-neutral-950/80 backdrop-blur">
+<nav aria-label="Navegação inferior" class="md:hidden fixed inset-x-0 bottom-0 left-0 right-0 z-40 border-t border-neutral-200/70 dark:border-neutral-800/70 bg-white/70 dark:bg-neutral-950/80 backdrop-blur pb-[max(10px, env(safe-area-inset-bottom))] [transform:translateZ(0)]">
     <ul class="grid grid-cols-4 pb-2">
         <li>
             <a href="{{route('dashboard')}}" data-tab

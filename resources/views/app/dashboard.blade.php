@@ -218,61 +218,61 @@
         </div>
 
         <!-- Next Payments -->
-        <div
-            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">
-            <div class="flex items-center justify-between">
-                <p class="font-medium">Próximos pagamentos</p>
-            </div>
+{{--        <div--}}
+{{--            class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4 md:p-5">--}}
+{{--            <div class="flex items-center justify-between">--}}
+{{--                <p class="font-medium">Próximos pagamentos</p>--}}
+{{--            </div>--}}
 
-            <ul class="mt-3 divide-y divide-neutral-200/70 dark:divide-neutral-800/70">
-                @forelse($upcomingAny as $item)
-                    <li class="group grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card"
-                        data-invoice-card>
-                        <span class="size-10 grid place-items-center rounded-xl text-white"
-                              style="background: {{ $item['color'] }}">
-                            <i class="{{ $item['icon'] }}"></i>
-                        </span>
-                        <div>
-                            <p class="text-sm font-medium">{{ $item['title'] }}</p>
-                            <p class="text-xs text-neutral-500 dark:text-neutral-400">{{ \Carbon\Carbon::parse($item['date'])->format('d/m/Y') }}</p>
-                        </div>
-                        <div class="text-right flex items-center gap-3">
-                            <p class="text-sm font-semibold">- {{ brlPrice($item['amount']) }}</p>
+{{--            <ul class="mt-3 divide-y divide-neutral-200/70 dark:divide-neutral-800/70">--}}
+{{--                @forelse($upcomingAny as $item)--}}
+{{--                    <li class="group grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card"--}}
+{{--                        data-invoice-card>--}}
+{{--                        <span class="size-10 grid place-items-center rounded-xl text-white"--}}
+{{--                              style="background: {{ $item['color'] }}">--}}
+{{--                            <i class="{{ $item['icon'] }}"></i>--}}
+{{--                        </span>--}}
+{{--                        <div>--}}
+{{--                            <p class="text-sm font-medium">{{ $item['title'] }}</p>--}}
+{{--                            <p class="text-xs text-neutral-500 dark:text-neutral-400">{{ \Carbon\Carbon::parse($item['date'])->format('d/m/Y') }}</p>--}}
+{{--                        </div>--}}
+{{--                        <div class="text-right flex items-center gap-3">--}}
+{{--                            <p class="text-sm font-semibold">- {{ brlPrice($item['amount']) }}</p>--}}
 
-                            @if($item['kind'] === 'tx')
-                                <button type="button"
-                                        class="bg-transparent border-0"
-                                        data-open-payment
-                                        data-id="{{ $item['modal_id'] }}"
-                                        data-amount="{{ $item['modal_amount'] }}"
-                                        data-date="{{ \Carbon\Carbon::parse($item['modal_date'])->format('Y-m-d') }}"
-                                        data-title="{{ e($item['title']) }}">
-                                    <i class="fa-solid fa-check-to-slot text-green-600"></i>
-                                </button>
-                            @else
-                                <button type="button"
-                                        class="bg-transparent border-0"
-                                        data-pay-invoice
-                                        data-card="{{ $item['card_id'] }}"
-                                        data-month="{{ $item['current_month'] }}"
-                                        data-amount="{{ $item['amount'] }}"
-                                        data-title="{{ e($item['title']) }}">
-                                    <i class="fa-solid fa-check text-green-600"></i>
-                                </button>
-                            @endif
-                        </div>
-                    </li>
-                @empty
-                    <li class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3">
-                        <span class="size-10 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800">
-                            <i class="fa-solid fa-file-invoice-dollar"></i>
-                        </span>
-                        <div class="text-sm">Nenhum pagamento.</div>
-                        <div></div>
-                    </li>
-                @endforelse
-            </ul>
-        </div>
+{{--                            @if($item['kind'] === 'tx')--}}
+{{--                                <button type="button"--}}
+{{--                                        class="bg-transparent border-0"--}}
+{{--                                        data-open-payment--}}
+{{--                                        data-id="{{ $item['modal_id'] }}"--}}
+{{--                                        data-amount="{{ $item['modal_amount'] }}"--}}
+{{--                                        data-date="{{ \Carbon\Carbon::parse($item['modal_date'])->format('Y-m-d') }}"--}}
+{{--                                        data-title="{{ e($item['title']) }}">--}}
+{{--                                    <i class="fa-solid fa-check-to-slot text-green-600"></i>--}}
+{{--                                </button>--}}
+{{--                            @else--}}
+{{--                                <button type="button"--}}
+{{--                                        class="bg-transparent border-0"--}}
+{{--                                        data-pay-invoice--}}
+{{--                                        data-card="{{ $item['card_id'] }}"--}}
+{{--                                        data-month="{{ $item['current_month'] }}"--}}
+{{--                                        data-amount="{{ $item['amount'] }}"--}}
+{{--                                        data-title="{{ e($item['title']) }}">--}}
+{{--                                    <i class="fa-solid fa-check text-green-600"></i>--}}
+{{--                                </button>--}}
+{{--                            @endif--}}
+{{--                        </div>--}}
+{{--                    </li>--}}
+{{--                @empty--}}
+{{--                    <li class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3">--}}
+{{--                        <span class="size-10 grid place-items-center rounded-xl bg-neutral-100 dark:bg-neutral-800">--}}
+{{--                            <i class="fa-solid fa-file-invoice-dollar"></i>--}}
+{{--                        </span>--}}
+{{--                        <div class="text-sm">Nenhum pagamento.</div>--}}
+{{--                        <div></div>--}}
+{{--                    </li>--}}
+{{--                @endforelse--}}
+{{--            </ul>--}}
+{{--        </div>--}}
 
         <!-- Transactions Recent -->
         <div

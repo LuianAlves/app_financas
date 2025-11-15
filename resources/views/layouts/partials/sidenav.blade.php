@@ -8,13 +8,12 @@
             </svg>
         </div>
         <div>
-            <p class="text-sm text-neutral-500 dark:text-neutral-400">Painel</p>
-            <p class="font-semibold">BlueBank UI</p>
+            <p class="font-semibold">Cliqis Finanças</p>
         </div>
     </div>
 
     <nav aria-label="Principal" class="mt-4 space-y-1">
-        <a href="#saldo" data-nav="home" aria-current="page"
+        <a href="{{route('dashboard')}}" data-nav="home" aria-current="page"
            class="group flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium bg-brand-50 dark:bg-neutral-800 text-brand-700 dark:text-neutral-100 hover:bg-brand-100/70 dark:hover:bg-neutral-800/70 transition">
                 <span
                     class="grid place-items-center size-8 rounded-lg bg-white/70 dark:bg-neutral-900/70 text-brand-600 dark:text-neutral-100 shadow-soft">
@@ -34,15 +33,8 @@
                 </span>
             Transações
         </a>
-        <a href="#atalhos" data-nav
-           class="group flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">
-                <span class="grid place-items-center size-8 rounded-lg bg-white/70 dark:bg-neutral-900/70 shadow-soft">
-                  <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                </span>
-            Atalhos
-        </a>
-        <a href="#projecoes-page" data-nav
+
+        <a href="{{route('projection-view.index')}}" data-nav
            class="group flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">
                 <span class="grid place-items-center size-8 rounded-lg bg-white/70 dark:bg-neutral-900/70 shadow-soft">
                   <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -51,7 +43,7 @@
                 </span>
             Projeções
         </a>
-        <a href="#perfil" data-nav
+        <a href="{{route('user-view.index')}}" data-nav
            class="group flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition">
                 <span class="grid place-items-center size-8 rounded-lg bg-white/70 dark:bg-neutral-900/70 shadow-soft">
                   <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -62,12 +54,12 @@
         </a>
     </nav>
 
-    <div class="mt-auto p-3 rounded-xl bg-gradient-to-br from-brand-50 to-white dark:from-neutral-800 dark:to-neutral-900 border border-neutral-200/70 dark:border-neutral-800/70">
-        <p class="text-sm font-medium">Meta do mês</p>
-        <p class="text-xs text-neutral-500 dark:text-neutral-400">Economizar R$ 1.500</p>
-        <div class="mt-3 h-2 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden">
-            <div class="h-full w-[62%] bg-brand-500 rounded-full"></div>
-        </div>
-        <p class="mt-2 text-xs text-neutral-600 dark:text-neutral-400"><span class="font-semibold">62%</span> atingido</p>
-    </div>
+{{--    <div class="mt-auto p-3 rounded-xl bg-gradient-to-br from-brand-50 to-white dark:from-neutral-800 dark:to-neutral-900 border border-neutral-200/70 dark:border-neutral-800/70">--}}
+{{--        <p class="text-sm font-medium">Meta do mês</p>--}}
+{{--        <p class="text-xs text-neutral-500 dark:text-neutral-400">Economizar R$ 1.500</p>--}}
+{{--        <div class="mt-3 h-2 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden">--}}
+{{--            <div class="h-full w-[62%] bg-brand-500 rounded-full"></div>--}}
+{{--        </div>--}}
+{{--        <p class="mt-2 text-xs text-neutral-600 dark:text-neutral-400"><span class="font-semibold">62%</span> atingido</p>--}}
+{{--    </div>--}}
 </aside>

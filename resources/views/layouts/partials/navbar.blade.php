@@ -12,27 +12,25 @@
                 </svg>
             </button>
             <div class="hidden md:flex items-center gap-2">
-                <div
-                    class="size-9 grid place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-soft">
-                    <svg viewBox="0 0 24 24" class="size-5" aria-hidden="true">
-                        <path fill="currentColor" d="M12 2l9 5v10l-9 5-9-5V7z"/>
-                    </svg>
-                </div>
+            </div>
+            <div
+                class="size-9 grid place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-soft">
+                <svg viewBox="0 0 24 24" class="size-5" aria-hidden="true">
+                    <path fill="currentColor" d="M12 2l9 5v10l-9 5-9-5V7z"/>
+                </svg>
+            </div>
+            @if(auth()->check())
                 <div>
                     <p class="text-xs text-neutral-500 dark:text-neutral-400">Bem-vindo(a),</p>
-                    <p class="font-semibold">Marina</p>
+                    <p class="font-semibold">{{ auth()->user()->name }}</p>
                 </div>
-            </div>
-            <div class="md:ml-4 md:w-96 relative">
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-neutral-400"
-                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.3-4.3"/>
-                </svg>
-                <input type="search" placeholder="Buscar"
-                       class="w-full pl-11 pr-4 py-2.5 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/80 dark:bg-neutral-900/60 focus:outline-none focus:ring-4 focus:ring-brand-500/20"/>
-            </div>
+            @else
+                <div>
+                    <p class="text-xs text-neutral-500 dark:text-neutral-400">Bem-vindo(a)</p>
+                    <p class="font-semibold">Visitante</p>
+                </div>
+            @endif
+
         </div>
 
         <div class="flex items-center gap-2">
@@ -61,13 +59,13 @@
                 <span
                     class="absolute -top-1 -right-1 size-4 rounded-full bg-brand-500 text-white text-[10px] grid place-items-center">3</span>
             </button>
-            <button
-                class="hidden md:flex items-center gap-2 pl-1 pr-3 py-1.5 rounded-full border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition"
-                aria-label="Abrir perfil">
-                <img src="https://api.dicebear.com/9.x/thumbs/svg?seed=Marina" alt="Avatar"
-                     class="size-8 rounded-full"/>
-                <span class="text-sm">Marina</span>
-            </button>
+            {{--            <button--}}
+            {{--                class="hidden md:flex items-center gap-2 pl-1 pr-3 py-1.5 rounded-full border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition"--}}
+            {{--                aria-label="Abrir perfil">--}}
+            {{--                <img src="https://api.dicebear.com/9.x/thumbs/svg?seed=Marina" alt="Avatar"--}}
+            {{--                     class="size-8 rounded-full"/>--}}
+            {{--                <span class="text-sm">Marina</span>--}}
+            {{--            </button>--}}
         </div>
     </div>
 </header>

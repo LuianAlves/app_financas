@@ -1,19 +1,74 @@
-<div class="row">
-    <x-input col="8" set="" type="text" title="Nome" id="name" name="name" value="{{ old('name', $user->name ?? '') }}" placeholder="John Doe" disabled=""></x-input>
-    <x-input col="8" set="" type="email" title="E-mail" id="email" name="email" value="{{ old('email', $user->email ?? '') }}" placeholder="john.doe@email.com" disabled=""></x-input>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <label class="block text-sm">
+        <span class="text-xs font-medium text-neutral-600 dark:text-neutral-300">Nome</span>
+        <input
+            type="text"
+            id="name"
+            name="name"
+            value="{{ old('name', $user->name ?? '') }}"
+            placeholder="John Doe"
+            required
+            class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+        >
+    </label>
+
+    <label class="block text-sm">
+        <span class="text-xs font-medium text-neutral-600 dark:text-neutral-300">E-mail</span>
+        <input
+            type="email"
+            id="email"
+            name="email"
+            value="{{ old('email', $user->email ?? '') }}"
+            placeholder="john.doe@email.com"
+            required
+            class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+        >
+    </label>
 </div>
 
-<div class="row">
-    <x-input col="6" set="" type="password" title="Senha" id="password" name="password" value="" placeholder="********" disabled=""></x-input>
-    <x-input col="6" set="" type="password" title="Confirma senha" id="password_confirmation" name="password_confirmation" value="" placeholder="********" disabled=""></x-input>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <label class="block text-sm">
+        <span class="text-xs font-medium text-neutral-600 dark:text-neutral-300">Senha</span>
+        <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="********"
+            class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+        >
+    </label>
+
+    <label class="block text-sm">
+        <span class="text-xs font-medium text-neutral-600 dark:text-neutral-300">Confirmar senha</span>
+        <input
+            type="password"
+            id="password_confirmation"
+            name="password_confirmation"
+            placeholder="********"
+            class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+        >
+    </label>
 </div>
 
-<div class="row">
-    <div id="imageInputWrap" class="col-6">
-        <label class="form-label">Foto</label>
-        <input class="form-control" type="file" id="image" name="image" accept="image/*">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <label class="block text-sm" id="imageInputWrap">
+        <span class="text-xs font-medium text-neutral-600 dark:text-neutral-300">Foto</span>
+        <input
+            type="file"
+            id="image"
+            name="image"
+            accept="image/*"
+            class="mt-1 block w-full text-sm text-neutral-700 dark:text-neutral-200
+                   file:mr-3 file:rounded-lg file:border-0
+                   file:bg-neutral-100 file:px-3 file:py-2
+                   dark:file:bg-neutral-800 dark:file:text-neutral-100
+                   file:text-xs cursor-pointer"
+        >
+    </label>
+
+    <div id="imagePreview" class="hidden">
+        {{-- preenchido via JS --}}
     </div>
-    <div id="imagePreview" class="col-6" style="display:none"></div>
 </div>
 
 @push('scripts')
@@ -29,21 +84,22 @@
 
             function showPreview(dataUrl) {
                 prevEl.innerHTML = `
-      <div class="position-relative" style="max-width:140px">
-        <img src="${dataUrl}" alt="preview"
-             style="width:140px;height:140px;border-radius:8px;object-fit:cover;">
-        <button type="button" id="changeImg"
-                class="btn btn-sm btn-light border position-absolute"
-                style="right:6px;bottom:6px">Trocar</button>
-      </div>`;
-                prevEl.style.display = '';
-                wrapEl.style.display = 'none';
+            <div class="relative inline-block">
+                <img src="${dataUrl}" alt="preview"
+                     class="w-28 h-28 rounded-xl object-cover border border-neutral-200/70 dark:border-neutral-800/70">
+                <button type="button" id="changeImg"
+                        class="absolute bottom-1 right-1 inline-flex items-center rounded-lg bg-white/95 dark:bg-neutral-900/95 border border-neutral-200/70 dark:border-neutral-800/70 px-2 py-1 text-[11px] shadow-sm">
+                    Trocar
+                </button>
+            </div>`;
+                prevEl.classList.remove('hidden');
+                wrapEl.classList.add('hidden');
             }
 
             function clearPreview() {
                 prevEl.innerHTML = '';
-                prevEl.style.display = 'none';
-                wrapEl.style.display = '';
+                prevEl.classList.add('hidden');
+                wrapEl.classList.remove('hidden');
                 fileEl.value = '';
             }
 

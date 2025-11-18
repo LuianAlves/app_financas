@@ -15,7 +15,10 @@
 <div class="flex md:min-h-screen">
 
     <main id="conteudo" class="flex-1 flex items-start md:items-center justify-center
-               max-w-7xl mx-auto w-full">
+               max-w-7xl mx-auto w-full
+               px-4
+               pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-10 md:pt-8"
+    >
         @yield('guest-content')
     </main>
 </div>

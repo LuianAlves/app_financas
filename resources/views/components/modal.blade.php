@@ -4,9 +4,12 @@
   'titleEdit'   => 'Editar registro',
   'titleShow'   => 'Detalhes',
   'submitLabel' => 'Salvar',
-  // IDs/seletores opcionais, caso queira customizar no JS
-  'formId'      => $id.'Form',
+  'formId'      => null,
 ])
+
+@php
+    $formId = $formId ?: $id.'Form';
+@endphp
 
 <div id="{{ $id }}" class="fixed inset-0 z-[95] hidden" role="dialog" aria-modal="true">
     <div data-crud-overlay class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
@@ -26,8 +29,9 @@
                 </button>
             </div>
 
-            <form id="" class="mt-4 grid gap-3" novalidate>
+            <form id="{{ $formId }}" class="mt-4 grid gap-3" novalidate>
                 <div data-form-error class="hidden mb-2 rounded-lg bg-red-50 text-red-700 text-sm px-3 py-2"></div>
+
                 {{ $slot }}
 
                 <div class="mt-2 flex items-center justify-end gap-2">
@@ -44,4 +48,3 @@
         </div>
     </div>
 </div>
-

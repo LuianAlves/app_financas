@@ -123,16 +123,40 @@
                            class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2" required/>
                     <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
                 </label>
+                @php
+                    // Agrupa por tipo
+                    $grouped = $categories->groupBy('type');
+
+                    // Ordem + rótulo exibido
+                    $typeOrder = [
+                        'despesa'      => 'Despesas',
+                        'entrada'      => 'Entradas',
+                        'investimento' => 'Investimentos',
+                    ];
+                @endphp
+
                 <label class="block">
                     <span class="text-xs text-neutral-500 dark:text-neutral-400">Categoria</span>
                     <select name="transaction_category_id" id="tx_cat"
                             class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2">
-                        @foreach($categories as $category)
-                            <option value="{{ $category->id }}" data-type="{{ $category->type }}">{{ $category->name }}</option>
+
+                        <option value="" disabled selected hidden>Selecione uma categoria</option>
+
+                        @foreach($typeOrder as $type => $label)
+                            @if(isset($grouped[$type]) && $grouped[$type]->isNotEmpty())
+                                <optgroup label="{{ $label }}">
+                                    @foreach($grouped[$type] as $category)
+                                        <option value="{{ $category->id }}" data-type="{{ $category->type }}">
+                                            {{ $category->name }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
                         @endforeach
                     </select>
                     <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
                 </label>
+
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">

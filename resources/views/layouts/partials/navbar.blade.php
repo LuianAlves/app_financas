@@ -48,6 +48,8 @@
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>
                 </svg>
             </button>
+            @if(auth()->check())
+
             <button
                 class="relative grid place-items-center size-10 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition"
                 aria-label="Notificações">
@@ -59,13 +61,7 @@
                 <span
                     class="absolute -top-1 -right-1 size-4 rounded-full bg-brand-500 text-white text-[10px] grid place-items-center">3</span>
             </button>
-            {{--            <button--}}
-            {{--                class="hidden md:flex items-center gap-2 pl-1 pr-3 py-1.5 rounded-full border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition"--}}
-            {{--                aria-label="Abrir perfil">--}}
-            {{--                <img src="https://api.dicebear.com/9.x/thumbs/svg?seed=Marina" alt="Avatar"--}}
-            {{--                     class="size-8 rounded-full"/>--}}
-            {{--                <span class="text-sm">Marina</span>--}}
-            {{--            </button>--}}
+                @endif
         </div>
     </div>
 </header>

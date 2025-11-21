@@ -130,6 +130,9 @@ class TransactionController extends Controller
             'custom_occurrences' => ['nullable','integer','min:1','required_if:termination,has_end'],
             'interval_value'     => 'required_if:recurrence_type,custom|integer|min:1',
 
+            'can_install'  => ['nullable','boolean'],
+            'installments' => ['nullable','integer','min:1'],
+
             'saving_id' => [function($attr,$val,$fail) use ($request) {
                 $cat = \App\Models\TransactionCategory::find($request->transaction_category_id);
                 if ($cat && $cat->type === 'investimento' && empty($val)) {
@@ -142,20 +145,31 @@ class TransactionController extends Controller
         ]);
 
         $txDate       = Carbon::parse($request->date)->startOfDay();
+
+        $isPix        = $request->type === 'pix';
         $isCard       = $request->type === 'card';
         $typeCard     = $isCard ? $request->type_card : null;
         $installments = (int) ($request->installments ?? 1);
+        $canInstall   = (bool) ($request->can_install ?? false);
 
-        if ($isCard && $typeCard === 'credit' && $installments >= 1 && $request->recurrence_type === 'unique') {
+        // 1) PIX parcelado (somente quando marcar "parcelar" e tiver mais de 1 parcela, em recorrência ÚNICA)
+        if ($isPix && $request->recurrence_type === 'unique' && $canInstall && $installments > 1) {
+            return $this->handlePixInstallments($request, $txDate, $installments);
+        }
+
+        // 2) Cartão de CRÉDITO parcelado (única + parcelar)
+        if ($isCard && $typeCard === 'credit' && $request->recurrence_type === 'unique' && $canInstall && $installments > 1) {
             return $this->handleInstallments($request, $txDate, $installments);
         }
 
         $isRecurring = $request->recurrence_type !== 'unique';
 
+        // 3) Cartão de CRÉDITO recorrente (mensal/anual/custom)
         if ($isCard && $typeCard === 'credit' && $isRecurring) {
             return $this->handleRecurringCard($request, $txDate);
         }
 
+        // 4) Demais casos (PIX/money único ou recorrente, débito, etc.)
         return $this->handleUniqueTransaction($request, $txDate, $typeCard, $isCard);
     }
 
@@ -433,6 +447,12 @@ class TransactionController extends Controller
         $horizonEnd = $txDate->copy()->addMonths(12)->endOfMonth();
         $occur      = $normalize($txDate->copy());
 
+        $occLimit = 0;
+
+        if ($request->termination === 'has_end') {
+            $occLimit = (int) ($request->custom_occurrences ?? 0);
+        }
+
         $useAlt = (bool)($request->alternate_cards)
             && collect($request->alternate_card_ids ?? [])->filter()->isNotEmpty();
 
@@ -452,7 +472,13 @@ class TransactionController extends Controller
 
             $cards = Card::whereIn('id', $altIds)->get(['id','closing_day']);
 
+            $counter = 0;
+
             while ($occur->lte($horizonEnd)) {
+                if ($occLimit > 0 && $counter >= $occLimit) {
+                    break;
+                }
+
                 $choice = $cards->map(function ($c) use ($occur) {
                     return ['card' => $c, 'lastClose' => CardCycle::lastClose($occur, (int)$c->closing_day)];
                 })
@@ -472,8 +498,10 @@ class TransactionController extends Controller
 
                 $this->createInvoiceItemIfNotExists($invoice->id, $transaction->id, $recurrent->id, $request, $occur);
 
+                $counter++;
                 $occur = $nextFn($occur);
             }
+
         } else {
             if (!$request->card_id) {
                 return response()->json(['error' => 'card_id é obrigatório quando não alterna cartões'], 422);
@@ -481,7 +509,13 @@ class TransactionController extends Controller
 
             $card = Card::findOrFail($request->card_id);
 
+            $counter = 0;
+
             while ($occur->lte($horizonEnd)) {
+                if ($occLimit > 0 && $counter >= $occLimit) {
+                    break;
+                }
+
                 $cycleMonth = CardCycle::cycleMonthFor($occur, (int)$card->closing_day);
 
                 $invoice = Invoice::firstOrCreate(
@@ -491,6 +525,7 @@ class TransactionController extends Controller
 
                 $this->createInvoiceItemIfNotExists($invoice->id, $transaction->id, $recurrent->id, $request, $occur);
 
+                $counter++;
                 $occur = $nextFn($occur);
             }
         }
@@ -663,5 +698,31 @@ class TransactionController extends Controller
                 (bool)$rec->include_sun
             );
         }
+    }
+
+    protected function handlePixInstallments(Request $request, Carbon $txDate, int $installments)
+    {
+        // valor de cada parcela (vai ter o mesmo "problema" de centavos do cartão: 1000/3 = 333.33)
+        $perInstallment = round($request->amount / $installments, 2);
+
+        // vamos transformar internamente em RECORRÊNCIA MENSAL com término
+        // - amount = valor de cada parcela
+        // - recurrence_type = 'monthly'
+        // - custom_occurrences = número de parcelas
+
+        $clone = $request->duplicate();
+        $clone->merge([
+            'amount'             => $perInstallment,
+            'recurrence_type'    => 'monthly',
+            'custom_occurrences' => $installments,
+            // para PIX não mexemos em include_sat/include_sun; usa o que vier do form ou defaults
+        ]);
+
+        // tipo de cartão = null, não é cartão
+        $typeCard = null;
+        $isCard   = false;
+
+        // reaproveita TODA a lógica de recorrência que você já tem
+        return $this->handleUniqueTransaction($clone, $txDate, $typeCard, $isCard);
     }
 }

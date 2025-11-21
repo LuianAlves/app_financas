@@ -14,7 +14,7 @@
             <div class="hidden md:flex items-center gap-2">
             </div>
             <div
-                class="size-9 grid place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-soft">
+                class="size-9 grid place-items-center md:hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-soft">
                 <svg viewBox="0 0 24 24" class="size-5" aria-hidden="true">
                     <path fill="currentColor" d="M12 2l9 5v10l-9 5-9-5V7z"/>
                 </svg>

@@ -1,4 +1,17 @@
-<aside class="hidden md:flex md:flex-col md:gap-4 md:px-4 bg-gradient-to-b from-neutral-50/80 to-white dark:from-neutral-950/80 dark:to-neutral-900/60 border-r border-neutral-200/70 dark:border-neutral-800/70 backdrop-blur supports-[backdrop-filter]:bg-neutral-50/40 supports-[backdrop-filter]:dark:bg-neutral-900/40">
+<aside class="hidden md:flex md:flex-col md:gap-4 md:px-4 md:py-6 bg-gradient-to-b from-neutral-50/80 to-white dark:from-neutral-950/80 dark:to-neutral-900/60 border-r border-neutral-200/70 dark:border-neutral-800/70 backdrop-blur supports-[backdrop-filter]:bg-neutral-50/40 supports-[backdrop-filter]:dark:bg-neutral-900/40">
+<div class="flex items-center gap-2 px-2">
+        <div
+            class="size-9 grid place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-soft">
+            <!-- Logo -->
+            <svg viewBox="0 0 24 24" class="size-5" aria-hidden="true">
+                <path fill="currentColor" d="M12 2l9 5v10l-9 5-9-5V7z"/>
+            </svg>
+        </div>
+        <div>
+            <p class="font-semibold">Cliqis Finanças</p>
+        </div>
+    </div>
+
     <nav aria-label="Principal" class="mt-4 space-y-1">
         <a href="{{route('dashboard')}}" data-nav="home" aria-current="page"
            class="group flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium bg-brand-50 dark:bg-neutral-800 text-brand-700 dark:text-neutral-100 hover:bg-brand-100/70 dark:hover:bg-neutral-800/70 transition">

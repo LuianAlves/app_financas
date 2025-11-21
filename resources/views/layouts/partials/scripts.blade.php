@@ -217,37 +217,37 @@
         ioAcc.observe(accPage);
     }
 
-    // Modal de conta bancária
-    const accModal = document.getElementById('accModal');
-    const accOverlay = document.getElementById('accOverlay');
-    const accClose = document.getElementById('accClose');
-    const accCancel = document.getElementById('accCancel');
-    const accForm = document.getElementById('accForm');
-
-    function openAccModal() {
-        accModal?.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-        accForm?.querySelector('input,select,button')?.focus();
-    }
-
-    function closeAccModal() {
-        accModal?.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-        accFab?.focus();
-    }
-
-    document.querySelectorAll('[data-open-modal=\"acc\"]').forEach(btn => btn.addEventListener('click', openAccModal));
-    accOverlay?.addEventListener('click', closeAccModal);
-    accClose?.addEventListener('click', closeAccModal);
-    accCancel?.addEventListener('click', closeAccModal);
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !accModal?.classList.contains('hidden')) closeAccModal();
-    });
-    accForm?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        alert('Conta salva! (exemplo)');
-        closeAccModal();
-    });
+    // // Modal de conta bancária
+    // const accModal = document.getElementById('accModal');
+    // const accOverlay = document.getElementById('accOverlay');
+    // const accClose = document.getElementById('accClose');
+    // const accCancel = document.getElementById('accCancel');
+    // const accForm = document.getElementById('accForm');
+    //
+    // function openAccModal() {
+    //     accModal?.classList.remove('hidden');
+    //     document.body.classList.add('overflow-hidden');
+    //     accForm?.querySelector('input,select,button')?.focus();
+    // }
+    //
+    // function closeAccModal() {
+    //     accModal?.classList.add('hidden');
+    //     document.body.classList.remove('overflow-hidden');
+    //     accFab?.focus();
+    // }
+    //
+    // document.querySelectorAll('[data-open-modal=\"acc\"]').forEach(btn => btn.addEventListener('click', openAccModal));
+    // accOverlay?.addEventListener('click', closeAccModal);
+    // accClose?.addEventListener('click', closeAccModal);
+    // accCancel?.addEventListener('click', closeAccModal);
+    // document.addEventListener('keydown', (e) => {
+    //     if (e.key === 'Escape' && !accModal?.classList.contains('hidden')) closeAccModal();
+    // });
+    // accForm?.addEventListener('submit', (e) => {
+    //     e.preventDefault();
+    //     alert('Conta salva! (exemplo)');
+    //     closeAccModal();
+    // });
 </script>
 
 <script>

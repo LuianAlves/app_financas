@@ -8,6 +8,8 @@
     </x-select>
 </div>
 
+teste
+
 <!-- Price/Date -->
 <div class="row">
     <x-input-price col="6" title="Valor" id="amount" name="amount"/>
@@ -119,6 +121,14 @@
     </div>
 </div>
 
+<!-- Parcelar valor? (PIX ou crédito + única) -->
+<div class="row mt-2 d-none" id="canInstallRow">
+    <label class="mb-1">Parcelar valor?</label>
+    <x-input-check col="6" id="can_install_no"  value="0" name="can_install" title="Não" checked="1"/>
+    <x-input-check col="6" id="can_install_yes" value="1" name="can_install" title="Sim"/>
+</div>
+
+<!--  Parcelas (somente crédito + unique) -->
 <!--  Parcelas (somente crédito + unique) -->
 <div class="row mt-2 d-none" id="installmentsContainer">
     <x-input col="12" type="number" min="1" title="Parcelas" id="installments" name="installments"
@@ -139,25 +149,48 @@
     <script src="{{asset('assets/js/common/mask_price_input.js')}}"></script>
 
     <script>
+        console.log('teste2')
         document.addEventListener('DOMContentLoaded', () => {
             const $  = s => document.querySelector(s);
             const $$ = s => [...document.querySelectorAll(s)];
+        console.log('teste3')
 
             // elementos
             const el = {
-                pay: { pix: $('#pix'), card: $('#card'), money: $('#money') },
-                rec: { unique: $('#unique'), monthly: $('#monthly'), yearly: $('#yearly'), custom: $('#custom') },
+                // forma de pagamento
+                pay: {
+                    pix:   document.querySelector('input[name="type"][value="pix"]'),
+                    card:  document.querySelector('input[name="type"][value="card"]'),
+                    money: document.querySelector('input[name="type"][value="money"]'),
+                },
+
+                // recorrência
+                rec: {
+                    unique:  document.querySelector('input[name="recurrence_type"][value="unique"]'),
+                    monthly: document.querySelector('input[name="recurrence_type"][value="monthly"]'),
+                    yearly:  document.querySelector('input[name="recurrence_type"][value="yearly"]'),
+                    custom:  document.querySelector('input[name="recurrence_type"][value="custom"]'),
+                },
+
+                // tipo de cartão
+                credit: document.querySelector('input[name="type_card"][value="credit"]'),
+                debit:  document.querySelector('input[name="type_card"][value="debit"]'),
+
                 typeCardCon: $('#typeCardContainer'),
                 cardSelCon:  $('#cardSelectContainer'),
                 pixCon:      $('#pixAccountContainer'),
                 customCon:   $('#customRecurrenceContainer'),
                 instCon:     $('#installmentsContainer'),
+
+                // "pode parcelar?"
+                canInstallRow: $('#canInstallRow'),
+                canInstallYes: document.querySelector('input[name="can_install"][value="1"]'),
+                canInstallNo:  document.querySelector('input[name="can_install"][value="0"]'),
+
                 altRow:      $('#alternateCardsRow'),
                 altSel:      $('#alternateCardsSelect'),
                 altChk:      $('#alternate_cards'),
                 cardId:      $('#card_id'),
-                credit:      $('#credit'),
-                debit:       $('#debit'),
                 cat:         $('#transaction_category_id'),
                 savingCon:   $('#savingContainer'),
                 termRow:     $('#terminationRow'),
@@ -187,45 +220,117 @@
                 });
             }
 
-            function payVal() { return el.pay.pix.checked ? 'pix' : (el.pay.card.checked ? 'card' : (el.pay.money.checked ? 'money' : null)); }
-            function recVal() { return el.rec.custom.checked ? 'custom' : (el.rec.monthly.checked ? 'monthly' : (el.rec.yearly.checked ? 'yearly' : 'unique')); }
-            function catType() { return el.cat?.selectedOptions?.[0]?.dataset?.type || null; }
+            function payVal() {
+                const checked = document.querySelector('input[name="type"]:checked');
+                return checked ? checked.value : null;   // pix | card | money
+            }
+
+            function recVal() {
+                const checked = document.querySelector('input[name="recurrence_type"]:checked');
+                return checked ? checked.value : 'unique'; // unique | monthly | yearly | custom
+            }
+
+            function cardTypeVal() {
+                const checked = document.querySelector('input[name="type_card"]:checked');
+                return checked ? checked.value : null;   // credit | debit | null
+            }
+
+            function catType() {
+                return el.cat?.selectedOptions?.[0]?.dataset?.type || null;
+            }
 
             function isInvest() { return catType() === 'investimento'; }
 
             function toggleAll() {
-                const pay = payVal();           // pix|card|money
-                const rec = recVal();           // unique|monthly|yearly|custom
-                const invest = isInvest();
+                const pay     = payVal();
+                const rec     = recVal();
+                const cardTyp = cardTypeVal();
+                const invest  = isInvest();
+
+                const isPix  = pay === 'pix';
+                const isCard = pay === 'card';
+                const isCred = isCard && cardTyp === 'credit';
+                const isRec  = rec !== 'unique';
 
                 // Investimento: bloquear crédito
                 if (invest && el.credit) {
                     el.credit.disabled = true;
-                    // se estava crédito, força débito
                     if (el.credit.checked) { el.credit.checked = false; el.debit.checked = true; }
                 } else {
                     if (el.credit) el.credit.disabled = false;
                 }
 
-                const isCard = pay === 'card';
-                const isCred = isCard && el.credit?.checked;
-                const isRec  = rec !== 'unique';
+                // Conta (Pix)
+                const showPixAcc = isPix;
+                if (el.pixCon) {
+                    if (showPixAcc) {
+                        el.pixCon.classList.remove('d-none');
+                        el.pixCon.style.display = '';
+                    } else {
+                        el.pixCon.classList.add('d-none');
+                        el.pixCon.style.display = 'none';
+                    }
+                    disableInside(el.pixCon, !showPixAcc);
+                }
 
-                // PIX account
-                const showPixAcc = pay === 'pix';
-                el.pixCon.classList.toggle('d-none', !showPixAcc);
-                disableInside(el.pixCon, !showPixAcc);
-
-                // Card container
+                // Tipo de cartão
                 const showTypeCard = isCard;
-                el.typeCardCon.classList.toggle('d-none', !showTypeCard);
-                disableInside(el.typeCardCon, !showTypeCard);
+                if (el.typeCardCon) {
+                    if (showTypeCard) {
+                        el.typeCardCon.classList.remove('d-none');
+                        el.typeCardCon.style.display = '';
+                    } else {
+                        el.typeCardCon.classList.add('d-none');
+                        el.typeCardCon.style.display = 'none';
+                    }
+                    disableInside(el.typeCardCon, !showTypeCard);
+                }
 
-                // Parcelas (apenas crédito + única)
-                const showInst = isCred && !isRec;
-                el.instCon.classList.toggle('d-none', !showInst);
-                disableInside(el.instCon, !showInst);
+                // ===== "Parcelar valor?" (PIX ou qualquer cartão) – só em ÚNICA =====
+                const showCanInstall = (isPix || isCard) && !isRec;
 
+                if (el.canInstallRow) {
+                    if (showCanInstall) {
+                        el.canInstallRow.classList.remove('d-none');
+                        el.canInstallRow.style.display = '';
+                    } else {
+                        el.canInstallRow.classList.add('d-none');
+                        el.canInstallRow.style.display = 'none';
+                    }
+
+                    disableInside(el.canInstallRow, !showCanInstall);
+
+                    if (!showCanInstall) {
+                        if (el.canInstallYes) el.canInstallYes.checked = false;
+                        if (el.canInstallNo)  el.canInstallNo.checked  = true;
+                    }
+                }
+
+                const canInstall = !!(el.canInstallYes && el.canInstallYes.checked);
+
+                // ===== Campo "Parcelas" =====
+                // - ÚNICA
+                // - Parcelar = SIM
+                // - E (PIX) ou (cartão CRÉDITO)
+                const showInst = !isRec && canInstall && (isPix || isCred);
+
+                if (el.instCon) {
+                    if (showInst) {
+                        el.instCon.classList.remove('d-none');
+                        el.instCon.style.display = '';
+                    } else {
+                        el.instCon.classList.add('d-none');
+                        el.instCon.style.display = 'none';
+                    }
+                    disableInside(el.instCon, !showInst);
+
+                    if (!showInst) {
+                        const instInput = document.querySelector('#installments');
+                        if (instInput) instInput.value = '';
+                    }
+                }
+
+                // Se investimento + cartão e nada marcado, força débito
                 if (invest && isCard && !el.debit.checked && !el.credit.checked) {
                     el.debit.checked = true;
                 }
@@ -234,40 +339,51 @@
                 const showAlt     = isCred && isRec;
                 const showAltSel  = showAlt && el.altChk?.checked;
 
-                el.altRow.classList.toggle('d-none', !showAlt);
-                el.altSel.classList.toggle('d-none', !showAltSel);
-                disableInside(el.altSel, !showAltSel);
+                if (el.altRow) {
+                    el.altRow.classList.toggle('d-none', !showAlt);
+                    disableInside(el.altRow, !showAlt);
+                }
+                if (el.altSel) {
+                    el.altSel.classList.toggle('d-none', !showAltSel);
+                    disableInside(el.altSel, !showAltSel);
+                }
 
                 // Recorrência custom (X dias)
                 const showCustom = rec === 'custom';
-                el.customCon.classList.toggle('d-none', !showCustom);
-                disableInside(el.customCon, !showCustom);
+                if (el.customCon) {
+                    el.customCon.classList.toggle('d-none', !showCustom);
+                    disableInside(el.customCon, !showCustom);
+                }
 
                 const showCardSelect = isCard && !showAltSel;
-
-                el.cardSelCon.classList.toggle('d-none', !showCardSelect);
-                disableInside(el.cardSelCon, !showCardSelect);
-                if (!showCardSelect) el.cardId.value = '';
+                if (el.cardSelCon) {
+                    el.cardSelCon.classList.toggle('d-none', !showCardSelect);
+                    disableInside(el.cardSelCon, !showCardSelect);
+                    if (!showCardSelect) el.cardId.value = '';
+                }
 
                 // Término/ocorrências:
-                if (rec === 'monthly' || rec === 'yearly' || rec === 'custom') {
-                    el.termRow.classList.remove('d-none');
-                    disableInside(el.termRow, false);
-                    const hasEnd = $('#has_end')?.checked;
-                    el.occCon.classList.toggle('d-none', !hasEnd);
-                    disableInside(el.occCon, !hasEnd);
-                } else {
-                    // unique
-                    el.termRow.classList.add('d-none');
-                    el.occCon.classList.add('d-none');
-                    disableInside(el.termRow, true);
-                    disableInside(el.occCon, true);
+                if (el.termRow && el.occCon) {
+                    if (rec === 'monthly' || rec === 'yearly' || rec === 'custom') {
+                        el.termRow.classList.remove('d-none');
+                        disableInside(el.termRow, false);
+                        const hasEnd = $('#has_end')?.checked;
+                        el.occCon.classList.toggle('d-none', !hasEnd);
+                        disableInside(el.occCon, !hasEnd);
+                    } else {
+                        el.termRow.classList.add('d-none');
+                        el.occCon.classList.add('d-none');
+                        disableInside(el.termRow, true);
+                        disableInside(el.occCon, true);
+                    }
                 }
 
                 // Investimento: mostrar cofrinho
                 const showSaving = invest;
-                el.savingCon.classList.toggle('d-none', !showSaving);
-                disableInside(el.savingCon, !showSaving);
+                if (el.savingCon) {
+                    el.savingCon.classList.toggle('d-none', !showSaving);
+                    disableInside(el.savingCon, !showSaving);
+                }
             }
 
             // Listeners
@@ -278,6 +394,7 @@
             el.cat?.addEventListener('change', toggleAll);
             $('#has_end')?.addEventListener('change', toggleAll);
             $('#no_end')?.addEventListener('change', toggleAll);
+            $$('input[name="can_install"]').forEach(i => i.addEventListener('change', toggleAll));
 
             toggleAll();
         });

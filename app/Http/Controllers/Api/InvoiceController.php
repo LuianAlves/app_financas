@@ -80,19 +80,32 @@ class InvoiceController extends Controller
         $total = (float) DB::table('invoice_items')->where('invoice_id', $invoice->id)->sum('amount');
         if ($total <= 0) return response()->json(['message' => 'Nada a pagar nesta fatura.'], 422);
 
+        $data = $request->validate([
+            'amount'    => ['nullable', 'numeric', 'min:0'],
+            'paid_at'   => ['nullable', 'date'],
+            'method'    => ['nullable', 'string', 'max:50'],
+            'reference' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $amount = $data['amount'] ?? $total;
+        $paidAt = !empty($data['paid_at'])
+            ? Carbon::parse($data['paid_at'])
+            : now();
+
+        $method    = $data['method']    ?? $request->string('method', 'other');
+        $reference = $data['reference'] ?? $request->string('reference');
+
         try {
-            DB::transaction(function () use ($invoice, $total, $request) {
-                // cria o “fato” do pagamento
+            DB::transaction(function () use ($invoice, $amount, $paidAt, $method, $reference, $request) {
                 InvoicePayment::create([
                     'invoice_id' => $invoice->id,
                     'user_id'    => $request->user()->id,
-                    'amount'     => $total,                 // pagamento total
-                    'paid_at'    => now(),
-                    'method'     => $request->string('method', 'other'),
-                    'reference'  => $request->string('reference'),
+                    'amount'     => $amount,
+                    'paid_at'    => $paidAt,
+                    'method'     => $method,
+                    'reference'  => $reference,
                 ]);
 
-                // marca a fatura como paga
                 $invoice->update(['paid' => true]);
             });
         } catch (\Throwable $e) {

@@ -256,6 +256,33 @@
                 </div>
             </div>
 
+            {{-- Parcelar valor? (PIX ou cartão de crédito + Única) --}}
+            <div id="tx_can_install_row" class="mt-3 hidden">
+                <span class="text-xs text-neutral-500 dark:text-neutral-400">Parcelar valor?</span>
+                <div class="mt-1 grid grid-cols-2 gap-2">
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
+                        <input id="can_install_no" type="radio" name="can_install" value="0" class="hidden" checked>
+                        <span class="size-4 rounded-full border"></span>
+                        <span>Não</span>
+                    </label>
+                    <label class="tx-chip inline-flex items-center gap-2 px-3 py-2 rounded-xl">
+                        <input id="can_install_yes" type="radio" name="can_install" value="1" class="hidden">
+                        <span class="size-4 rounded-full border"></span>
+                        <span>Sim</span>
+                    </label>
+                </div>
+            </div>
+
+            {{-- Nº de parcelas --}}
+            <div id="tx_installments_wrap" class="mt-3 hidden">
+                <label class="block">
+                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Parcelas</span>
+                    <input id="installments" name="installments" type="number" min="1"
+                           class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
+                           placeholder="Ex: 3 parcelas">
+                </label>
+            </div>
+
             <div id="tx_custom_rec" class="mt-3 hidden">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <label class="block">
@@ -455,31 +482,72 @@
                         const setC=(id,on)=>{ const el=form.querySelector('#'+id); if(el){ el.checked=!!on; el.dispatchEvent(new Event('change')); } };
 
                         form.querySelector('[name="id"]')?.setAttribute('value', tx.id ?? tx.uuid ?? '');
-                        set('title', tx.title); set('description', tx.description);
-                        set('amount', tx.amount); set('date', String(tx.date ?? '').slice(0,10));
+
+                        set('title', tx.title);
+                        set('description', tx.description);
+                        set('amount', tx.amount);
+                        set('date', String(tx.date ?? '').slice(0,10));
                         set('transaction_category_id', tx.transaction_category_id ?? tx.category_id);
+
                         if(tx.account_id) set('account_id', tx.account_id);
-                        if(tx.card_id) set('card_id', tx.card_id);
+                        if(tx.card_id)    set('card_id', tx.card_id);
 
-                        const type=tx.type||'pix'; setC('pix',type==='pix'); setC('card',type==='card'); setC('money',type==='money');
-                        if(tx.type_card){ setC('credit',tx.type_card==='credit'); setC('debit',tx.type_card==='debit'); }
+                        const type = tx.type || 'pix';
+                        setC('pix',   type==='pix');
+                        setC('card',  type==='card');
+                        setC('money', type==='money');
 
-                        const rec=tx.recurrence_type||'unique';
-                        setC('unique',rec==='unique'); setC('monthly',rec==='monthly'); setC('yearly',rec==='yearly'); setC('custom',rec==='custom');
+                        if(tx.type_card){
+                            setC('credit', tx.type_card==='credit');
+                            setC('debit',  tx.type_card==='debit');
+                        }
+
+                        const rec = tx.recurrence_type || 'unique';
+                        setC('unique',  rec==='unique');
+                        setC('monthly', rec==='monthly');
+                        setC('yearly',  rec==='yearly');
+                        setC('custom',  rec==='custom');
 
                         if(tx.custom_occurrences) set('custom_occurrences', tx.custom_occurrences);
-                        if(tx.interval_value) set('interval_value', tx.interval_value);
-                        if(tx.include_sat!=null) form.querySelector('#include_sat').checked=!!+tx.include_sat;
-                        if(tx.include_sun!=null) form.querySelector('#include_sun').checked=!!+tx.include_sun;
+                        if(tx.interval_value)     set('interval_value', tx.interval_value);
+
+                        if(tx.include_sat != null) form.querySelector('#include_sat').checked = !!+tx.include_sat;
+                        if(tx.include_sun != null) form.querySelector('#include_sun').checked = !!+tx.include_sun;
+
+                        // Heurística: se é ÚNICA + tem custom_occurrences > 1 e (PIX ou crédito),
+                        // assume que é compra parcelada e preenche campos.
+                        const occ        = parseInt(tx.custom_occurrences ?? tx.installments ?? 0, 10);
+                        const isPix      = type === 'pix';
+                        const isCred     = type === 'card' && tx.type_card === 'credit';
+                        const isUnique   = rec === 'unique';
+                        const parcelado  = isUnique && occ > 1 && (isPix || isCred);
+
+                        if (parcelado) {
+                            setC('can_install_yes', true);
+                            const instInput = form.querySelector('#installments');
+                            if (instInput) instInput.value = occ || '';
+                        } else {
+                            setC('can_install_no', true);
+                        }
 
                         toggleUI(form);
                     },
                     clearForm:(form)=>{
                         form.reset();
                         form.querySelector('[name="id"]')?.setAttribute('value','');
-                        ['pix','card','money','credit','debit','unique','monthly','yearly','custom'].forEach(id=>{
-                            const el=form.querySelector('#'+id); if(el) el.dispatchEvent(new Event('change'));
+
+                        // dispara change nos grupos principais
+                        ['pix','card','money','credit','debit','unique','monthly','yearly','custom','no_end','has_end','can_install_no','can_install_yes'].forEach(id=>{
+                            const el=form.querySelector('#'+id);
+                            if(el) el.dispatchEvent(new Event('change'));
                         });
+
+                        // garante defaults básicos
+                        const setC=(id,on)=>{ const el=form.querySelector('#'+id); if(el){ el.checked=!!on; } };
+                        setC('unique', true);
+                        setC('no_end', true);
+                        setC('can_install_no', true);
+
                         toggleUI(form);
                     },
                     onBeforeSubmit:(fd)=>{
@@ -494,17 +562,29 @@
 
                 (function bindModalUI(){
                     const modal=document.getElementById('txModal'); if(!modal) return;
-                    const groups={pay:['pix','card','money'], card:['credit','debit'], rec:['unique','monthly','yearly','custom']};
+
+                    const groups = {
+                        pay:        ['pix','card','money'],
+                        card:       ['credit','debit'],
+                        rec:        ['unique','monthly','yearly','custom'],
+                        term:       ['no_end','has_end'],
+                        canInstall: ['can_install_no','can_install_yes'],
+                    };
 
                     modal.addEventListener('change',(e)=>{
                         const id=e.target?.id; if(!id) return;
+
                         Object.values(groups).forEach(g=>{
                             if(g.includes(id) && modal.querySelector('#'+id)?.checked){
                                 g.forEach(other=>{
-                                    if(other!==id){ const el=modal.querySelector('#'+other); if(el) el.checked=false; }
+                                    if(other!==id){
+                                        const el=modal.querySelector('#'+other);
+                                        if(el) el.checked=false;
+                                    }
                                 });
                             }
                         });
+
                         toggleUI(modal);
                     });
 
@@ -514,45 +594,101 @@
 
                 function toggleUI(scope){
                     const $=(sel)=>scope.querySelector(sel);
-                    const pay = $('#pix')?.checked ? 'pix' : ($('#card')?.checked ? 'card' : ($('#money')?.checked ? 'money' : null));
-                    const rec = $('#custom')?.checked ? 'custom' : ($('#monthly')?.checked ? 'monthly' : ($('#yearly')?.checked ? 'yearly' : 'unique'));
-                    const catSel=document.getElementById('tx_cat');
-                    const catType=((catSel?.selectedOptions?.[0]?.dataset?.type)||'');
-                    const typeNorm=(t)=>{t=String(t).toLowerCase(); if(t==='1'||t.includes('entrada'))return 'entrada'; if(t==='3'||t.includes('invest'))return 'investimento'; return 'despesa';}
-                    const invest=(typeNorm(catType)==='investimento');
 
-                    const cardType=document.getElementById('tx_card_type');
-                    const pixAcc=document.getElementById('tx_pix_acc');
-                    const cardSel=document.getElementById('tx_card_select');
-                    const altRow=document.getElementById('tx_alt_row');
-                    const altSel=document.getElementById('tx_alt_select');
-                    const savingW=document.getElementById('tx_saving_wrap');
-                    const termRow=document.getElementById('tx_term_row');
-                    const occWrap=document.getElementById('tx_occ');
+                    const pay = $('#pix')?.checked ? 'pix'
+                        : ($('#card')?.checked ? 'card'
+                            : ($('#money')?.checked ? 'money' : null));
 
-                    const credit=document.getElementById('credit');
-                    const debit=document.getElementById('debit');
-                    if(credit){ credit.disabled=invest; if(invest && credit.checked){ credit.checked=false; if(debit) debit.checked=true; } }
+                    const rec = $('#custom')?.checked ? 'custom'
+                        : ($('#monthly')?.checked ? 'monthly'
+                            : ($('#yearly')?.checked ? 'yearly' : 'unique'));
 
-                    const isCard=(pay==='card');
-                    const isCred=isCard && credit?.checked;
-                    const isRec=(rec!=='unique');
+                    const catSel = document.getElementById('tx_cat');
+                    const catType = (catSel?.selectedOptions?.[0]?.dataset?.type) || '';
 
+                    const typeNorm = (t)=>{
+                        t=String(t).toLowerCase();
+                        if(t==='1'||t.includes('entrada')) return 'entrada';
+                        if(t==='3'||t.includes('invest'))  return 'investimento';
+                        return 'despesa';
+                    };
+                    const invest = (typeNorm(catType)==='investimento');
+
+                    const cardType  = document.getElementById('tx_card_type');
+                    const pixAcc    = document.getElementById('tx_pix_acc');
+                    const cardSel   = document.getElementById('tx_card_select');
+                    const altRow    = document.getElementById('tx_alt_row');
+                    const altSel    = document.getElementById('tx_alt_select');
+                    const savingW   = document.getElementById('tx_saving_wrap');
+                    const termRow   = document.getElementById('tx_term_row');
+                    const occWrap   = document.getElementById('tx_occ');
+                    const customRec = document.getElementById('tx_custom_rec');
+
+                    const canRow    = document.getElementById('tx_can_install_row');
+                    const instWrap  = document.getElementById('tx_installments_wrap');
+                    const canYes    = document.getElementById('can_install_yes');
+                    const canNo     = document.getElementById('can_install_no');
+
+                    const credit = document.getElementById('credit');
+                    const debit  = document.getElementById('debit');
+
+                    // investimento não pode ser crédito
+                    if(credit){
+                        credit.disabled = invest;
+                        if(invest && credit.checked){
+                            credit.checked = false;
+                            if(debit) debit.checked = true;
+                        }
+                    }
+
+                    const isPix  = (pay === 'pix');
+                    const isCard = (pay === 'card');
+                    const isCred = isCard && !!(credit && credit.checked);
+                    const isRec  = (rec !== 'unique');
+
+                    // tipo de cartão / conta pix
                     cardType?.classList.toggle('hidden', !isCard);
-                    pixAcc?.classList.toggle('hidden', !(pay==='pix' || pay==='money'));
+                    pixAcc?.classList.toggle('hidden', !(isPix || pay==='money'));
 
-                    const showAlt=!!(isCred && isRec);
-                    const altOn=document.getElementById('alternate_cards')?.checked;
+                    // alternância de cartões (crédito recorrente)
+                    const showAlt  = isCred && isRec;
+                    const altOn    = document.getElementById('alternate_cards')?.checked;
                     altRow?.classList.toggle('hidden', !showAlt);
                     altSel?.classList.toggle('hidden', !(showAlt && altOn));
                     cardSel?.classList.toggle('hidden', !(isCard && !(showAlt && altOn)));
 
-                    termRow?.classList.toggle('hidden', rec==='unique');
-                    const hasEnd=document.getElementById('has_end')?.checked;
+                    // término / nº ocorrências
+                    termRow?.classList.toggle('hidden', rec === 'unique');
+                    const hasEnd = document.getElementById('has_end')?.checked;
                     occWrap?.classList.toggle('hidden', !(hasEnd && rec!=='unique'));
 
-                    document.getElementById('tx_custom_rec')?.classList.toggle('hidden', rec!=='custom');
+                    // recorrência custom
+                    customRec?.classList.toggle('hidden', rec !== 'custom');
+
+                    // cofrinho para investimento
                     savingW?.classList.toggle('hidden', !invest);
+
+                    // ===== Parcelamento (PIX ou cartão de CRÉDITO + Única) =====
+                    const showCan = !isRec && (isPix || isCred);
+
+                    if (canRow) {
+                        canRow.classList.toggle('hidden', !showCan);
+                        if (!showCan) {
+                            if (canNo)  canNo.checked  = true;
+                            if (canYes) canYes.checked = false;
+                        }
+                    }
+
+                    const canInstall = !!(canYes && canYes.checked);
+                    const showInst   = showCan && canInstall;
+
+                    if (instWrap) {
+                        instWrap.classList.toggle('hidden', !showInst);
+                        if (!showInst) {
+                            const inp = document.getElementById('installments');
+                            if (inp) inp.value = '';
+                        }
+                    }
                 }
 
                 const CSRF='{{ csrf_token() }}';

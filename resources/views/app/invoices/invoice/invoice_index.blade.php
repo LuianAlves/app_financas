@@ -1,26 +1,72 @@
 @extends('layouts.templates.app')
 @section('new-content')
-    <x-card-header prevRoute="{{ route('card-view.index') }}" iconRight="fa-solid fa-credit-card" title=""
-                   description=""></x-card-header>
+    <div class="flex items-center justify-between my-4">
+        <div>
+            <h2 class="text-xl font-semibold">Faturas</h2>
+            <p class="text-sm text-neutral-500 dark:text-neutral-400">Acompanhe as faturas do seu cartão {{$card->account->bank_name . ' ' . $card->last_four_digits}}</p>
+        </div>
+        <div class="hidden md:flex items-center gap-2">
+            <button data-open-modal="acc"
+                    class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
+                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Nova conta
+            </button>
+        </div>
+    </div>
 
     {{-- Carrossel de meses --}}
     <div class="icons-carousel" id="months">
         @foreach($invoices as $inv)
-            <button class="icon-button nav-link-atalho month-btn {{ $selectedYm === $inv->ym ? 'active' : '' }}" data-ym="{{ $inv->ym }}">
-                <span class="bg-{{ $inv->paid ? 'success' : 'danger' }}">{{ $inv->month }}</span>
+            <button
+                class="icon-button nav-link-atalho month-btn status-{{ $inv->status }} {{ $selectedYm === $inv->ym ? 'active' : '' }}"
+                data-ym="{{ $inv->ym }}"
+                data-status="{{ $inv->status }}"
+                data-paid="{{ $inv->paid ? 1 : 0 }}"
+            >
+                <span class="month-pill">{{ $inv->month }}</span>
                 <b>{{ $inv->total }}</b>
             </button>
         @endforeach
     </div>
 
+
     {{-- Header da fatura selecionada --}}
-    <div class="balance-box m-0 mb-3" id="invoiceHeader" data-card="{{ $card->id }}">
+    <div class="balance-box m-0 mb-3 status-{{ $header['status'] }}" id="invoiceHeader"
+         data-card="{{ $card->id }}"
+         data-status="{{ $header['status'] }}">
         <div class="d-flex align-items-center justify-content-between">
             <span class="fw-bold" id="hdr-month">Fatura de {{ $header['month_label'] }}</span>
-            <a href="{{route('invoice-payment.update', [$card->id, $header['ym']])}}">
-{{--                <i class="fa-solid fa-check-to-slot text-success fs-5"></i>--}}
-            </a>
+
+            <div class="d-flex align-items-center gap-2">
+            <span id="invoiceStatusBadge"
+                  class="badge rounded-pill small
+                    @if($header['status']==='paid') badge-status-paid
+                    @elseif($header['status']==='overdue') badge-status-overdue
+                    @else badge-status-pending @endif">
+                @if($header['status']==='paid')
+                    Paga
+                @elseif($header['status']==='overdue')
+                    Em atraso
+                @else
+                    Em aberto
+                @endif
+            </span>
+
+                {{-- botão que abre o modal --}}
+                <button type="button"
+                        class="btn btn-sm btn-link text-decoration-none pay-invoice-open
+                        @if($header['status']==='paid') d-none @endif"
+                        data-ym="{{ $header['ym'] }}"
+                        data-total-raw="{{ $header['total_raw'] }}"
+                        data-total-formatted="{{ $header['total'] }}">
+                    <i class="fa-solid fa-check-to-slot me-1"></i>
+                    Marcar pago
+                </button>
+            </div>
         </div>
+
         <strong id="hdr-total">{{ $header['total'] }}</strong>
         <span>Limite disponível <b id="hdr-limit">{{ $header['limit'] }}</b></span>
         <span class="closing-date" id="hdr-close">{!! $header['close_label'] !!}</span>
@@ -36,24 +82,215 @@
         :data="[]"
     />
 
-    <div id="confirmDeleteItem" class="x-confirm" hidden>
-        <div class="x-sheet" role="dialog" aria-modal="true" aria-labelledby="xConfirmTitle2">
-            <div class="x-head">
-                <h5 id="xConfirmTitle2">Remover item</h5>
-                <button type="button" class="x-close" data-action="cancel" aria-label="Fechar">×</button>
-            </div>
-            <div class="x-body">Deseja remover este item da fatura?</div>
-            <div class="x-actions">
-                <button type="button" class="btn btn-light" data-action="cancel">Cancelar</button>
-                <button type="button" class="btn btn-danger" data-action="confirm">Excluir</button>
+    <div id="confirmDeleteItem"
+         class="fixed inset-0 z-[60] hidden"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="deleteItemTitle">
+
+        {{-- Overlay --}}
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" data-del-overlay></div>
+
+        {{-- Sheet --}}
+        <div class="absolute inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[420px]">
+            <div class="rounded-t-3xl md:rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 shadow-soft dark:shadow-softDark p-4 md:p-6">
+                <div class="flex items-start justify-between">
+                    <h5 id="deleteItemTitle" class="text-lg font-semibold">Remover item</h5>
+                    <button type="button"
+                            id="deleteCloseBtn"
+                            class="size-10 grid place-items-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            aria-label="Fechar">
+                        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6 6 18"/>
+                            <path d="M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <p class="mt-3 text-sm text-neutral-600 dark:text-neutral-300">
+                    Deseja remover este item da fatura?
+                </p>
+
+                <div class="mt-5 flex items-center justify-end gap-2">
+                    <button type="button"
+                            id="deleteCancelBtn"
+                            class="px-3 py-2 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800">
+                        Cancelar
+                    </button>
+                    <button type="button"
+                            id="deleteConfirmBtn"
+                            class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-soft">
+                        Excluir
+                    </button>
+                </div>
             </div>
         </div>
     </div>
+
+
+    <div id="payInvoiceModal"
+         class="fixed inset-0 z-[60] hidden"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="payInvoiceTitle">
+
+        {{-- overlay --}}
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" data-pay-overlay></div>
+
+        {{-- sheet --}}
+        <div class="absolute inset-x-0 bottom-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[420px]">
+            <div class="rounded-t-3xl md:rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 shadow-soft dark:shadow-softDark p-4 md:p-6">
+                <div class="flex items-start justify-between">
+                    <h5 id="payInvoiceTitle" class="text-lg font-semibold">Confirmar pagamento da fatura</h5>
+                    <button type="button"
+                            class="size-10 grid place-items-center rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                            data-pay-close
+                            aria-label="Fechar">
+                        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6 6 18"/>
+                            <path d="M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <form id="payInvoiceFormModal" method="POST" class="mt-4 space-y-4">
+                    @csrf
+
+                    {{-- Valor a pagar (editável) --}}
+                    <div>
+                        <label for="payAmountInput" class="text-xs text-neutral-500 dark:text-neutral-400">
+                            Valor a pagar
+                        </label>
+
+                        <div class="mt-1 flex rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 overflow-hidden">
+                            <span class="inline-flex items-center px-3 text-sm text-neutral-500">R$</span>
+                            <input type="text"
+                                   class="flex-1 border-0 bg-transparent px-3 py-2 text-right font-semibold focus:outline-none focus:ring-0"
+                                   id="payAmountInput"
+                                   name="amount"
+                                   inputmode="decimal"
+                                   autocomplete="off">
+                        </div>
+
+                        <p class="mt-1 text-xs text-neutral-500">
+                            Valor total da fatura: <span id="payAmountLabel">R$ 0,00</span>
+                        </p>
+                    </div>
+
+                    {{-- Data do pagamento --}}
+                    <div>
+                        <label for="payDate" class="text-xs text-neutral-500 dark:text-neutral-400">
+                            Data do pagamento
+                        </label>
+                        <input type="date"
+                               class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
+                               id="payDate"
+                               name="paid_at"
+                               value="{{ now()->format('Y-m-d') }}">
+                    </div>
+
+                    <div class="pt-2 flex items-center justify-end gap-2">
+                        <button type="button"
+                                class="px-3 py-2 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                data-pay-close>
+                            Cancelar
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
+                            Confirmar pagamento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 @endsection
 
 @push('styles')
     <style>
         /* ===== Carrossel de Meses ===== */
+        .item-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 6px;
+        }
+
+        .item-actions button {
+            border: none;
+            background: transparent;
+            padding: 4px;
+            border-radius: 999px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .item-actions button:hover {
+            background: rgba(15,23,42,.06);
+            color: var(--brand);
+        }
+
+        /* bolinha do mês */
+        .icons-carousel .icon-button .month-pill {
+            background: #e5e7eb;
+            color: var(--text-primary);
+        }
+
+        .icons-carousel .icon-button.status-paid .month-pill {
+            background: var(--inv-blue);
+            color: #fff;
+        }
+
+        .icons-carousel .icon-button.status-pending .month-pill {
+            background: var(--inv-orange);
+            color: #fff;
+        }
+
+        .icons-carousel .icon-button.status-overdue .month-pill {
+            background: var(--inv-red);
+            color: #fff;
+        }
+
+        /* leve destaque na borda do card do mês */
+        .icons-carousel .icon-button.status-paid {
+            border-color: rgba(37,99,235,.35);
+        }
+        .icons-carousel .icon-button.status-pending {
+            border-color: rgba(249,115,22,.35);
+        }
+        .icons-carousel .icon-button.status-overdue {
+            border-color: rgba(239,68,68,.4);
+        }
+
+        /* box principal da fatura */
+        .balance-box.status-paid {
+            box-shadow: 0 6px 18px rgba(37,99,235,.22);
+            border: 1px solid rgba(37,99,235,.28);
+        }
+        .balance-box.status-pending {
+            box-shadow: 0 6px 18px rgba(249,115,22,.22);
+            border: 1px solid rgba(249,115,22,.28);
+        }
+        .balance-box.status-overdue {
+            box-shadow: 0 6px 18px rgba(239,68,68,.23);
+            border: 1px solid rgba(239,68,68,.3);
+        }
+
+        /* badge de status */
+        .badge-status-paid {
+            background: rgba(37,99,235,.09);
+            color: #1d4ed8;
+        }
+        .badge-status-pending {
+            background: rgba(249,115,22,.11);
+            color: #ea580c;
+        }
+        .badge-status-overdue {
+            background: rgba(239,68,68,.11);
+            color: #b91c1c;
+        }
+
         .icons-carousel {
             display: flex;
             gap: 14px;
@@ -155,17 +392,21 @@
         }
 
         /* ===== Lista ===== */
-        .swipe-item {
+        #invoiceItems {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .invoice-item {
             border-radius: 14px;
             border: 1px solid var(--card-border);
             background: var(--card-bg);
             box-shadow: 0 2px 8px var(--card-shadow);
-            overflow: hidden;
-            transition: transform .25s ease;
         }
 
-        .swipe-item:hover {
-            transform: scale(1.01);
+        .invoice-item:hover {
+            transform: translateY(-1px);
         }
 
         .tx-line {
@@ -173,15 +414,19 @@
             justify-content: space-between;
             align-items: center;
             padding: 12px 16px;
-            place-items: center;
+        }
+
+        .tx-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .title-date {
             display: flex;
             flex-direction: column;
-            align-items: flex-start; /* texto alinhado à esquerda */
-            gap: 2px; /* espaço entre título e data */
-            place-items: center;
+            align-items: flex-start;
+            gap: 2px;
         }
 
         .tx-title {
@@ -189,7 +434,7 @@
             font-size: 14px;
             color: var(--text-primary);
             line-height: 1.3;
-            text-transform: capitalize
+            text-transform: capitalize;
         }
 
         .tx-date {
@@ -197,9 +442,15 @@
             color: var(--text-secondary);
         }
 
+        .tx-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
         .amount-box {
             text-align: right;
-            min-width: 90px; /* garante espaço fixo */
+            min-width: 90px;
         }
 
         .tx-amount {
@@ -208,27 +459,44 @@
             color: var(--brand);
         }
 
-        /* container do ícone redondinho */
-        .icon-circle{
+        /* ícone redondo à esquerda */
+        .icon-circle {
             display: inline-grid;
-            place-items: center;            /* centraliza em X e Y */
-            width: 32px; height: 32px;
+            place-items: center;
+            width: 32px;
+            height: 32px;
             flex: 0 0 32px;
             border-radius: 50%;
             background: var(--cat-bg, var(--brand));
-            color:#fff;
-            font-size:14px;
-            line-height:1;
-            vertical-align: middle;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        /* botões editar / excluir */
+        .item-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 4px;
+        }
+
+        .item-actions button {
+            border: none;
+            background: transparent;
+            padding: 4px;
+            border-radius: 999px;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .item-actions button:hover {
+            background: rgba(15,23,42,.06);
+            color: var(--brand);
         }
 
 
         /* opcional: um espacinho entre o ícone e o texto */
         .d-flex.align-items-center { gap: 8px; }
-
-
-
-
 
         /* ===== Tema Claro ===== */
         :root {
@@ -241,9 +509,14 @@
             --circle-text: #ffffff;
             --text-primary: #111827;
             --text-secondary: #374151;
+
+            /* Cores de status (parecidas com o print 3) */
+            --inv-blue: #1dbd58;   /* pagas */
+            --inv-orange: #f97316; /* pendentes atuais/futuras */
+            --inv-red: #ef4444;    /* atrasadas */
         }
 
-        /* ===== Tema Escuro ===== */
+        /* opcional: no tema escuro, suaviza */
         .dark {
             --brand: #3b82f6;
             --card-bg: #1f2937;
@@ -254,6 +527,10 @@
             --circle-text: #ffffff;
             --text-primary: #f9fafb;
             --text-secondary: #d1d5db;
+
+            --inv-blue: #60a5fa;
+            --inv-orange: #fb923c;
+            --inv-red: #f87171;
         }
 
 
@@ -263,33 +540,51 @@
 @push('scripts')
     <script>
         (() => {
-            const months = document.getElementById('months');
-            const itemsBox = document.getElementById('invoiceItems');
+            const months        = document.getElementById('months');
+            const itemsBox      = document.getElementById('invoiceItems');
+            const invoiceHeader = document.getElementById('invoiceHeader');
+
+            if (!months || !itemsBox || !invoiceHeader) return;
+
             const hdrMonth = document.getElementById('hdr-month');
             const hdrTotal = document.getElementById('hdr-total');
             const hdrLimit = document.getElementById('hdr-limit');
             const hdrClose = document.getElementById('hdr-close');
-            const hdrDue = document.getElementById('hdr-due');
-            const cardId = document.getElementById('invoiceHeader').dataset.card;
+            const hdrDue   = document.getElementById('hdr-due');
 
-            const modalEl = document.getElementById('modalInvoiceItem');
-            const form = document.getElementById('formInvoiceItem');
-            const saveBtn = form?.querySelector('button[type="submit"]');
+            const statusBadge = document.getElementById('invoiceStatusBadge');
+            const cardId      = invoiceHeader.dataset.card;
 
-            const xConfirm = document.getElementById('confirmDeleteItem');
-            const xConfirmBtn = xConfirm.querySelector('[data-action="confirm"]');
-            const xCancelBtns = xConfirm.querySelectorAll('[data-action="cancel"]');
+            let payOpenBtn = document.querySelector('.pay-invoice-open');
+
+            // status atual da fatura (controla ícones de editar/excluir)
+            let currentInvoiceStatus = invoiceHeader.dataset.status || 'pending';
 
             const CSRF = '{{ csrf_token() }}';
-            const OPEN_W = 96, TH_OPEN = 40;
+
+            function getActiveMonthBtn() {
+                return months.querySelector('.month-btn.active') || months.querySelector('.month-btn');
+            }
+
+            function computeStatus(btn, serverStatus) {
+                const btnStatus = btn ? btn.dataset.status : null;
+                const btnPaid   = btn ? btn.dataset.paid === '1' : false;
+
+                let st = serverStatus || btnStatus || 'pending';
+                if (btnPaid) st = 'paid';
+                return st;
+            }
+
+            // ====== MODAL ITEM (x-modal) ======
+            let itemModalEl = document.getElementById('modalInvoiceItem');
+            const itemForm  = document.getElementById('formInvoiceItem');
+            const itemSave  = itemForm?.querySelector('button[type="submit"]');
 
             let currentMode = 'create'; // create|edit|show
-            let currentId = null;
-            let pendingDeleteId = null;
+            let currentId   = null;
 
-            // ====== Utils form
             function $(sel) {
-                return form?.querySelector(sel);
+                return itemForm?.querySelector(sel);
             }
 
             function setVal(id, val) {
@@ -310,245 +605,234 @@
             }
 
             function setFormMode(mode) {
+                if (!itemForm) return;
                 currentMode = mode;
                 const isShow = mode === 'show';
-                form.querySelectorAll('input,select,textarea,button').forEach(el => {
+                itemForm.querySelectorAll('input,select,textarea,button').forEach(el => {
                     if (el.type === 'submit') return;
                     el.disabled = isShow;
                 });
-                saveBtn?.classList.toggle('d-none', isShow);
+                if (itemSave) itemSave.classList.toggle('d-none', isShow);
             }
 
             function fillForm(it) {
-                // Ajuste estes IDs conforme seu form partial:
                 setVal('title', it.title);
                 setVal('amount', it.raw_amount ?? it.amount);
                 setVal('date', String(it.date ?? '').slice(0, 10));
-                if (it.installments) {
-                    setVal('installments', it.installments);
-                }
-                if (it.current_installment) {
-                    setVal('current_installment', it.current_installment);
-                }
-                // Exemplos de flags
+                if (it.installments)        setVal('installments', it.installments);
+                if (it.current_installment) setVal('current_installment', it.current_installment);
                 setCheck('is_projection', !!it.is_projection);
             }
 
             function clearForm() {
-                form.reset();
+                itemForm?.reset();
             }
 
-            function openModal(mode, it) {
+            function openItemModal(mode, it) {
+                if (!itemForm) return;
+                if (!itemModalEl) {
+                    itemModalEl = itemForm.closest('.x-confirm') || itemForm.closest('.modal');
+                }
+                if (!itemModalEl) return;
+
                 setFormMode(mode);
                 if (it) fillForm(it); else clearForm();
-                modalEl.classList.add('show');
+
+                itemModalEl.classList.add('show');
+                itemModalEl.hidden = false;
                 document.body.classList.add('modal-open');
             }
 
-            function closeModal() {
-                modalEl.classList.remove('show');
+            function closeItemModal() {
+                if (!itemModalEl) return;
+                itemModalEl.classList.remove('show');
+                itemModalEl.hidden = true;
                 document.body.classList.remove('modal-open');
             }
 
+            function closeItemIfOutside(e) {
+                if (!itemModalEl || !itemModalEl.classList.contains('show') || !itemForm) return;
+                const r = itemForm.getBoundingClientRect();
+                const p = e.touches ? e.touches[0] : e;
+                const x = p.clientX, y = p.clientY;
+                const inside = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+                if (!inside) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeItemModal();
+                }
+            }
+
+            window.addEventListener('pointerdown', closeItemIfOutside, true);
+            window.addEventListener('touchstart', closeItemIfOutside, {capture: true, passive: false});
+            document.getElementById('closeModal')?.addEventListener('click', closeItemModal);
+
+            // ====== MODAL DELETE ======
+            const delModal      = document.getElementById('confirmDeleteItem');
+            const delOverlay    = delModal?.querySelector('[data-del-overlay]');
+            const delConfirmBtn = document.getElementById('deleteConfirmBtn');
+            const delCancelBtn  = document.getElementById('deleteCancelBtn');
+            const delCloseBtn   = document.getElementById('deleteCloseBtn');
+            let   pendingDeleteId = null;
+
             function openConfirm() {
-                xConfirm.hidden = false;
-                xConfirm.classList.add('show');
-                document.body.classList.add('modal-open');
+                if (!delModal) return;
+                delModal.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
             }
 
             function closeConfirm() {
-                xConfirm.classList.remove('show');
-                xConfirm.hidden = true;
-                document.body.classList.remove('modal-open');
+                if (!delModal) return;
+                delModal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
             }
 
-            xConfirmBtn.addEventListener('click', async () => {
+            delConfirmBtn?.addEventListener('click', async () => {
                 await doDelete();
                 closeConfirm();
             });
-            xCancelBtns.forEach(b => b.addEventListener('click', closeConfirm));
-            xConfirm.addEventListener('click', (e) => {
-                if (e.target === xConfirm) closeConfirm();
-            });
+            delCancelBtn?.addEventListener('click', closeConfirm);
+            delCloseBtn?.addEventListener('click', closeConfirm);
+            delOverlay?.addEventListener('click', closeConfirm);
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && !xConfirm.hidden) closeConfirm();
+                if (e.key === 'Escape' && delModal && !delModal.classList.contains('hidden')) {
+                    closeConfirm();
+                }
             });
 
-            // ====== Render
+            async function doDelete() {
+                if (!pendingDeleteId) return;
+                const res = await fetch(`{{ url('/invoice-items') }}/${pendingDeleteId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': CSRF,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                if (!res.ok) {
+                    alert('Erro ao excluir');
+                    return;
+                }
+                itemsBox.querySelector(`.invoice-item[data-id="${pendingDeleteId}"]`)?.remove();
+                pendingDeleteId = null;
+            }
+
+            // ====== MODAL PAGAR FATURA ======
+            const payModal       = document.getElementById('payInvoiceModal');
+            const payOverlay     = payModal?.querySelector('[data-pay-overlay]');
+            const payFormModal   = document.getElementById('payInvoiceFormModal');
+            const payAmountLabel = document.getElementById('payAmountLabel');
+            const payAmountInput = document.getElementById('payAmountInput');
+            const payDateInput   = document.getElementById('payDate');
+
+            function openPayModal(cardId, ym, totalRaw, totalFormatted) {
+                if (!payModal || !payFormModal) return;
+
+                const action = `{{ url('/invoice/payment') }}/${cardId}/${ym}`;
+                payFormModal.action = action;
+
+                payAmountLabel.textContent = totalFormatted || 'R$ 0,00';
+                payAmountInput.value       = totalRaw != null ? totalRaw : '';
+
+                if (payDateInput && !payDateInput.value) {
+                    const today = new Date().toISOString().slice(0, 10);
+                    payDateInput.value = today;
+                }
+
+                payModal.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
+            }
+
+            function closePayModal() {
+                if (!payModal) return;
+                payModal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
+
+            if (payOpenBtn) {
+                payOpenBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const activeBtn = getActiveMonthBtn();
+                    const ym        = payOpenBtn.dataset.ym || activeBtn?.dataset.ym;
+                    const totalRaw  = payOpenBtn.dataset.totalRaw;
+                    const formatted = payOpenBtn.dataset.totalFormatted || hdrTotal.textContent;
+                    if (!ym) return;
+                    openPayModal(cardId, ym, totalRaw, formatted);
+                });
+            }
+
+            document.querySelectorAll('[data-pay-close]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    closePayModal();
+                });
+            });
+            payOverlay?.addEventListener('click', (e) => {
+                e.preventDefault();
+                closePayModal();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && payModal && !payModal.classList.contains('hidden')) {
+                    closePayModal();
+                }
+            });
+
+            // ====== RENDER ITENS ======
             function renderItem(it) {
-                const id = getId(it);
-                const inst = (it.installments > 1) ? `<small>${it.current_installment}/${it.installments}</small> ` : '';
-                const proj = it.is_projection ? '<small>(proj.)</small>' : '';
-                const date = it.date ?? '';
+                const id     = getId(it);
+                const inst   = (it.installments > 1)
+                    ? `${it.current_installment}/${it.installments} `
+                    : '';
+                const proj   = it.is_projection ? '<small>(proj.)</small>' : '';
+                const date   = it.date ?? '';
                 const amount = it.amount;
 
                 const iconCls = it.icon && it.icon.trim() ? it.icon : 'fa-solid fa-tag';
-                const bg = it.color || '#999';
+                const bg      = it.color || '#999';
+
+                const canEdit = currentInvoiceStatus !== 'paid';
+
+                const actionsHtml = canEdit ? `
+                    <div class="item-actions">
+                        <button type="button" class="item-edit-btn" title="Editar">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button type="button" class="item-delete-btn" title="Excluir">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                ` : '';
 
                 return `
-                          <li class="swipe-item" data-id="${id}">
+        <li class="invoice-item" data-id="${id}">
+            <div class="tx-line">
+                <div class="tx-left">
+                    <span class="icon-circle" style="--cat-bg:${bg}">
+                        <i class="${iconCls}"></i>
+                    </span>
+                    <div class="title-date">
+                        <span class="tx-title">${it.title ?? 'Sem título'}</span>
+                        <span class="tx-date">${date}</span>
+                    </div>
+                </div>
 
-                                <div class="swipe-content">
-                                      <div class="tx-line d-flex justify-content-between">
-                                           <div class="d-flex align-items-center">
-        <i class="${iconCls} text-white" style="font-size:12px;background:${bg};padding:7.5px;border-radius:50%;"></i>
-                                        <span class="tx-title">${it.title ?? 'Sem título'}</span>
-                                                    <small class="tx-date">${date}</small>
-
-                                           </div>
-                                           <span class="tx-amount price-default">${inst}${amount} ${proj}</span>
-                                      </div>
-                                </div>
-
-                          </li>`;
+                <div class="tx-right">
+                    <span class="tx-amount price-default">${inst}${amount} ${proj}</span>
+                    ${actionsHtml}
+                </div>
+            </div>
+        </li>`;
             }
 
             function paintList(list) {
-                itemsBox.innerHTML = list.map(renderItem).join('') || '<div class="p-3 text-muted">Sem lançamentos neste mês.</div>';
+                itemsBox.innerHTML =
+                    (list && list.length)
+                        ? list.map(renderItem).join('')
+                        : '<div class="p-3 text-muted">Sem lançamentos neste mês.</div>';
             }
 
-            // ====== Swipe handlers (mesma base)
-            let swipe = {active: null, startX: 0, dragging: false};
-
-            function closeAll() {
-                document.querySelectorAll('.swipe-item.open-left,.swipe-item.open-right').forEach(li => li.classList.remove('open-left', 'open-right'));
-            }
-
-            function dragTranslate(item, px) {
-                const content = item.querySelector('.swipe-content');
-                content.style.transition = 'none';
-                const clamp = Math.max(-OPEN_W, Math.min(OPEN_W, px));
-                content.style.transform = `translateX(${clamp}px)`;
-            }
-
-            function restoreTransition(item) {
-                const content = item.querySelector('.swipe-content');
-                requestAnimationFrame(() => content.style.transition = 'transform 160ms ease');
-            }
-
-            function onStart(e) {
-                if (document.body.classList.contains('modal-open')) return;
-                const li = e.target.closest('.swipe-item');
-                if (!li) return;
-                closeAll();
-                swipe.active = li;
-                swipe.dragging = true;
-                swipe.startX = (e.touches ? e.touches[0].clientX : e.clientX);
-                li.querySelector('.swipe-content').style.transition = 'none';
-            }
-
-            function onMove(e) {
-                if (document.body.classList.contains('modal-open')) return;
-                if (!swipe.dragging || !swipe.active) return;
-                const x = (e.touches ? e.touches[0].clientX : e.clientX);
-                const dx = x - swipe.startX;
-                let base = 0;
-                if (swipe.active.classList.contains('open-left')) base = -OPEN_W;
-                if (swipe.active.classList.contains('open-right')) base = OPEN_W;
-                const move = base + dx;
-                if (move < 0) dragTranslate(swipe.active, Math.max(move, -OPEN_W));
-                else dragTranslate(swipe.active, Math.min(move, OPEN_W));
-            }
-
-            function onEnd() {
-                if (document.body.classList.contains('modal-open')) return;
-                if (!swipe.dragging || !swipe.active) return;
-                const content = swipe.active.querySelector('.swipe-content');
-                restoreTransition(swipe.active);
-                const m = new WebKitCSSMatrix(getComputedStyle(content).transform);
-                const finalX = m.m41;
-                swipe.active.classList.remove('open-left', 'open-right');
-                if (finalX <= -TH_OPEN) swipe.active.classList.add('open-left');
-                else if (finalX >= TH_OPEN) swipe.active.classList.add('open-right');
-                content.style.transform = '';
-                swipe.dragging = false;
-                swipe.active = null;
-            }
-
-            itemsBox.addEventListener('touchstart', onStart, {passive: true});
-            itemsBox.addEventListener('mousedown', onStart);
-            window.addEventListener('touchmove', onMove, {passive: false});
-            window.addEventListener('mousemove', onMove);
-            window.addEventListener('touchend', onEnd);
-            window.addEventListener('mouseup', onEnd);
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.swipe-item')) closeAll();
-            });
-
-            // ====== Clicks Edit/Delete + abrir (show)
-            let suppressShowUntil = 0;
-            const suppressShow = (ms = 800) => {
-                suppressShowUntil = Date.now() + ms;
-            };
-
-            itemsBox.addEventListener('touchstart', (e) => {
-                if (document.body.classList.contains('modal-open')) return;
-                const btn = e.target.closest('.swipe-edit-btn,.swipe-delete-btn');
-                if (!btn) return;
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                suppressShow();
-                const li = btn.closest('.swipe-item');
-                const id = li?.dataset.id;
-                if (!id) return;
-                if (btn.classList.contains('swipe-edit-btn')) handleEdit(id);
-                else handleAskDelete(id);
-            }, {capture: true, passive: false});
-
-            itemsBox.addEventListener('pointerdown', (e) => {
-                if (document.body.classList.contains('modal-open')) return;
-                const btn = e.target.closest('.swipe-edit-btn,.swipe-delete-btn');
-                if (!btn) return;
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                suppressShow();
-                const li = btn.closest('.swipe-item');
-                const id = li?.dataset.id;
-                if (!id) return;
-                if (btn.classList.contains('swipe-edit-btn')) handleEdit(id);
-                else handleAskDelete(id);
-            }, true);
-
-            itemsBox.addEventListener('click', (e) => {
-                if (document.body.classList.contains('modal-open')) return;
-                if (e.target.closest('.swipe-edit-btn,.swipe-delete-btn')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                }
-            }, true);
-
-            itemsBox.addEventListener('click', async (e) => {
-                if (Date.now() < suppressShowUntil) return;
-                const content = e.target.closest('.swipe-content');
-                if (!content) return;
-                const li = content.closest('.swipe-item');
-                if (!li) return;
-
-                if (li.classList.contains('open-left') || li.classList.contains('open-right')) {
-                    closeAll();
-                    return;
-                }
-
-                const id = li.dataset.id;
-                currentId = id;
-                try {
-                    const res = await fetch(`{{ url('/invoice-items') }}/${id}`, {
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-                    if (!res.ok) throw new Error('Erro ao carregar item');
-                    const it = await res.json();
-                    openModal('show', it);
-                } catch (err) {
-                    alert(err.message);
-                }
-            });
-
+            // ====== CLIQUES NOS ITENS ======
             async function handleEdit(id) {
                 currentId = id;
                 const res = await fetch(`{{ url('/invoice-items') }}/${id}`, {
@@ -562,7 +846,7 @@
                     return;
                 }
                 const it = await res.json();
-                openModal('edit', it);
+                openItemModal('edit', it);
             }
 
             function handleAskDelete(id) {
@@ -570,70 +854,84 @@
                 openConfirm();
             }
 
-            async function doDelete() {
-                if (!pendingDeleteId) return;
-                const res = await fetch(`{{ url('/invoice-items') }}/${pendingDeleteId}`, {
-                    method: 'DELETE',
-                    headers: {'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}
-                });
-                if (!res.ok) {
-                    alert('Erro ao excluir');
+            itemsBox.addEventListener('click', async (e) => {
+                const row = e.target.closest('.invoice-item');
+                if (!row) return;
+                const id = row.dataset.id;
+
+                const isPaid = currentInvoiceStatus === 'paid';
+
+                if (e.target.closest('.item-edit-btn')) {
+                    e.preventDefault();
+                    if (isPaid) return;
+                    await handleEdit(id);
                     return;
                 }
-                itemsBox.querySelector(`.swipe-item[data-id="${pendingDeleteId}"]`)?.remove();
-                pendingDeleteId = null;
-            }
 
-            form?.addEventListener('submit', async (e) => {
+                if (e.target.closest('.item-delete-btn')) {
+                    e.preventDefault();
+                    if (isPaid) return;
+                    handleAskDelete(id);
+                    return;
+                }
+
+                try {
+                    const res = await fetch(`{{ url('/invoice-items') }}/${id}`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    if (!res.ok) throw new Error('Erro ao carregar item');
+                    const it = await res.json();
+                    openItemModal('show', it);
+                } catch (err) {
+                    alert(err.message);
+                }
+            });
+
+            // submit form de item
+            itemForm?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 if (currentMode === 'edit') {
-                    form.querySelectorAll('[disabled]').forEach(el => el.disabled = false);
+                    itemForm.querySelectorAll('[disabled]').forEach(el => el.disabled = false);
                 }
-                const fd = new FormData(form);
+                const fd = new FormData(itemForm);
                 let url, method = 'POST';
+
                 if (currentMode === 'edit' && currentId) {
                     url = `{{ url('/invoice-items') }}/${currentId}`;
                     fd.append('_method', 'PUT');
                 } else {
-                    url = `{{ route('invoice-items.store') }}`; // criar item avulso (se aplicável)
+                    url = `{{ route('invoice-items.store') }}`;
                 }
+
                 const res = await fetch(url, {
                     method,
-                    headers: {'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+                    headers: {
+                        'X-CSRF-TOKEN': CSRF,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
                     body: fd
                 });
                 if (!res.ok) {
                     alert('Erro ao salvar');
                     return;
                 }
-                closeModal();
-                // reload mês atual
-                const activeBtn = months.querySelector('.month-btn.active');
-                if (activeBtn) activeBtn.click();
+                closeItemModal();
+
+                const activeBtn = getActiveMonthBtn();
+                activeBtn?.click();
             });
 
-            // Fechar modal clicando fora
-            function closeIfOutside(e) {
-                if (!modalEl.classList.contains('show')) return;
-                const r = form.getBoundingClientRect();
-                const p = e.touches ? e.touches[0] : e;
-                const x = p.clientX, y = p.clientY;
-                const inside = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-                if (!inside) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    closeModal();
-                }
-            }
-
-            window.addEventListener('pointerdown', closeIfOutside, true);
-            window.addEventListener('touchstart', closeIfOutside, {capture: true, passive: false});
-            document.getElementById('closeModal')?.addEventListener('click', closeModal);
-
+            // ====== CARROSSEL DE MESES ======
             months.addEventListener('click', async (e) => {
                 const btn = e.target.closest('.month-btn');
                 if (!btn) return;
+
                 const ym = btn.dataset.ym;
+
                 months.querySelectorAll('.month-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
 
@@ -644,15 +942,43 @@
 
                 hdrMonth.textContent = 'Fatura de ' + data.header.month_label;
                 hdrTotal.textContent = data.header.total;
-                hdrLimit.innerHTML = data.header.limit;
-                hdrClose.innerHTML = data.header.close_label;
-                hdrDue.innerHTML = data.header.due_label;
+                hdrLimit.innerHTML   = data.header.limit;
+                hdrClose.innerHTML   = data.header.close_label;
+                hdrDue.innerHTML     = data.header.due_label;
+
+                let st = computeStatus(btn, data.header.status);
+
+                invoiceHeader.dataset.status = st;
+                currentInvoiceStatus         = st;
+
+                invoiceHeader.classList.remove('status-paid','status-pending','status-overdue');
+                invoiceHeader.classList.add('status-' + st);
+
+                statusBadge.classList.remove('badge-status-paid','badge-status-pending','badge-status-overdue');
+                statusBadge.classList.add('badge-status-' + st);
+                statusBadge.textContent =
+                    st === 'paid' ? 'Paga' : (st === 'overdue' ? 'Em atraso' : 'Em aberto');
+
+                payOpenBtn = document.querySelector('.pay-invoice-open');
+                if (payOpenBtn) {
+                    if (st === 'paid') {
+                        payOpenBtn.classList.add('d-none');
+                    } else {
+                        payOpenBtn.classList.remove('d-none');
+                        payOpenBtn.dataset.ym             = data.header.ym;
+                        payOpenBtn.dataset.totalRaw       = data.header.total_raw;
+                        payOpenBtn.dataset.totalFormatted = data.header.total;
+                    }
+                }
 
                 paintList(data.items || []);
+
+                const offset = Math.max(0, btn.offsetLeft - 12);
+                months.scrollLeft = offset;
             });
 
-            // ====== Boot inicial com os itens do blade (server-side) — transforma $items em swipe
-            (function bootstrapFromServer() {
+            // ====== BOOT ======
+            function bootstrapFromServer() {
                 const initial = [
                         @foreach($items as $it)
                     {
@@ -670,9 +996,47 @@
                     @endforeach
                 ];
                 paintList(initial);
-            })();
+            }
 
+            function selectInitialMonth() {
+                const btns = Array.from(months.querySelectorAll('.month-btn'));
+                if (!btns.length) return;
+
+                const nowYm = parseInt('{{ now()->format('Ym') }}', 10);
+                let target  = null;
+
+                target = btns.find(b =>
+                    parseInt(b.dataset.ym, 10) >= nowYm &&
+                    b.dataset.status !== 'paid'
+                );
+
+                if (!target) {
+                    target = btns.find(b => b.dataset.status !== 'paid');
+                }
+
+                if (!target) {
+                    target = btns[btns.length - 1];
+                }
+
+                btns.forEach(b => b.classList.remove('active'));
+                target.classList.add('active');
+
+                const st = computeStatus(target, invoiceHeader.dataset.status || null);
+                invoiceHeader.dataset.status = st;
+                currentInvoiceStatus         = st;
+
+                const offset = Math.max(0, target.offsetLeft - 12);
+                months.scrollLeft = offset;
+
+                target.click();
+            }
+
+            bootstrapFromServer();
+            selectInitialMonth();
         })();
     </script>
 @endpush
+
+
+
 

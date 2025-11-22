@@ -22,6 +22,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
+
         /*
         |--------------------------------------------------------------------------
         | PROCESSAR ANIVERSÁRIOS DOS INVESTIMENTOS
@@ -39,6 +40,10 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()            // impede rodar 2 vezes
             ->runInBackground();              // roda em paralelo (opcional)
 
+        $schedule->command('cdi:update')
+            ->dailyAt('08:00')       // horário que você quiser
+            ->withoutOverlapping()
+            ->onOneServer();
         /*
         |--------------------------------------------------------------------------
         | OUTROS EXEMPLOS (caso precise no futuro)
@@ -49,6 +54,7 @@ class Kernel extends ConsoleKernel
         | $schedule->call(fn() => Log::info('Teste'))->everyMinute();
         |
         */
+
 
     }
 

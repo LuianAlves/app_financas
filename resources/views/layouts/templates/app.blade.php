@@ -74,7 +74,7 @@
     <script src="/assets/js/common/crud-model.js"></script>
 
     <!-- Include:scripts -->
-    @include('layouts.partials.scripts')
+{{--    @include('layouts.partials.scripts')--}}
     @stack('scripts')
 
 </body>

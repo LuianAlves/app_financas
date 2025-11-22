@@ -1,4 +1,4 @@
-{{-- resources/views/app/digest/index.blade.php --}}
+{{-- resources/views/app/digest/saving_index.blade.php --}}
 @extends('layouts.templates.app')
 
 @section('new-content')

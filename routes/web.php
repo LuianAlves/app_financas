@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
 
 // Api Controllers
-use App\Http\Controllers\Api\{
+use App\Http\Controllers\Api\{SavingTransactionController,
     UserController as ApiUserController,
     AccountController as ApiAccountController,
     CardController as ApiCardController,
@@ -19,8 +19,7 @@ use App\Http\Controllers\Api\{
     RecurrentController as ApiRecurrentController,
     SavingController as ApiSavingController,
     TransactionController as ApiTransactionController,
-    InvestmentController as ApiInvestmentController,
-};
+    InvestmentController as ApiInvestmentController};
 
 // Web Controllers
 use App\Http\Controllers\Web\{ChartController,
@@ -83,6 +82,12 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
         //Savings
         Route::get('/saving', [WebSavingController::class, 'index'])->name('saving-view.index');
         Route::resource('savings', ApiSavingController::class)->scoped(['saving' => 'uuid']);
+
+        // DEPÓSITO
+        Route::post('/savings/{saving}/deposit', [SavingTransactionController::class, 'deposit']);
+
+        // SAQUE
+        Route::post('/savings/{saving}/withdraw', [SavingTransactionController::class, 'withdraw']);
 
         Route::resource('recurrents', ApiRecurrentController::class)->scoped(['recurrent' => 'uuid']);
 

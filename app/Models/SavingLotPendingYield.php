@@ -5,31 +5,32 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class SavingMovement extends Model
+class SavingLotPendingYield extends Model
 {
     use HasUuids;
 
-    protected $table = 'saving_movements';
-
+    protected $table = 'saving_lot_pending_yields';
     public $incrementing = false;
     protected $keyType = 'string';
+    public $timestamps = false;
 
     protected $fillable = [
         'id',
-        'user_id',
-        'saving_id',
         'lot_id',
-        'transaction_id',
-        'account_id',
-        'direction',
-        'amount',
-        'date',
-        'notes',
+        'saving_id',
+        'base_amount',
+        'days_invested',
+        'yield_amount',
+        'credit_date',
+        'credited_at',
     ];
 
     protected $casts = [
-        'amount' => 'float',
-        'date'   => 'datetime',
+        'base_amount'   => 'float',
+        'days_invested' => 'int',
+        'yield_amount'  => 'float',
+        'credit_date'   => 'date',
+        'credited_at'   => 'datetime',
     ];
 
     public function lot()
@@ -37,15 +38,14 @@ class SavingMovement extends Model
         return $this->belongsTo(SavingLot::class, 'lot_id');
     }
 
-    public function account()
-    {
-        return $this->belongsTo(Account::class);
-    }
-
     public function parentSaving()
     {
         return $this->belongsTo(Saving::class, 'saving_id');
     }
 
-
 }
+
+
+
+
+

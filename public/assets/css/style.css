@@ -151,3 +151,16 @@ html {
     border-color: #2563eb !important;
     color: #fff !important;
 }
+
+/* Força o layout novo e ignora o antigo */
+.card-floating {
+    all: unset !important;
+    display: block !important;
+    border-radius: 0.75rem !important;
+    overflow: hidden !important;
+}
+.card-floating [data-bg] {
+    border-radius: 0.75rem !important;
+}
+
+

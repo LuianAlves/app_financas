@@ -19,7 +19,7 @@
             <main id="conteudo" class="flex-1 max-w-7xl mx-auto w-full px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8 md:pt-6">
                 @yield('new-content')
             </main>
-            
+
             <!-- Speed Dial / FAB (mobile) -->
 {{--            <div id="speedDial" class="md:hidden fixed bottom-20 right-4 z-50">--}}
 {{--                <div class="relative">--}}
@@ -70,8 +70,13 @@
 <!-- Include:bottom_nav -->
             @include('layouts.partials.bottom_nav')
 
+    <!-- CrudLite global (precisa vir ANTES do scripts) -->
+    <script src="/assets/js/common/crud-model.js"></script>
+
     <!-- Include:scripts -->
     @include('layouts.partials.scripts')
+    @stack('scripts')
+
 </body>
 </html>
 

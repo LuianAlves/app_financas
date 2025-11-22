@@ -1,21 +1,23 @@
 @extends('layouts.templates.app')
 
 @section('new-content')
-{{--    @push('styles')--}}
-{{--        <style>--}}
-{{--            /* Skeleton */--}}
-{{--            .skel { position:relative; overflow:hidden; border-radius:.5rem; background:#e5e7eb }--}}
-{{--            .dark .skel { background:#262626 }--}}
-{{--            .skel::after { content:""; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); animation:skel 1.1s infinite }--}}
-{{--            @keyframes skel { 100% { transform:translateX(100%) } }--}}
 
-{{--            #savFab { z-index:80 }--}}
-{{--            body.ui-modal-open #savFab { pointer-events:none }--}}
 
-{{--            .card-floating { transition:transform .2s ease, box-shadow .2s ease; cursor:pointer; }--}}
-{{--            .card-floating:hover { transform:translateY(-4px); box-shadow:0 8px 20px rgba(0,0,0,.25) }--}}
-{{--        </style>--}}
-{{--    @endpush--}}
+        @push('styles')
+        <style>
+            /* Skeleton */
+            .skel { position:relative; overflow:hidden; border-radius:.5rem; background:#e5e7eb }
+            .dark .skel { background:#262626 }
+            .skel::after { content:""; position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent); animation:skel 1.1s infinite }
+            @keyframes skel { 100% { transform:translateX(100%) } }
+
+            #savFab { z-index:80 }
+            body.ui-modal-open #savFab { pointer-events:none }
+
+            .card-floating { transition:transform .2s ease, box-shadow .2s ease; cursor:pointer; }
+            .card-floating:hover { transform:translateY(-4px); box-shadow:0 8px 20px rgba(0,0,0,.25) }
+        </style>
+    @endpush
 
     <section id="savings-page" class="mt-6">
 

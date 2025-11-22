@@ -676,11 +676,7 @@
 
         window.addEventListener('resize', updateFabVisibility);
 
-    window.savingTemplate = savingTemplate;
+        window.savingTemplate = savingTemplate;
     })();
 
 </script>
-
-
-
-

@@ -75,7 +75,7 @@
 
     <!-- Include:scripts -->
     @include('layouts.partials.scripts')
-    @stack('scripts')
+{{--    @stack('scripts')--}}
 
 </body>
 </html>

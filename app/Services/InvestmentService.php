@@ -7,6 +7,7 @@ use App\Models\Saving;
 use App\Models\SavingLot;
 use App\Models\SavingLotPendingYield;
 use App\Models\SavingMovement;
+use App\Models\AccountMovement;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -22,19 +23,66 @@ class InvestmentService
         return $createdAt->copy()->addMonthNoOverflow()->toDateString();
     }
 
+    /**
+     * DEPÓSITO NO COFRINHO
+     * - Debita a conta vinculada
+     * - Cria movimento em account_movements (saving_out)
+     * - Cria lote e movement em savings
+     */
     public function deposit(Saving $saving, float $amount, Carbon $date, ?Account $account = null, ?string $notes = null): SavingLot
     {
         return DB::transaction(function () use ($saving, $amount, $date, $account, $notes) {
-            if ($account) {
-                if ($account->current_balance < $amount) {
+
+            // Sempre resolve a conta vinculada ao cofrinho
+            if (!$account) {
+                if (!$saving->account_id) {
                     throw ValidationException::withMessages([
-                        'amount' => 'Saldo insuficiente na conta vinculada.'
+                        'account_id' => 'Este cofrinho não possui uma conta vinculada.',
                     ]);
                 }
-                $account->current_balance -= $amount;
-                $account->save();
+
+                $account = Account::lockForUpdate()->find($saving->account_id);
             }
 
+            if (!$account) {
+                throw ValidationException::withMessages([
+                    'account_id' => 'Conta vinculada não encontrada.',
+                ]);
+            }
+
+            if ($account->user_id !== $saving->user_id) {
+                throw ValidationException::withMessages([
+                    'account_id' => 'Conta inválida para este cofrinho.',
+                ]);
+            }
+
+            if ($account->current_balance < $amount) {
+                throw ValidationException::withMessages([
+                    'amount' => 'Saldo insuficiente na conta vinculada.',
+                ]);
+            }
+
+            // Debita a conta
+            $account->current_balance -= $amount;
+            $account->save();
+
+            // Movimento de conta: dinheiro saiu da conta pro cofrinho
+            AccountMovement::create([
+                'user_id'          => $account->user_id,
+                'account_id'       => $account->id,
+                'occurred_at'      => $date,
+                'amount'           => $amount,
+                'type'             => 'saving_out', // saiu da conta
+                'description'      => $notes ?? "Transferência para cofrinho {$saving->name}",
+                'transaction_id'   => null,
+                'payment_transaction_id' => null,
+                'invoice_id'       => null,
+                'saving_id'        => $saving->id,
+                'transfer_group_id'=> null,
+                'balance_after'    => $account->current_balance,
+            ]);
+
+            // Cria lote
             $lot = SavingLot::create([
                 'saving_id'            => $saving->id,
                 'original_amount'      => $amount,
@@ -44,17 +92,19 @@ class InvestmentService
                 'next_yield_date'      => $this->nextAnniversary($date),
             ]);
 
+            // Movimento do saving
             SavingMovement::create([
-                'user_id'   => $saving->user_id,
-                'saving_id' => $saving->id,
-                'lot_id'    => $lot->id,
-                'account_id'=> $account?->id,
-                'direction' => 'deposit',
-                'amount'    => $amount,
-                'date'      => $date->toDateString(),
-                'notes'     => $notes ?? 'Aporte',
+                'user_id'    => $saving->user_id,
+                'saving_id'  => $saving->id,
+                'lot_id'     => $lot->id,
+                'account_id' => $account->id,
+                'direction'  => 'deposit',
+                'amount'     => $amount,
+                'date'       => $date->toDateString(),
+                'notes'      => $notes ?? 'Aporte',
             ]);
 
+            // Atualiza saldo do cofrinho
             $saving->current_amount += $amount;
             $saving->save();
 
@@ -62,19 +112,64 @@ class InvestmentService
         });
     }
 
+    /**
+     * RESGATE DO COFRINHO
+     * - Debita o cofrinho
+     * - Credita a conta vinculada
+     * - Cria movimento em account_movements (saving_in)
+     * - Atualiza lotes e movements
+     */
     public function withdraw(Saving $saving, float $amount, Carbon $date, ?Account $account = null, ?string $notes = null): void
     {
         DB::transaction(function () use ($saving, $amount, $date, $account, $notes) {
+
             if ($saving->current_amount < $amount) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Saldo insuficiente no investimento.'
+                    'amount' => 'Saldo insuficiente no cofrinho.',
                 ]);
             }
 
-            if ($account) {
-                $account->current_balance += $amount;
-                $account->save();
+            if (!$account) {
+                if (!$saving->account_id) {
+                    throw ValidationException::withMessages([
+                        'account_id' => 'Este cofrinho não possui uma conta vinculada.',
+                    ]);
+                }
+
+                $account = Account::lockForUpdate()->find($saving->account_id);
             }
+
+            if (!$account) {
+                throw ValidationException::withMessages([
+                    'account_id' => 'Conta vinculada não encontrada.',
+                ]);
+            }
+
+            if ($account->user_id !== $saving->user_id) {
+                throw ValidationException::withMessages([
+                    'account_id' => 'Conta inválida para este cofrinho.',
+                ]);
+            }
+
+            // Credita a conta
+            $account->current_balance += $amount;
+            $account->save();
+
+            // Movimento de conta: dinheiro entrou vindo do cofrinho
+            AccountMovement::create([
+                'user_id'          => $account->user_id,
+                'account_id'       => $account->id,
+                'occurred_at'      => $date,
+                'amount'           => $amount,
+                'type'             => 'saving_in', // entrou na conta
+                'description'      => $notes ?? "Resgate do cofrinho {$saving->name}",
+                'transaction_id'   => null,
+                'payment_transaction_id' => null,
+                'invoice_id'       => null,
+                'saving_id'        => $saving->id,
+                'transfer_group_id'=> null,
+                'balance_after'    => $account->current_balance,
+            ]);
 
             $remaining = $amount;
 
@@ -120,14 +215,14 @@ class InvestmentService
                 $lot->save();
 
                 SavingMovement::create([
-                    'user_id'   => $saving->user_id,
-                    'saving_id' => $saving->id,
-                    'lot_id'    => $lot->id,
-                    'account_id'=> $account?->id,
-                    'direction' => 'withdraw',
-                    'amount'    => $consumed,
-                    'date'      => $date->toDateString(),
-                    'notes'     => $notes ?? 'Saque',
+                    'user_id'    => $saving->user_id,
+                    'saving_id'  => $saving->id,
+                    'lot_id'     => $lot->id,
+                    'account_id' => $account->id,
+                    'direction'  => 'withdraw',
+                    'amount'     => $consumed,
+                    'date'       => $date->toDateString(),
+                    'notes'      => $notes ?? 'Saque',
                 ]);
 
                 $remaining -= $consumed;

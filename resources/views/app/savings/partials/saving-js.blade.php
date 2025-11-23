@@ -434,14 +434,34 @@
             }
 
             if (act === 'delete') {
-                try {
-                    await crud.delete(sheetId);   // usa delete do CrudLite (com confirmDelete interno)
-                    await crud.reload();
-                } catch (e) {
-                    alert(e.message || 'Erro ao excluir');
-                }
-                return;
+    // confirmação simples (igual ao confirmDelete do CrudLite)
+    const ok = confirm('Excluir este cofrinho?');
+    if (!ok) return;
+
+    try {
+        const res = await fetch(u(ROUTES.destroy, sheetId), {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': CSRF,
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
             }
+        });
+
+        if (!res.ok) {
+            let data = null;
+            try { data = await res.json(); } catch {}
+            throw new Error(data?.message || 'Erro ao excluir.');
+        }
+
+        await crud.reload();
+    } catch (e) {
+        alert(e.message || 'Erro ao excluir');
+    }
+
+    return;
+}
+
 
             if (act === 'deposit') {
                 doDeposit(sheetId);

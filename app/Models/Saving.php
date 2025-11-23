@@ -23,7 +23,8 @@ class Saving extends Model
         'rate_period',
         'start_date',
         'notes',
-        'cdi_percent', // novo
+        'cdi_percent',
+        'color_card',
     ];
 
     protected $casts = [

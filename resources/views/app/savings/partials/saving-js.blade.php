@@ -130,7 +130,11 @@
 
         function savingTemplate(sv) {
             const id = sv.id;
-            const color = getSavingColor(id, sv.color_card || '#00BFA6');
+
+            // 1) PRIORIDADE: cor vinda do backend (salva em `color_card` no banco)
+            // 2) Se não tiver no backend, tenta o que estiver no localStorage
+            // 3) Se nada, cai no fallback padrão
+            const color = sv.color_card || getSavingColor(id, '#00BFA6');
 
             const principal  = computePrincipal(sv);
             const total      = computeTotal(sv);
@@ -145,7 +149,7 @@
 
             return `
 <article data-id="${id}" class="card-floating rounded-xl shadow-soft overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-  <div class="p-4 flex flex-col gap-3" data-bg style="background:${color};color:white;">
+  <div class="p-4 flex flex-col gap-3" style="background:${color}; color:white;" data-bg>
 
     <div class="flex items-start justify-between">
       <div>
@@ -153,7 +157,7 @@
         <p class="text-xs opacity-80">${accName}</p>
       </div>
       <button type="button" data-sheet-open class="inline-grid size-8 place-items-center rounded-lg hover:bg-black/20">
-        <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg class="size-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="5" cy="12" r="1.5"></circle>
           <circle cx="12" cy="12" r="1.5"></circle>
           <circle cx="19" cy="12" r="1.5"></circle>
@@ -178,14 +182,16 @@
     </div>
 
     <div class="flex items-center justify-between text-[11px] opacity-90">
-      <span>${(cdiPercent*100).toLocaleString('pt-BR',{maximumFractionDigits:2})}% do CDI</span>
+      <span>${(cdiPercent*100).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:2})}% do CDI</span>
       <span>Criado em: ${dateBR(sv.start_date || sv.created_at)}</span>
     </div>
 
     ${sv.notes ? `<p class="text-[11px] mt-1 opacity-90">Obs.: ${sv.notes}</p>` : ''}
   </div>
-</article>`;
+</article>
+    `;
         }
+
 
         /* ============================================================
          *  CRUDLITE
@@ -218,47 +224,35 @@
             skeletonCount: 6,
 
             onBeforeSubmit(fd){
-            // 🔹 normaliza data
-            const sd = fd.get('start_date');
-            if (sd) {
-                fd.set('start_date', String(sd).slice(0,10));
-            }
-        
-            // 🔹 normaliza CDI
-            // usuário digita EX: "105" (105%)
-            // backend recebe 1.05 (fator)
-            const cp = fd.get('cdi_percent');
-            if (cp != null) {
-                const cleaned = String(cp)
-                    .replace(/[^\d,.,-]/g,'')                 // remove símbolos, espaço, etc
-                    .replace(/\.(?=\d{3}(?:\D|$))/g,'')       // remove ponto de milhar
-                    .replace(',', '.');                       // vírgula -> ponto
-        
-                const num = parseFloat(cleaned) || 0;         // ex: "105" → 105
-                const factor = num / 100;                     // 105 → 1.05
-        
-                fd.set('cdi_percent', factor.toFixed(4));     // manda 1.0500
-            }
-        
-            // NÃO mandar cor nem aporte inicial para o backend
-            fd.delete('color_card');
-            fd.delete('current_amount');
-        
-            // guarda a cor que o usuário escolheu para usarmos depois
-            const chosenColor = form.querySelector('#color_card')?.value || '#00BFA6';
-            pendingColor = chosenColor;
-        
-            return fd;
-        },
+                const sd = fd.get('start_date');
+                if (sd != null) fd.set('start_date', String(sd).slice(0, 10));
+
+                const cp = fd.get('cdi_percent');
+                if (cp != null) {
+                    const cleaned = String(cp)
+                        .replace(/[^\d,.,-]/g,'')                 // remove símbolos, espaço, etc
+                        .replace(/\.(?=\d{3}(?:\D|$))/g,'')       // remove ponto de milhar
+                        .replace(',', '.');                       // vírgula -> ponto
+
+                    const num = parseFloat(cleaned) || 0;         // ex: "105" → 105
+                    const factor = num / 100;                     // 105 → 1.05
+
+                    fd.set('cdi_percent', factor.toFixed(4));     // manda 1.0500
+                }
+
+                fd.delete('current_amount');
+
+                return fd;
+            },
 
 
             fillForm(formEl, sv){
                 const id = sv.id ?? sv.uuid ?? '';
-            
+
                 formEl.querySelector('#sav_id').value = id;
                 formEl.name.value        = sv.name ?? '';
                 formEl.account_id.value  = sv.account_id ?? sv.account?.id ?? '';
-            
+
                 // sv.cdi_percent vem do banco como fator (1.05)
                 // mostramos como 105 no input
                 const factor = sv.cdi_percent ?? 1.00;
@@ -266,10 +260,10 @@
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 2,
                 });
-            
+
                 formEl.start_date.value  = (sv.start_date ?? '').slice(0,10);
                 formEl.notes.value       = sv.notes ?? '';
-            
+
                 const colorInput = formEl.querySelector('#color_card');
                 if (colorInput) {
                     colorInput.value = getSavingColor(id, sv.color_card || '#00BFA6');
@@ -341,26 +335,61 @@
          *  DEPÓSITO / SAQUE
          * ============================================================ */
 
+        // Helper genérico para tratar erros da API (422 + outros)
+        async function handleApiErrorResponse(res, fallbackMessage) {
+            let data = null;
+
+            try {
+                data = await res.json();
+            } catch (e) {
+                // se não vier JSON, ignora e usa mensagem padrão
+            }
+
+            // Erros de validação (422) com mensagens do Laravel
+            if (res.status === 422 && data && data.errors) {
+                const errors = data.errors;
+
+                const msg =
+                    (errors.amount && errors.amount[0]) ||
+                    (errors.current_amount && errors.current_amount[0]) ||
+                    (errors.account_id && errors.account_id[0]) ||
+                    fallbackMessage;
+
+                alert(msg);
+                return;
+            }
+
+            // Outros erros com message ou fallback
+            const msg = (data && data.message) || fallbackMessage;
+            alert(msg);
+        }
+
+
         async function doDeposit(id) {
             const v = prompt('Valor do depósito (R$):');
             const amount = moneyToNumber(v);
             if (!amount || amount <= 0) return alert('Valor inválido.');
 
             try {
-                const res = await fetch(u(ROUTES.deposit,id),{
-                    method:'POST',
-                    headers:{
-                        'X-CSRF-TOKEN':CSRF,
-                        'X-Requested-With':'XMLHttpRequest',
-                        'Accept':'application/json',
-                        'Content-Type':'application/json'
+                const res = await fetch(u(ROUTES.deposit, id), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': CSRF,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
                     },
-                    body:JSON.stringify({amount})
+                    body: JSON.stringify({ amount })
                 });
-                if (!res.ok) throw new Error('Erro ao depositar.');
+
+                if (!res.ok) {
+                    await handleApiErrorResponse(res, 'Não foi possível realizar o depósito.');
+                    return;
+                }
+
                 await crud.reload();
             } catch (e) {
-                alert(e.message || 'Erro ao depositar');
+                alert('Erro inesperado ao realizar o depósito.');
             }
         }
 
@@ -370,26 +399,28 @@
             if (!amount || amount <= 0) return alert('Valor inválido.');
 
             try {
-                const res = await fetch(u(ROUTES.withdraw,id),{
-                    method:'POST',
-                    headers:{
-                        'X-CSRF-TOKEN':CSRF,
-                        'X-Requested-With':'XMLHttpRequest',
-                        'Accept':'application/json',
-                        'Content-Type':'application/json'
+                const res = await fetch(u(ROUTES.withdraw, id), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': CSRF,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
                     },
-                    body:JSON.stringify({amount})
+                    body: JSON.stringify({ amount })
                 });
+
                 if (!res.ok) {
-                    let d = null;
-                    try { d = await res.json(); } catch {}
-                    throw new Error(d?.message || 'Erro ao sacar.');
+                    await handleApiErrorResponse(res, 'Não foi possível realizar o saque.');
+                    return;
                 }
+
                 await crud.reload();
             } catch (e) {
-                alert(e.message || 'Erro ao sacar');
+                alert('Erro inesperado ao realizar o saque.');
             }
         }
+
 
         /* ============================================================
          *  BOTTOM SHEET

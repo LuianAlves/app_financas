@@ -414,7 +414,8 @@
             reload: loadList,
             openCreate,
             openModal,
-            closeModal
+            closeModal,
+            delete: doDelete,
         };
     }
 

@@ -51,13 +51,13 @@
                     </select>
                 </label>
 
-                <label class="block">
-                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Aporte inicial (R$)</span>
-                    <input id="current_amount" name="current_amount" inputmode="decimal"
-                           placeholder="0,00"
-                           class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70
-                                  bg-white/90 dark:bg-neutral-900/70 px-3 py-2">
-                </label>
+{{--                <label class="block">--}}
+{{--                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Aporte inicial (R$)</span>--}}
+{{--                    <input id="current_amount" name="current_amount" inputmode="decimal"--}}
+{{--                           placeholder="0,00"--}}
+{{--                           class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70--}}
+{{--                                  bg-white/90 dark:bg-neutral-900/70 px-3 py-2">--}}
+{{--                </label>--}}
 
                 <label class="block">
                     <span class="text-xs text-neutral-500 dark:text-neutral-400">% do CDI</span>

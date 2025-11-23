@@ -453,25 +453,14 @@
             }
 
             if (act === 'delete') {
-    try {
-
-        // tenta usar o método correto exposto pelo CrudLite
-        if (typeof crud.delete === 'function') {
-            await crud.delete(sheetId);
-        } else if (typeof crud.destroy === 'function') {
-            await crud.destroy(sheetId);
-        } else if (typeof crud.remove === 'function') {
-            await crud.remove(sheetId);
-        } else {
-            throw new Error('Função de exclusão não encontrada no CrudLite.');
-        }
-
-        await crud.reload();
-    } catch (e) {
-        alert(e.message || 'Erro ao excluir');
-    }
-    return;
-}
+                try {
+                    await crud.delete(sheetId);   // usa delete do CrudLite (com confirmDelete interno)
+                    await crud.reload();
+                } catch (e) {
+                    alert(e.message || 'Erro ao excluir');
+                }
+                return;
+            }
 
             if (act === 'deposit') {
                 doDeposit(sheetId);

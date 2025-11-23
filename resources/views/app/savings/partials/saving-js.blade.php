@@ -473,9 +473,6 @@
                 return;
             }
 
-
-
-
             if (act === 'deposit') {
                 doDeposit(sheetId);
                 return;

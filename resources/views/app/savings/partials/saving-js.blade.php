@@ -213,32 +213,23 @@
                 btnClose:'#savClose',
                 btnCancel:'#savCancel'
             },
-
             template: savingTemplate,
             skeleton: cardSkeleton,
             skeletonCount: 6,
 
             onBeforeSubmit(fd){
-                // 🔹 normaliza data
+                // normaliza data
                 const sd = fd.get('start_date');
-                if (sd) {
-                    fd.set('start_date', String(sd).slice(0,10));
-                }
+                if (sd) fd.set('start_date', String(sd).slice(0,10));
 
-                // 🔹 normaliza CDI
-                // usuário digita EX: "105" (105%)
-                // backend recebe 1.05 (fator)
+                // normaliza CDI
                 const cp = fd.get('cdi_percent');
-                if (cp != null) {
+                if (cp) {
                     const cleaned = String(cp)
-                        .replace(/[^\d,.,-]/g,'')                 // remove símbolos, espaço, etc
-                        .replace(/\.(?=\d{3}(?:\D|$))/g,'')       // remove ponto de milhar
-                        .replace(',', '.');                       // vírgula -> ponto
-
-                    const num = parseFloat(cleaned) || 0;         // ex: "105" → 105
-                    const factor = num / 100;                     // 105 → 1.05
-
-                    fd.set('cdi_percent', factor.toFixed(4));     // manda 1.0500
+                        .replace(/[^\d,.,-]/g,'')
+                        .replace(/\.(?=\d{3}(?:\D|$))/g,'')
+                        .replace(',', '.');
+                    fd.set('cdi_percent', cleaned);
                 }
 
                 // NÃO mandar cor nem aporte inicial para o backend
@@ -252,30 +243,20 @@
                 return fd;
             },
 
-
             fillForm(formEl, sv){
-                    const id = sv.id ?? sv.uuid ?? '';
+                const id = sv.id ?? sv.uuid ?? '';
 
-                    formEl.querySelector('#sav_id').value = id;
-                    formEl.name.value        = sv.name ?? '';
-                    formEl.account_id.value  = sv.account_id ?? sv.account?.id ?? '';
+                formEl.querySelector('#sav_id').value = id;
+                formEl.name.value        = sv.name ?? '';
+                formEl.account_id.value  = sv.account_id ?? sv.account?.id ?? '';
+                formEl.cdi_percent.value = sv.cdi_percent ?? 1.00;
+                formEl.start_date.value  = (sv.start_date ?? '').slice(0,10);
+                formEl.notes.value       = sv.notes ?? '';
 
-                    // 🔹 sv.cdi_percent vem como fator (1.05) e vamos mostrar como 105
-                    const factor = sv.cdi_percent ?? 1.00;
-                    formEl.cdi_percent.value = (factor * 100).toLocaleString('pt-BR', {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 2,
-                    });
-
-                    formEl.start_date.value  = (sv.start_date ?? '').slice(0,10);
-                    formEl.notes.value       = sv.notes ?? '';
-
-                    const colorInput = formEl.querySelector('#color_card');
-                    if (colorInput) {
-                        colorInput.value = getSavingColor(id, sv.color_card || '#00BFA6');
-                    }
-
-
+                const colorInput = formEl.querySelector('#color_card');
+                if (colorInput) {
+                    colorInput.value = getSavingColor(id, sv.color_card || '#00BFA6');
+                }
 
                 // aporte inicial só faz sentido na criação
                 const initialField = formEl.querySelector('#current_amount');

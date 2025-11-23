@@ -61,7 +61,7 @@
 
                 <label class="block">
                     <span class="text-xs text-neutral-500 dark:text-neutral-400">% do CDI</span>
-                    <input id="cdi_percent" name="cdi_percent" inputmode="decimal" placeholder="Ex: 1.10"
+                    <input id="cdi_percent" name="cdi_percent" inputmode="decimal" placeholder="Ex: 105"
                            class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70
                                   bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
                            value="1.00">

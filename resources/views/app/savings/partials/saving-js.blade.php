@@ -245,25 +245,28 @@
 
             fillForm(formEl, sv){
                 const id = sv.id ?? sv.uuid ?? '';
-
+            
                 formEl.querySelector('#sav_id').value = id;
                 formEl.name.value        = sv.name ?? '';
                 formEl.account_id.value  = sv.account_id ?? sv.account?.id ?? '';
-                formEl.cdi_percent.value = sv.cdi_percent ?? 1.00;
+            
+                // sv.cdi_percent vem do banco como fator (1.05)
+                // mostramos como 105 no input
+                const factor = sv.cdi_percent ?? 1.00;
+                formEl.cdi_percent.value = (factor * 100).toLocaleString('pt-BR', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                });
+            
                 formEl.start_date.value  = (sv.start_date ?? '').slice(0,10);
                 formEl.notes.value       = sv.notes ?? '';
-
+            
                 const colorInput = formEl.querySelector('#color_card');
                 if (colorInput) {
                     colorInput.value = getSavingColor(id, sv.color_card || '#00BFA6');
                 }
+            }
 
-                // aporte inicial só faz sentido na criação
-                const initialField = formEl.querySelector('#current_amount');
-                if (initialField) {
-                    initialField.value = '';
-                }
-            },
 
             onModeChange(mode, formEl, titleEl){
                 const isShow = (mode === 'show');

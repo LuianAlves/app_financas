@@ -265,7 +265,7 @@
                 if (colorInput) {
                     colorInput.value = getSavingColor(id, sv.color_card || '#00BFA6');
                 }
-            }
+            },
 
 
             onModeChange(mode, formEl, titleEl){

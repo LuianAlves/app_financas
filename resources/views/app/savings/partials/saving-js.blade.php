@@ -213,6 +213,7 @@
                 btnClose:'#savClose',
                 btnCancel:'#savCancel'
             },
+
             template: savingTemplate,
             skeleton: cardSkeleton,
             skeletonCount: 6,
@@ -328,6 +329,9 @@
                     const cardBg = document.querySelector(`article[data-id="${CSS.escape(id)}"] [data-bg]`);
                     if (cardBg) cardBg.style.background = color;
                 });
+                if (typeof window.crud.delete !== 'function' && typeof window.crud.destroy === 'function') {
+                    window.crud.delete = window.crud.destroy;
+                }
             }
         });
 
@@ -453,13 +457,22 @@
 
             if (act === 'delete') {
                 try {
-                    await crud.delete(sheetId);   // usa delete do CrudLite (com confirmDelete interno)
+                    if (typeof crud.delete === 'function') {
+                        await crud.delete(sheetId);
+                    } else if (typeof crud.destroy === 'function') {
+                        await crud.destroy(sheetId);
+                    } else {
+                        alert('Não foi possível excluir: método delete/destroy não encontrado.');
+                        return;
+                    }
+
                     await crud.reload();
                 } catch (e) {
                     alert(e.message || 'Erro ao excluir');
                 }
                 return;
             }
+
 
             if (act === 'deposit') {
                 doDeposit(sheetId);

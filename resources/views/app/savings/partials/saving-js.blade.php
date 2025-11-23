@@ -218,30 +218,39 @@
             skeletonCount: 6,
 
             onBeforeSubmit(fd){
-                // normaliza data
-                const sd = fd.get('start_date');
-                if (sd) fd.set('start_date', String(sd).slice(0,10));
+            // 🔹 normaliza data
+            const sd = fd.get('start_date');
+            if (sd) {
+                fd.set('start_date', String(sd).slice(0,10));
+            }
+        
+            // 🔹 normaliza CDI
+            // usuário digita EX: "105" (105%)
+            // backend recebe 1.05 (fator)
+            const cp = fd.get('cdi_percent');
+            if (cp != null) {
+                const cleaned = String(cp)
+                    .replace(/[^\d,.,-]/g,'')                 // remove símbolos, espaço, etc
+                    .replace(/\.(?=\d{3}(?:\D|$))/g,'')       // remove ponto de milhar
+                    .replace(',', '.');                       // vírgula -> ponto
+        
+                const num = parseFloat(cleaned) || 0;         // ex: "105" → 105
+                const factor = num / 100;                     // 105 → 1.05
+        
+                fd.set('cdi_percent', factor.toFixed(4));     // manda 1.0500
+            }
+        
+            // NÃO mandar cor nem aporte inicial para o backend
+            fd.delete('color_card');
+            fd.delete('current_amount');
+        
+            // guarda a cor que o usuário escolheu para usarmos depois
+            const chosenColor = form.querySelector('#color_card')?.value || '#00BFA6';
+            pendingColor = chosenColor;
+        
+            return fd;
+        },
 
-                // normaliza CDI
-                const cp = fd.get('cdi_percent');
-                if (cp) {
-                    const cleaned = String(cp)
-                        .replace(/[^\d,.,-]/g,'')
-                        .replace(/\.(?=\d{3}(?:\D|$))/g,'')
-                        .replace(',', '.');
-                    fd.set('cdi_percent', cleaned);
-                }
-
-                // NÃO mandar cor nem aporte inicial para o backend
-                fd.delete('color_card');
-                fd.delete('current_amount');
-
-                // guarda a cor que o usuário escolheu para usarmos depois
-                const chosenColor = form.querySelector('#color_card')?.value || '#00BFA6';
-                pendingColor = chosenColor;
-
-                return fd;
-            },
 
             fillForm(formEl, sv){
                 const id = sv.id ?? sv.uuid ?? '';

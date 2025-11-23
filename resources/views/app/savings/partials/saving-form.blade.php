@@ -51,8 +51,6 @@
                     </select>
                 </label>
 
-
-
 {{--                <label class="block">--}}
 {{--                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Aporte inicial (R$)</span>--}}
 {{--                    <input id="current_amount" name="current_amount" inputmode="decimal"--}}

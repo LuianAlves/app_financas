@@ -194,8 +194,6 @@
         if (window.__SAVING_CRUD_INIT__) return;
         window.__SAVING_CRUD_INIT__ = true;
 
-
-
         window.crud = CrudLite({
             key: 'savings',
             routes: {

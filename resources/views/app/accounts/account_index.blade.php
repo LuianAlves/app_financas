@@ -126,29 +126,30 @@
                                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Valor em conta (R$)</span>
                                 <input id="current_balance" name="current_balance" inputmode="decimal"
                                        placeholder="0,00"
+                                       value="0.00"
                                        class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
                                        required/>
                                 <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
                             </label>
 
-                            <label class="block">
-                                <span class="text-xs text-neutral-500 dark:text-neutral-400">Tipo de conta</span>
-                                <div class="mt-1 inline-flex w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-neutral-50 dark:bg-neutral-800 p-1">
-                                    <input type="radio" name="type" value="1" id="accCorr" class="peer/acc1 hidden"
-                                           checked>
-                                    <label for="accCorr"
-                                           class="flex-1 text-center px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-900 shadow-sm cursor-pointer peer-checked/acc1:font-medium">Corrente</label>
+{{--                            <label class="block">--}}
+{{--                                <span class="text-xs text-neutral-500 dark:text-neutral-400">Tipo de conta</span>--}}
+{{--                                <div class="mt-1 inline-flex w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-neutral-50 dark:bg-neutral-800 p-1">--}}
+{{--                                    <input type="radio" name="type" value="1" id="accCorr" class="peer/acc1 hidden"--}}
+{{--                                           checked>--}}
+{{--                                    <label for="accCorr"--}}
+{{--                                           class="flex-1 text-center px-3 py-1.5 rounded-lg bg-white dark:bg-neutral-900 shadow-sm cursor-pointer peer-checked/acc1:font-medium">Corrente</label>--}}
 
-                                    <input type="radio" name="type" value="2" id="accPoup" class="peer/acc2 hidden">
-                                    <label for="accPoup"
-                                           class="flex-1 text-center px-3 py-1.5 rounded-lg cursor-pointer hover:bg-white/70 dark:hover:bg-neutral-900/70">Poupança</label>
+{{--                                    <input type="radio" name="type" value="2" id="accPoup" class="peer/acc2 hidden">--}}
+{{--                                    <label for="accPoup"--}}
+{{--                                           class="flex-1 text-center px-3 py-1.5 rounded-lg cursor-pointer hover:bg-white/70 dark:hover:bg-neutral-900/70">Poupança</label>--}}
 
-                                    <input type="radio" name="type" value="3" id="accInv" class="peer/acc3 hidden">
-                                    <label for="accInv"
-                                           class="flex-1 text-center px-3 py-1.5 rounded-lg cursor-pointer hover:bg-white/70 dark:hover:bg-neutral-900/70">Investimento</label>
-                                </div>
-                                <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
-                            </label>
+{{--                                    <input type="radio" name="type" value="3" id="accInv" class="peer/acc3 hidden">--}}
+{{--                                    <label for="accInv"--}}
+{{--                                           class="flex-1 text-center px-3 py-1.5 rounded-lg cursor-pointer hover:bg-white/70 dark:hover:bg-neutral-900/70">Investimento</label>--}}
+{{--                                </div>--}}
+{{--                                <p class="field-error mt-1 text-xs text-red-600 hidden"></p>--}}
+{{--                            </label>--}}
                         </div>
 
                         <div class="mt-2 flex items-center justify-end gap-2">
@@ -313,9 +314,9 @@
                 const typeGradient = (t)=> (String(t)==='2'||String(t).toLowerCase()==='poupanca')?'from-emerald-400 to-emerald-600'
                     : (String(t)==='3'||String(t).toLowerCase()==='investimento')?'from-violet-400 to-violet-600'
                         : 'from-brand-400 to-brand-600';
-                const typeLabel = (t)=> (String(t)==='2'||String(t).toLowerCase()==='poupanca')?'Poupança'
-                    : (String(t)==='3'||String(t).toLowerCase()==='investimento')?'Investimento'
-                        : 'Conta corrente';
+                // const typeLabel = (t)=> (String(t)==='2'||String(t).toLowerCase()==='poupanca')?'Poupança'
+                //     : (String(t)==='3'||String(t).toLowerCase()==='investimento')?'Investimento'
+                //         : 'Conta corrente';
 
                 // FAB toggle
                 function updateFabVisibility(has) {
@@ -350,14 +351,13 @@
 </article>`;
                 }
 
-                // Card template (o botão de “mais” abre o sheet via data-sheet-open, NÃO via CrudLite)
                 function cardTemplate(acc) {
                     const id = acc.id ?? acc.uuid ?? acc.account_id;
                     const t = acc.type ?? '1';
-                    const label = typeLabel(t);
+                    //const label = typeLabel(t);
                     const grad = typeGradient(t);
                     const inAcc = moneyToNumber(acc.current_balance);
-                    const cofr = moneyToNumber(acc.saving_amount); // valor inicial; depois patch com savings endpoint
+                    const cofr = moneyToNumber(acc.saving_amount);
                     const total = inAcc + cofr;
                     return `
 <article data-id="${id}" class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5 shadow-soft">
@@ -370,7 +370,6 @@
       </span>
       <div>
         <p class="font-semibold">${acc.bank_name ?? 'Sem título'}</p>
-        <p class="text-xs text-neutral-500 dark:text-neutral-400">${label}</p>
       </div>
     </div>
     <div class="flex items-center gap-2">
@@ -425,8 +424,8 @@
                     formEl.bank_name.value = acc.bank_name ?? '';
                     const raw = acc.current_balance;
                     formEl.current_balance.value = typeof raw==='number' ? String(raw).replace('.', ',') : String(raw ?? '');
-                    const t = mapTypeIn(acc);
-                    formEl.querySelectorAll('input[name="type"]').forEach(i => i.checked = (i.value === t));
+                    // const t = mapTypeIn(acc);
+                    // formEl.querySelectorAll('input[name="type"]').forEach(i => i.checked = (i.value === t));
                     // id hidden
                     const hid = formEl.querySelector('#acc_id');
                     if (hid) hid.value = acc.id ?? acc.uuid ?? '';

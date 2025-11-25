@@ -287,12 +287,6 @@
                 </div>
                 <strong class="text-lg">{{ $inv['total_brl'] }}</strong>
 
-                @if(!is_null($inv['available_limit']))
-                    <div class="flex items-center justify-between mt-1">
-                        <span>Limite disponível <b>{{ brlPrice($inv['available_limit']) }}</b></span>
-                    </div>
-                @endif
-
                 <div class="flex items-center justify-between mt-1">
                     <span>Vence em <b>{{ $inv['due_label'] }}.</b></span>
                 </div>

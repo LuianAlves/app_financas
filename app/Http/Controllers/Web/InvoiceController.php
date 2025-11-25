@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Web;
 
 use App\Models\InvoicePayment;
+use App\Models\TransactionCategory;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 use App\Models\Card;
@@ -64,6 +66,10 @@ class InvoiceController extends Controller
         // header para o mês selecionado
         [$header, $items] = $this->buildInvoicePayload($card, $selectedYm);
 
+        $categories = TransactionCategory::where('user_id', Auth::id())
+            ->orderBy('name')
+            ->get();
+
         // carrossel com status (paid | pending | overdue)
         $invoices = $sorted->map(function ($inv) use ($card, $today) {
             $dt  = Carbon::createFromFormat('Y-m', $inv->current_month)->locale('pt_BR');
@@ -86,7 +92,7 @@ class InvoiceController extends Controller
             ];
         })->values();
 
-        return view('app.invoices.invoice.invoice_index', compact('card', 'invoices', 'header', 'items', 'selectedYm'));
+        return view('app.invoices.invoice.invoice_index', compact('card', 'invoices', 'header', 'items', 'selectedYm', 'categories'));
     }
 
     public function show($cardId, $ym)
@@ -164,22 +170,26 @@ class InvoiceController extends Controller
         $monthTotal = 0;
 
         if ($inv) {
-            $items = $inv->items()->with('category')->orderBy('date')->get()->map(function (\App\Models\InvoiceItem $it){
-                return (object)[
-                    'id' => $it->id,
-                    'title' => $it->title,
-                    'date' => \Carbon\Carbon::parse($it->date)->format('d/m/Y'),
-                    'amount_raw' => (float)$it->amount,
-                    'amount' => brlPrice($it->amount),
-                    'installments' => (int)$it->installments,
-                    'current_installment' => (int)$it->current_installment,
-                    'is_projection' => (bool)$it->is_projection,
-                    'icon' => optional($it->category)->icon,
-                    'color' => optional($it->category)->color,
-                ];
-            });
-
-            $monthTotal = $inv->items->sum('amount');
+            // garante que vem número
+            $monthTotal = (float) $inv->items->sum('amount');
+            $items = $inv->items()
+                ->with('category')
+                ->orderBy('date')
+                ->get()
+                ->map(function (\App\Models\InvoiceItem $it){
+                    return (object)[
+                        'id' => $it->id,
+                        'title' => $it->title,
+                        'date' => \Carbon\Carbon::parse($it->date)->format('d/m/Y'),
+                        'amount_raw' => (float) $it->amount,
+                        'amount' => brlPrice($it->amount),
+                        'installments' => (int)$it->installments,
+                        'current_installment' => (int)$it->current_installment,
+                        'is_projection' => (bool)$it->is_projection,
+                        'icon' => optional($it->category)->icon,
+                        'color' => optional($it->category)->color,
+                    ];
+                });
         }
 
         $selectedYm = $ym;
@@ -211,11 +221,12 @@ class InvoiceController extends Controller
 
         $header = [
             'ym'           => $ym,
+            'invoice_id'   => optional($inv)->id,   // <--- NOVO
             'month_label'  => ucfirst($dt->locale('pt_BR')->isoFormat('MMMM')),
-            'paid'         => (bool)optional($inv)->paid,
-            'status'       => $status, // se já tiver aquela lógica de status
+            'paid'         => (bool) optional($inv)->paid,
+            'status'       => $status,
             'total'        => brlPrice($monthTotal),
-            'total_raw'    => $monthTotal, // << ADICIONA ISSO
+            'total_raw'    => $monthTotal,
             'limit'        => brlPrice($limitAvail),
             'close_label'  => 'Fecha em <b>'.strtoupper($close->isoFormat('DD MMM')).'</b>',
             'due_label'    => 'Vence em <b>'.strtoupper($due->isoFormat('DD MMM')).'</b>',

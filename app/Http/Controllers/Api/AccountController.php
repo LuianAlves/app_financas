@@ -58,7 +58,7 @@ class AccountController extends Controller
             'user_id' => Auth::id(),
             'bank_name' => $request->bank_name,
             'current_balance' => $request->current_balance,
-            'type' => $request->type,
+            'type' => 1,
             'created_at' => Carbon::now()
         ]);
 
@@ -81,7 +81,6 @@ class AccountController extends Controller
         $data = $request->validate([
             'bank_name' => 'sometimes|string|max:255',
             'current_balance' => 'sometimes|numeric',
-            'type' => 'sometimes|string'
         ]);
 
         $account = $this->account->find($id);

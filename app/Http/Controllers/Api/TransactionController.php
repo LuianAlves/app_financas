@@ -180,13 +180,106 @@ class TransactionController extends Controller
         return response()->json($tx);
     }
 
-    public function update(Request $req, string $id)
+    public function update(Request $request, string $id)
     {
+        // Mesma validação do store()
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'transaction_category_id' => 'required|uuid|exists:transaction_categories,id',
+            'amount' => 'required|numeric|min:0.01',
+            'date' => 'required|date',
+
+            'type' => 'required|in:pix,card,money',
+            'account_id' => 'required_if:type,pix|nullable|uuid|exists:accounts,id',
+
+            'type_card' => 'nullable|required_if:type,card|in:credit,debit',
+
+            'card_id'   => [
+                'exclude_if:alternate_cards,1',   // se alternar=1, ignora todas as regras abaixo
+                'nullable',
+                'required_if:type,card',          // obrigatório se for cartão (quando NÃO alterna)
+                'uuid',
+                'exists:cards,id',
+            ],
+
+            'alternate_cards'      => ['nullable','boolean'],
+            'alternate_card_ids'   => ['required_if:alternate_cards,1','array'],
+            'alternate_card_ids.*' => ['uuid','distinct','exists:cards,id'],
+
+            'recurrence_type' => 'nullable|in:unique,monthly,yearly,custom',
+            'termination'        => 'nullable|in:no_end,has_end',
+            'custom_occurrences' => ['nullable','integer','min:1','required_if:termination,has_end'],
+            'interval_value'     => 'required_if:recurrence_type,custom|integer|min:1',
+
+            'can_install'  => ['nullable','boolean'],
+            'installments' => ['nullable','integer','min:1'],
+
+            'saving_id' => [function($attr,$val,$fail) use ($request) {
+                $cat = \App\Models\TransactionCategory::find($request->transaction_category_id);
+                if ($cat && $cat->type === 'investimento' && empty($val)) {
+                    $fail('saving_id é obrigatório para categoria investimento.');
+                }
+                if ($cat && $cat->type === 'investimento' && $request->type === 'card' && $request->type_card === 'credit') {
+                    $fail('Investimento não pode ser no crédito.');
+                }
+            }],
+        ]);
+
         $tx = Transaction::findOrFail($id);
 
-        $tx->update($req->all());
+        $txDate         = Carbon::parse($request->date)->startOfDay();
+        $isPix          = $request->type === 'pix';
+        $isCard         = $request->type === 'card';
+        $typeCard       = $isCard ? $request->type_card : null;
+        $installments   = (int) ($request->installments ?? 1);
+        $canInstall     = (bool) ($request->can_install ?? false);
+        $recurrenceType = $request->recurrence_type ?? 'unique';
+        $isRecurring    = $recurrenceType !== 'unique';
 
-        return response()->json($tx->fresh());
+        $response = null;
+
+        DB::transaction(function () use (
+            $request,
+            $tx,
+            $txDate,
+            $isPix,
+            $isCard,
+            $typeCard,
+            $installments,
+            $canInstall,
+            $recurrenceType,
+            $isRecurring,
+            &$response
+        ) {
+            // Limpa tudo que foi gerado com base na transação antiga
+            $this->cleanupForUpdate($tx);
+
+            // Remove a transação antiga (vamos recriar com a nova configuração)
+            $tx->delete();
+
+            // 1) PIX parcelado (Única + "parcelar" + > 1 parcela)
+            if ($isPix && $recurrenceType === 'unique' && $canInstall && $installments > 1) {
+                $response = $this->handlePixInstallments($request, $txDate, $installments);
+                return;
+            }
+
+            // 2) Cartão de CRÉDITO parcelado (Única + "parcelar" + > 1 parcela)
+            if ($isCard && $typeCard === 'credit' && $recurrenceType === 'unique' && $canInstall && $installments > 1) {
+                $response = $this->handleInstallments($request, $txDate, $installments);
+                return;
+            }
+
+            // 3) Cartão de CRÉDITO recorrente (mensal/anual/custom)
+            if ($isCard && $typeCard === 'credit' && $isRecurring) {
+                $response = $this->handleRecurringCard($request, $txDate);
+                return;
+            }
+
+            // 4) Demais casos (PIX/dinheiro único ou recorrente, débito, etc.)
+            $response = $this->handleUniqueTransaction($request, $txDate, $typeCard, $isCard);
+        });
+
+        return $response;
     }
 
     public function destroy(string $id)
@@ -230,21 +323,19 @@ class TransactionController extends Controller
         for ($i = 1; $i <= $installments; $i++) {
             $cycleMonth = CardCycle::cycleMonthFor($occur, (int)$card->closing_day);
 
-            $invoice = Invoice::firstOrCreate(
-                ['user_id' => Auth::id(), 'card_id' => $card->id, 'current_month' => $cycleMonth],
-                ['paid' => false]
-            );
+            // garante sequência (ex.: cria 2026-12 antes de 2027-01)
+            $invoice = $this->ensureCardInvoicesUntil($card, $cycleMonth);
 
             InvoiceItem::create([
-                'invoice_id' => $invoice->id,
-                'transaction_id' => $transaction->id,
-                'title' => $request->title,
-                'amount' => $amountPerInstallment,
-                'date' => $occur->copy(),
+                'invoice_id'              => $invoice->id,
+                'transaction_id'          => $transaction->id,
+                'title'                   => $request->title,
+                'amount'                  => $amountPerInstallment,
+                'date'                    => $occur->copy(),
                 'transaction_category_id' => $request->transaction_category_id,
-                'installments' => $installments,
-                'current_installment' => $i,
-                'is_projection' => true,
+                'installments'            => $installments,
+                'current_installment'     => $i,
+                'is_projection'           => true,
             ]);
 
             $occur->addMonthNoOverflow();
@@ -491,12 +582,15 @@ class TransactionController extends Controller
                 $chosen     = $choice['card'];
                 $cycleMonth = CardCycle::cycleMonthFor($occur, (int)$chosen->closing_day);
 
-                $invoice = Invoice::firstOrCreate(
-                    ['user_id' => Auth::id(), 'card_id' => $chosen->id, 'current_month' => $cycleMonth],
-                    ['paid' => false]
-                );
+                $invoice = $this->ensureCardInvoicesUntil($chosen, $cycleMonth);
 
-                $this->createInvoiceItemIfNotExists($invoice->id, $transaction->id, $recurrent->id, $request, $occur);
+                $this->createInvoiceItemIfNotExists(
+                    $invoice->id,
+                    $transaction->id,
+                    $recurrent->id,
+                    $request,
+                    $occur
+                );
 
                 $counter++;
                 $occur = $nextFn($occur);
@@ -518,12 +612,15 @@ class TransactionController extends Controller
 
                 $cycleMonth = CardCycle::cycleMonthFor($occur, (int)$card->closing_day);
 
-                $invoice = Invoice::firstOrCreate(
-                    ['user_id' => Auth::id(), 'card_id' => $card->id, 'current_month' => $cycleMonth],
-                    ['paid' => false]
-                );
+                $invoice = $this->ensureCardInvoicesUntil($card, $cycleMonth);
 
-                $this->createInvoiceItemIfNotExists($invoice->id, $transaction->id, $recurrent->id, $request, $occur);
+                $this->createInvoiceItemIfNotExists(
+                    $invoice->id,
+                    $transaction->id,
+                    $recurrent->id,
+                    $request,
+                    $occur
+                );
 
                 $counter++;
                 $occur = $nextFn($occur);
@@ -724,5 +821,113 @@ class TransactionController extends Controller
 
         // reaproveita TODA a lógica de recorrência que você já tem
         return $this->handleUniqueTransaction($clone, $txDate, $typeCard, $isCard);
+    }
+
+    protected function ensureCardInvoicesUntil(Card $card, string $targetCycleMonth): Invoice
+    {
+        $userId     = Auth::id();
+        $targetDate = Carbon::parse($targetCycleMonth)->startOfDay();
+
+        // Última fatura existente para esse cartão
+        $maxMonth = Invoice::where('user_id', $userId)
+            ->where('card_id', $card->id)
+            ->max('current_month');
+
+        if ($maxMonth) {
+            $maxDate = Carbon::parse($maxMonth)->startOfDay();
+
+            // Só precisamos criar algo se o alvo estiver DEPOIS da última
+            if ($targetDate->gt($maxDate)) {
+
+                // Começa no mês seguinte ao último existente
+                $cursor = $maxDate->copy()->addMonthNoOverflow();
+
+                // Gera todas as faturas até o mês alvo (incluindo)
+                while ($cursor->lte($targetDate)) {
+                    $monthKey = CardCycle::cycleMonthFor(
+                        $cursor->copy(),
+                        (int) $card->closing_day
+                    );
+
+                    Invoice::firstOrCreate(
+                        [
+                            'user_id'       => $userId,
+                            'card_id'       => $card->id,
+                            'current_month' => $monthKey,
+                        ],
+                        [
+                            'paid' => false,
+                        ]
+                    );
+
+                    $cursor->addMonthNoOverflow();
+                }
+            }
+        } else {
+            // Não existe NENHUMA fatura para o cartão → garante pelo menos a do mês alvo
+            $monthKey = CardCycle::cycleMonthFor(
+                $targetDate->copy(),
+                (int) $card->closing_day
+            );
+
+            Invoice::firstOrCreate(
+                [
+                    'user_id'       => $userId,
+                    'card_id'       => $card->id,
+                    'current_month' => $monthKey,
+                ],
+                [
+                    'paid' => false,
+                ]
+            );
+        }
+
+        // Retorna SEMPRE a fatura do mês alvo (que agora com certeza existe)
+        return Invoice::firstOrCreate(
+            [
+                'user_id'       => $userId,
+                'card_id'       => $card->id,
+                'current_month' => $targetCycleMonth,
+            ],
+            [
+                'paid' => false,
+            ]
+        );
+    }
+
+    protected function cleanupForUpdate(Transaction $tx): void
+    {
+        // 1) Reverter movimentos de cofrinho ligados a essa transação
+        $movements = SavingMovement::where('transaction_id', $tx->id)->get();
+
+        foreach ($movements as $mv) {
+            // Devolve o saldo no cofrinho
+            Saving::where('id', $mv->saving_id)->decrement('current_amount', $mv->amount);
+            $mv->delete();
+        }
+
+        // 2) Recorrentes ligados a essa transação (e tudo que depende deles)
+        $recs = Recurrent::where('transaction_id', $tx->id)->get();
+
+        foreach ($recs as $rec) {
+            // Itens de fatura de cartão gerados pela recorrência
+            InvoiceItem::where('recurrent_id', $rec->id)->delete();
+
+            // Alternância de cartões
+            DB::table('recurrent_cards')->where('recurrent_id', $rec->id)->delete();
+
+            // Modelos e ocorrências de recorrência
+            $this->monthlyItemRecurrents->where('recurrent_id', $rec->id)->delete();
+            $this->yearlyItemRecurrents->where('recurrent_id', $rec->id)->delete();
+            $this->customItemRecurrents->where('recurrent_id', $rec->id)->delete();
+
+            $rec->delete();
+        }
+
+        // 3) Itens de fatura vinculados diretamente à transação (parcelado no crédito)
+        InvoiceItem::where('transaction_id', $tx->id)->delete();
+
+        // OBS: não removo as Invoice em si – elas podem continuar vazias,
+        // mantendo a sequência de faturas do cartão.
     }
 }

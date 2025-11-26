@@ -4,7 +4,7 @@
         <div>
             <h2 class="text-xl font-semibold">Faturas</h2>
             <p class="text-sm text-neutral-500 dark:text-neutral-400">Acompanhe as faturas do seu
-                cartão {{$card->account->bank_name . ' ' . $card->last_four_digits}}</p>
+                cartão {{$card->account?->bank_name . ' ' . $card->last_four_digits}}</p>
         </div>
         <div class="hidden md:flex items-center gap-2">
             <button data-open-modal="acc"

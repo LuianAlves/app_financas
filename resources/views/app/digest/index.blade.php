@@ -125,28 +125,6 @@
                             <p class="text-sm font-semibold price-default">
                                 {{ ($c['amt'] ?? 0) < 0 ? '-' : '+' }} {{ brlPrice(abs($c['amt'] ?? 0)) }}
                             </p>
-
-                            @if($c['is_invoice'] && empty($c['paid']))
-                                <button type="button"
-                                        class="inline-flex items-center justify-center rounded-full border border-transparent text-green-600 hover:bg-green-50 text-sm"
-                                        data-pay-invoice
-                                        data-card="{{ $c['card_id'] }}"
-                                        data-month="{{ $c['current_month'] }}"
-                                        data-amount="{{ abs($c['amt']) }}"
-                                        data-title="{{ e($c['title']) }}">
-                                    <i class="fa-solid fa-check"></i>
-                                </button>
-                            @elseif(!$c['is_invoice'] && !empty($c['tx_id']))
-                                <button type="button"
-                                        class="inline-flex items-center justify-center rounded-full border border-transparent text-green-600 hover:bg-green-50 text-sm"
-                                        data-open-payment
-                                        data-id="{{ $c['tx_id'] }}"
-                                        data-amount="{{ abs($c['amt']) }}"
-                                        data-date="{{ $c['date'] }}"
-                                        data-title="{{ e($c['title']) }}">
-                                    <i class="fa-solid fa-check-to-slot"></i>
-                                </button>
-                            @endif
                         </div>
                     </li>
                 @empty
@@ -216,28 +194,6 @@
                             <p class="text-sm font-semibold price-default">
                                 {{ ($c['amt'] ?? 0) < 0 ? '-' : '+' }} {{ brlPrice(abs($c['amt'] ?? 0)) }}
                             </p>
-
-                            @if($c['is_invoice'] && empty($c['paid']))
-                                <button type="button"
-                                        class="inline-flex items-center justify-center rounded-full border border-transparent text-green-600 hover:bg-green-50 text-sm"
-                                        data-pay-invoice
-                                        data-card="{{ $c['card_id'] }}"
-                                        data-month="{{ $c['current_month'] }}"
-                                        data-amount="{{ abs($c['amt']) }}"
-                                        data-title="{{ e($c['title']) }}">
-                                    <i class="fa-solid fa-check"></i>
-                                </button>
-                            @elseif(!$c['is_invoice'] && !empty($c['tx_id']))
-                                <button type="button"
-                                        class="inline-flex items-center justify-center rounded-full border border-transparent text-green-600 hover:bg-green-50 text-sm"
-                                        data-open-payment
-                                        data-id="{{ $c['tx_id'] }}"
-                                        data-amount="{{ abs($c['amt']) }}"
-                                        data-date="{{ $c['date'] }}"
-                                        data-title="{{ e($c['title']) }}">
-                                    <i class="fa-solid fa-check-to-slot"></i>
-                                </button>
-                            @endif
                         </div>
                     </li>
                 @empty
@@ -281,28 +237,6 @@
                             <p class="text-sm font-semibold price-default">
                                 {{ $amt < 0 ? '-' : '+' }} {{ brlPrice(abs($amt)) }}
                             </p>
-
-                            @if(!empty($item['extendedProps']['is_invoice']) && !$item['extendedProps']['paid'])
-                                <button type="button"
-                                        class="inline-flex items-center justify-center rounded-full border border-transparent text-green-600 hover:bg-green-50 text-sm"
-                                        data-pay-invoice
-                                        data-card="{{ $item['extendedProps']['card_id'] }}"
-                                        data-month="{{ $item['extendedProps']['current_month'] }}"
-                                        data-amount="{{ abs($amt) }}"
-                                        data-title="{{ e($item['title']) }}">
-                                    <i class="fa-solid fa-check"></i>
-                                </button>
-                            @elseif(in_array($item['extendedProps']['type'] ?? '', ['despesa','entrada']) && empty($item['extendedProps']['paid']))
-                                <button type="button"
-                                        class="inline-flex items-center justify-center rounded-full border border-transparent text-green-600 hover:bg-green-50 text-sm"
-                                        data-open-payment
-                                        data-id="{{ $item['extendedProps']['transaction_id'] }}"
-                                        data-amount="{{ abs($amt) }}"
-                                        data-date="{{ $item['start'] }}"
-                                        data-title="{{ e($item['title']) }}">
-                                    <i class="fa-solid fa-check-to-slot"></i>
-                                </button>
-                            @endif
                         </div>
                     </li>
                 @empty
@@ -321,8 +255,7 @@
 
         @if(isset($overdueCards) && $overdueCards->count())
             {{-- TOTAL ATRASADO --}}
-            <div
-                class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
+            <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
                 <p class="text-xs font-semibold tracking-[0.12em] uppercase text-neutral-500 dark:text-neutral-400">
                     Total atrasado
                 </p>
@@ -347,11 +280,11 @@
                     <span>{{ $fmtBrl($kpiOverdue['out'] ?? 0) }}</span>
                 </span>
                 </div>
-            </div>
 
-            <div class="rounded-2xl border border-red-200/70 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 p-4">
+                <div class="h-px bg-neutral-100 dark:bg-neutral-800 my-5"></div>
+
                 <div class="flex items-center justify-between gap-2">
-                    <h2 class="text-sm font-semibold text-red-700 dark:text-red-300">
+                    <h2 class="text-sm font-semibold text-neutral-700 dark:text-neutral-100">
                         Lançamentos atrasados
                     </h2>
 
@@ -396,28 +329,6 @@
                                 <p class="text-sm font-semibold price-default">
                                     {{ ($c['amt'] ?? 0) < 0 ? '-' : '+' }} {{ brlPrice(abs($c['amt'] ?? 0)) }}
                                 </p>
-
-                                @if($c['is_invoice'] && empty($c['paid']))
-                                    <button type="button"
-                                            class="inline-flex items-center justify-center rounded-full border border-transparent text-green-600 hover:bg-green-50 text-sm"
-                                            data-pay-invoice
-                                            data-card="{{ $c['card_id'] }}"
-                                            data-month="{{ $c['current_month'] }}"
-                                            data-amount="{{ abs($c['amt']) }}"
-                                            data-title="{{ e($c['title']) }}">
-                                        <i class="fa-solid fa-check"></i>
-                                    </button>
-                                @elseif(!$c['is_invoice'] && !empty($c['tx_id']))
-                                    <button type="button"
-                                            class="inline-flex items-center justify-center rounded-full border border-transparent text-green-600 hover:bg-green-50 text-sm"
-                                            data-open-payment
-                                            data-id="{{ $c['tx_id'] }}"
-                                            data-amount="{{ abs($c['amt']) }}"
-                                            data-date="{{ $c['date'] }}"
-                                            data-title="{{ e($c['title']) }}">
-                                        <i class="fa-solid fa-check-to-slot"></i>
-                                    </button>
-                                @endif
                             </div>
                         </li>
                     @endforeach
@@ -452,28 +363,6 @@
                                     <p class="text-sm font-semibold price-default">
                                         {{ ($c['amt'] ?? 0) < 0 ? '-' : '+' }} {{ brlPrice(abs($c['amt'] ?? 0)) }}
                                     </p>
-
-                                    @if($c['is_invoice'] && empty($c['paid']))
-                                        <button type="button"
-                                                class="inline-flex items-center justify-center rounded-full border border-transparent text-green-600 hover:bg-green-50 text-sm"
-                                                data-pay-invoice
-                                                data-card="{{ $c['card_id'] }}"
-                                                data-month="{{ $c['current_month'] }}"
-                                                data-amount="{{ abs($c['amt']) }}"
-                                                data-title="{{ e($c['title']) }}">
-                                            <i class="fa-solid fa-check"></i>
-                                        </button>
-                                    @elseif(!$c['is_invoice'] && !empty($c['tx_id']))
-                                        <button type="button"
-                                                class="inline-flex items-center justify-center rounded-full border border-transparent text-green-600 hover:bg-green-50 text-sm"
-                                                data-open-payment
-                                                data-id="{{ $c['tx_id'] }}"
-                                                data-amount="{{ abs($c['amt']) }}"
-                                                data-date="{{ $c['date'] }}"
-                                                data-title="{{ e($c['title']) }}">
-                                            <i class="fa-solid fa-check-to-slot"></i>
-                                        </button>
-                                    @endif
                                 </div>
                             </li>
                         @endforeach

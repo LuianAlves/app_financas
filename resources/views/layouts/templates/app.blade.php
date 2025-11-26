@@ -7,12 +7,12 @@
 
 <a href="#conteudo" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 bg-white dark:bg-neutral-800 text-sm px-3 py-2 rounded-lg shadow-soft dark:shadow-softDark">Pular para o conteúdo</a>
 
-<div class="md:grid md:grid-cols-[260px_1fr] md:min-h-screen">
+<div id="appLayout" class="md:grid md:grid-cols-[260px_1fr] md:min-h-screen transition-[grid-template-columns] duration-200">
     @include('layouts.partials.sidenav')
 
     <div class="relative flex flex-col min-h-screen md:min-h-0">
         @include('layouts.partials.navbar')
-        <main id="conteudo" class="flex-1 max-w-7xl mx-auto w-full px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8 md:pt-6">
+        <main id="conteudo" class="flex-1 w-full max-w-7xl mx-auto px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pt-6 md:pb-8 md:max-w-none md:mx-0 md:px-6 lg:px-8">
             @yield('new-content')
         </main>
     </div>

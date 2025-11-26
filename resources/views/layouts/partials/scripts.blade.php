@@ -272,6 +272,43 @@
     Conexão lenta — exibindo dados em cache…
 </div>
 
+{{--Desktop Toggle--}}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const layout = document.getElementById('appLayout');
+        const sidebarToggle = document.getElementById('sidebarToggleDesktop');
+        const sidebarIcon = document.getElementById('sidebarToggleIcon');
+
+        if (!layout || !sidebarToggle) return;
+
+        const updateIcon = () => {
+            const collapsed = layout.classList.contains('sidebar-collapsed');
+
+            // Ícone duplo << >> simples: se quiser, troca o desenho aqui.
+            if (collapsed) {
+                // Mostrar chevrons apontando para a direita (abrir)
+                sidebarIcon.innerHTML = `
+                <path d="M9 6l4 6-4 6" />
+                <path d="M5 6l4 6-4 6" />
+            `;
+            } else {
+                // Mostrar chevrons apontando para a esquerda (fechar)
+                sidebarIcon.innerHTML = `
+                <path d="M10 6 6 12l4 6" />
+                <path d="M14 6l-4 6 4-6-4-6" />
+            `;
+            }
+        };
+
+        sidebarToggle.addEventListener('click', () => {
+            layout.classList.toggle('sidebar-collapsed');
+            updateIcon();
+        });
+
+        // estado inicial
+        updateIcon();
+    });
+</script>
 {{--Mobile Menu Script--}}
 <script>
     document.addEventListener('DOMContentLoaded', () => {

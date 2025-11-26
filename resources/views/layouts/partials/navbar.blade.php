@@ -1,21 +1,22 @@
-<header
-    class="sticky top-0 z-40 border-b border-neutral-200/70 dark:border-neutral-800/70 bg-white/70 dark:bg-neutral-950/60 backdrop-blur supports-[backdrop-filter]:bg-white/50 supports-[backdrop-filter]:dark:bg-neutral-950/50">
+<header class="sticky top-0 z-40 border-b border-neutral-200/70 dark:border-neutral-800/70 bg-white/70 dark:bg-neutral-950/60 backdrop-blur supports-[backdrop-filter]:bg-white/50 supports-[backdrop-filter]:dark:bg-neutral-950/50">
     <div class="max-w-7xl mx-auto flex items-center justify-between gap-3 px-4 py-3 md:py-4">
         <div class="flex items-center gap-3">
-            <button id="btnMenu"
-                    class="hidden grid place-items-center size-10 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition"
-                    aria-label="Abrir menu">
-                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <line x1="3" y1="12" x2="21" y2="12"/>
-                    <line x1="3" y1="6" x2="21" y2="6"/>
-                    <line x1="3" y1="18" x2="21" y2="18"/>
-                </svg>
-            </button>
             <div class="hidden md:flex items-center gap-2">
+                <button
+                    type="button"
+                    id="sidebarToggleDesktop"
+                    class="inline-flex items-center justify-center rounded-xl border border-neutral-200/70 dark:border-neutral-700/70 bg-white/80 dark:bg-neutral-900/80 text-neutral-700 dark:text-neutral-100 px-2.5 py-2 shadow-soft focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-950"
+                >
+                    <span class="sr-only">Alternar menu lateral</span>
+                    <svg id="sidebarToggleIcon" viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor"
+                         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <!-- estado inicial: chevron apontando pra esquerda (fechar) -->
+                        <path d="M10 6 6 12l4 6" />
+                        <path d="M14 6l-4 6 4 6" />
+                    </svg>
+                </button>
             </div>
-            <div
-                class="size-9 grid place-items-center md:hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-soft">
+            <div class="size-9 grid place-items-center md:hidden rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-soft">
                 <svg viewBox="0 0 24 24" class="size-5" aria-hidden="true">
                     <path fill="currentColor" d="M12 2l9 5v10l-9 5-9-5V7z"/>
                 </svg>

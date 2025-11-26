@@ -1,9 +1,7 @@
 @extends('layouts.templates.app')
 
 @section('new-content')
-
-
-        @push('styles')
+    @push('styles')
         <style>
             /* Skeleton */
             .skel { position:relative; overflow:hidden; border-radius:.5rem; background:#e5e7eb }
@@ -54,7 +52,7 @@
     </button>
 
     @push('scripts')
+        <script src="{{ asset('assets/js/common/crud-model.js') }}"></script>
         @include('app.savings.partials.saving-js')
     @endpush
-
 @endsection

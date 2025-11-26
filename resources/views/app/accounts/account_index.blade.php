@@ -63,23 +63,18 @@
     @endpush
 
     <section id="contas-page" class="mt-6">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-4">
-            <div>
-                <h2 class="text-xl font-semibold">Contas bancárias</h2>
-                <p class="text-sm text-neutral-500 dark:text-neutral-400">Acompanhe saldos por banco e acesse o extrato
-                    de cada conta.</p>
-            </div>
+        <x-card-header
+            prevRoute="{{ route('dashboard') }}"
+            iconRight="piggy-bank"
+            title="Contas bancárias"
+            description="Acompanhe saldos por banco e acesse o extrato de cada conta.">
+
             <div class="hidden md:flex items-center gap-2">
-                <button data-open-modal="acc"
-                        class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
-                    <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 5v14M5 12h14"/>
-                    </svg>
-                    Nova conta
+                <button data-open-modal="acc" class="inline-flex items-center gap-2 p-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-soft">
+                    <i class="fa-solid fa-plus-minus fs-3"></i>
                 </button>
             </div>
-        </div>
+        </x-card-header>
 
         <!-- Lista -->
         <div id="accGrid" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>

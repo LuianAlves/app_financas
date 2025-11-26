@@ -1,5 +1,5 @@
 <script>
-    (function(){
+    (function () {
         const ua = navigator.userAgent || '';
         const isIOSLike =
             (/(iPad|iPhone|iPod)/.test(ua) && !window.MSStream) ||
@@ -20,7 +20,9 @@
     $pushRegisterPath = public_path('assets/js/push-register.js');
 @endphp
 
-<script src="{{ asset('assets/js/push-register.js') }}?v={{ file_exists($pushRegisterPath) ? filemtime($pushRegisterPath) : time() }}" defer></script>
+<script
+    src="{{ asset('assets/js/push-register.js') }}?v={{ file_exists($pushRegisterPath) ? filemtime($pushRegisterPath) : time() }}"
+    defer></script>
 
 <script>
     const btnTheme = document.getElementById('btnTheme');
@@ -262,10 +264,97 @@
     $installPath = public_path('assets/js/install.js');
 @endphp
 
-<script src="{{ asset('assets/js/install.js') }}?v={{ file_exists($installPath) ? filemtime($installPath) : time() }}" defer></script>
+<script src="{{ asset('assets/js/install.js') }}?v={{ file_exists($installPath) ? filemtime($installPath) : time() }}"
+        defer></script>
 
-<div id="net-banner" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:85px;z-index:1200;background:#222;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;">
+<div id="net-banner"
+     style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:85px;z-index:1200;background:#222;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;">
     Conexão lenta — exibindo dados em cache…
 </div>
 
+{{--Desktop Toggle--}}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const layout = document.getElementById('appLayout');
+        const sidebarToggle = document.getElementById('sidebarToggleDesktop');
+        const sidebarIcon = document.getElementById('sidebarToggleIcon');
+
+        if (!layout || !sidebarToggle) return;
+
+        const updateIcon = () => {
+            const collapsed = layout.classList.contains('sidebar-collapsed');
+
+            // Ícone duplo << >> simples: se quiser, troca o desenho aqui.
+            if (collapsed) {
+                // Mostrar chevrons apontando para a direita (abrir)
+                sidebarIcon.innerHTML = `
+                <path d="M9 6l4 6-4 6" />
+                <path d="M5 6l4 6-4 6" />
+            `;
+            } else {
+                // Mostrar chevrons apontando para a esquerda (fechar)
+                sidebarIcon.innerHTML = `
+                <path d="M10 6 6 12l4 6" />
+                <path d="M14 6l-4 6 4-6-4-6" />
+            `;
+            }
+        };
+
+        sidebarToggle.addEventListener('click', () => {
+            layout.classList.toggle('sidebar-collapsed');
+            updateIcon();
+        });
+
+        // estado inicial
+        updateIcon();
+    });
+</script>
+{{--Mobile Menu Script--}}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const toggle = document.getElementById('appMenuToggle');
+        const menu = document.getElementById('mobile-app-menu');
+        if (!toggle || !menu) return;
+
+        const panel = menu.querySelector('[data-menu-panel]');
+        const closeEls = menu.querySelectorAll('[data-menu-close]');
+
+        const openMenu = () => {
+            menu.classList.remove('hidden');
+            toggle.setAttribute('aria-expanded', 'true');
+
+            // animação
+            requestAnimationFrame(() => {
+                panel.classList.remove('translate-y-full', 'opacity-0');
+            });
+        };
+
+        const closeMenu = () => {
+            toggle.setAttribute('aria-expanded', 'false');
+            panel.classList.add('translate-y-full', 'opacity-0');
+
+            const onEnd = (e) => {
+                if (e.target !== panel) return;
+                menu.classList.add('hidden');
+                panel.removeEventListener('transitionend', onEnd);
+            };
+            panel.addEventListener('transitionend', onEnd);
+        };
+
+        toggle.addEventListener('click', () => {
+            const isOpen = !menu.classList.contains('hidden');
+            isOpen ? closeMenu() : openMenu();
+        });
+
+        closeEls.forEach(el => {
+            el.addEventListener('click', closeMenu);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !menu.classList.contains('hidden')) {
+                closeMenu();
+            }
+        });
+    });
+</script>
 @stack('scripts')

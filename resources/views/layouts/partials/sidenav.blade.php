@@ -1,5 +1,5 @@
-<aside class="hidden md:flex md:flex-col md:gap-4 md:px-4 md:py-6 bg-gradient-to-b from-neutral-50/80 to-white dark:from-neutral-950/80 dark:to-neutral-900/60 border-r border-neutral-200/70 dark:border-neutral-800/70 backdrop-blur supports-[backdrop-filter]:bg-neutral-50/40 supports-[backdrop-filter]:dark:bg-neutral-900/40">
-<div class="flex items-center gap-2 px-2">
+<aside data-sidebar class="hidden md:flex md:flex-col md:gap-4 md:px-4 md:py-6 bg-gradient-to-b from-neutral-50/80 to-white dark:from-neutral-950/80 dark:to-neutral-900/60 border-r border-neutral-200/70 dark:border-neutral-800/70 backdrop-blur supports-[backdrop-filter]:bg-neutral-50/40 supports-[backdrop-filter]:dark:bg-neutral-900/40 transition-transform duration-200">
+    <div class="flex items-center gap-2 px-2">
         <div
             class="size-9 grid place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-soft">
             <!-- Logo -->
@@ -54,12 +54,12 @@
         </a>
     </nav>
 
-{{--    <div class="mt-auto p-3 rounded-xl bg-gradient-to-br from-brand-50 to-white dark:from-neutral-800 dark:to-neutral-900 border border-neutral-200/70 dark:border-neutral-800/70">--}}
-{{--        <p class="text-sm font-medium">Meta do mês</p>--}}
-{{--        <p class="text-xs text-neutral-500 dark:text-neutral-400">Economizar R$ 1.500</p>--}}
-{{--        <div class="mt-3 h-2 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden">--}}
-{{--            <div class="h-full w-[62%] bg-brand-500 rounded-full"></div>--}}
-{{--        </div>--}}
-{{--        <p class="mt-2 text-xs text-neutral-600 dark:text-neutral-400"><span class="font-semibold">62%</span> atingido</p>--}}
-{{--    </div>--}}
+    {{--    <div class="mt-auto p-3 rounded-xl bg-gradient-to-br from-brand-50 to-white dark:from-neutral-800 dark:to-neutral-900 border border-neutral-200/70 dark:border-neutral-800/70">--}}
+    {{--        <p class="text-sm font-medium">Meta do mês</p>--}}
+    {{--        <p class="text-xs text-neutral-500 dark:text-neutral-400">Economizar R$ 1.500</p>--}}
+    {{--        <div class="mt-3 h-2 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden">--}}
+    {{--            <div class="h-full w-[62%] bg-brand-500 rounded-full"></div>--}}
+    {{--        </div>--}}
+    {{--        <p class="mt-2 text-xs text-neutral-600 dark:text-neutral-400"><span class="font-semibold">62%</span> atingido</p>--}}
+    {{--    </div>--}}
 </aside>

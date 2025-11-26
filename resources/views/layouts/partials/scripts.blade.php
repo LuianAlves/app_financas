@@ -1,5 +1,5 @@
 <script>
-    (function(){
+    (function () {
         const ua = navigator.userAgent || '';
         const isIOSLike =
             (/(iPad|iPhone|iPod)/.test(ua) && !window.MSStream) ||
@@ -20,7 +20,9 @@
     $pushRegisterPath = public_path('assets/js/push-register.js');
 @endphp
 
-<script src="{{ asset('assets/js/push-register.js') }}?v={{ file_exists($pushRegisterPath) ? filemtime($pushRegisterPath) : time() }}" defer></script>
+<script
+    src="{{ asset('assets/js/push-register.js') }}?v={{ file_exists($pushRegisterPath) ? filemtime($pushRegisterPath) : time() }}"
+    defer></script>
 
 <script>
     const btnTheme = document.getElementById('btnTheme');
@@ -262,10 +264,60 @@
     $installPath = public_path('assets/js/install.js');
 @endphp
 
-<script src="{{ asset('assets/js/install.js') }}?v={{ file_exists($installPath) ? filemtime($installPath) : time() }}" defer></script>
+<script src="{{ asset('assets/js/install.js') }}?v={{ file_exists($installPath) ? filemtime($installPath) : time() }}"
+        defer></script>
 
-<div id="net-banner" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:85px;z-index:1200;background:#222;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;">
+<div id="net-banner"
+     style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:85px;z-index:1200;background:#222;color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;">
     Conexão lenta — exibindo dados em cache…
 </div>
 
+{{--Mobile Menu Script--}}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const toggle = document.getElementById('appMenuToggle');
+        const menu = document.getElementById('mobile-app-menu');
+        if (!toggle || !menu) return;
+
+        const panel = menu.querySelector('[data-menu-panel]');
+        const closeEls = menu.querySelectorAll('[data-menu-close]');
+
+        const openMenu = () => {
+            menu.classList.remove('hidden');
+            toggle.setAttribute('aria-expanded', 'true');
+
+            // animação
+            requestAnimationFrame(() => {
+                panel.classList.remove('translate-y-full', 'opacity-0');
+            });
+        };
+
+        const closeMenu = () => {
+            toggle.setAttribute('aria-expanded', 'false');
+            panel.classList.add('translate-y-full', 'opacity-0');
+
+            const onEnd = (e) => {
+                if (e.target !== panel) return;
+                menu.classList.add('hidden');
+                panel.removeEventListener('transitionend', onEnd);
+            };
+            panel.addEventListener('transitionend', onEnd);
+        };
+
+        toggle.addEventListener('click', () => {
+            const isOpen = !menu.classList.contains('hidden');
+            isOpen ? closeMenu() : openMenu();
+        });
+
+        closeEls.forEach(el => {
+            el.addEventListener('click', closeMenu);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !menu.classList.contains('hidden')) {
+                closeMenu();
+            }
+        });
+    });
+</script>
 @stack('scripts')

@@ -100,14 +100,14 @@
         {{-- FAB Categorias (mesma base visual do FAB acima) --}}
         <a
             href="{{ \Illuminate\Support\Facades\Route::has('transactionCategory.index') ? route('transactionCategory.index') : url('/transaction-category') }}"
-            class="md:hidden fixed bottom-36 right-4 z-[79] size-14 rounded-2xl grid place-items-center text-white shadow-lg
+            class="md:hidden fixed bottom-36 right-4 z-[40] size-14 rounded-2xl grid place-items-center text-white shadow-lg
                  bg-brand-600 hover:bg-brand-700 active:scale-95 transition"
             aria-label="Categorias">
             <i class="fa-solid fa-list-ul text-base"></i>
         </a>
 
         <div id="txMenu"
-             class="hidden fixed z-[75] min-w-40 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 shadow-soft p-1">
+             class="hidden fixed z-[40] min-w-40 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 shadow-soft p-1">
             <button data-menu-action="edit"  class="w-full text-left px-4 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800">Editar</button>
             <button data-menu-action="show"  class="w-full text-left px-4 py-2 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800">Ver detalhes</button>
             <button data-menu-action="delete" class="w-full text-left px-4 py-2 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">Excluir</button>

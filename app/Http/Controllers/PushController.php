@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Notifications\PushNotification;
 use Illuminate\Support\Facades\Log;
+use Minishlink\WebPush\Subscription;
+use Minishlink\WebPush\WebPush;
 
 class PushController extends Controller
 {

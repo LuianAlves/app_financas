@@ -11,18 +11,22 @@ class DailyDigestController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $tz   = 'America/Sao_Paulo';
-        $today = now($tz)->startOfDay();
-        $tomorrow = $today->copy()->addDay();
-        $afterTomorrow = $tomorrow->copy()->addDay();
+        $tz = 'America/Sao_Paulo';
+
+        $today        = now($tz)->startOfDay();
+        $tomorrow     = $today->copy()->addDay();
+        $afterTomorrow= $tomorrow->copy()->addDay();
 
         // ========= TRANSAÇÕES (sem cartão/credit e sem “total fatura”)
-        $txBase = $user->transactions()->with('transactionCategory')
+        $txBase = $user->transactions()
+            ->with('transactionCategory')
             ->where(function ($q) {
                 $q->where('transactions.type', '!=', 'card')
                     ->orWhereNull('transactions.type')
-                    ->orWhere(fn($qq) => $qq->where('transactions.type', 'card')
-                        ->where('transactions.type_card', '!=', 'credit'));
+                    ->orWhere(fn ($qq) =>
+                    $qq->where('transactions.type', 'card')
+                        ->where('transactions.type_card', '!=', 'credit')
+                    );
             })
             ->where(function ($q) {
                 $q->whereNull('transactions.title')
@@ -31,30 +35,32 @@ class DailyDigestController extends Controller
                     ]);
             });
 
-        // HOJE
+        // ========= HOJE
         $todayBase = (clone $txBase)->whereDate('date', $today->toDateString());
-        $todayIn   = (clone $todayBase)->whereHas('transactionCategory', fn($q)=>$q->where('type','entrada'))->get();
-        $todayOut  = (clone $todayBase)->whereHas('transactionCategory', fn($q)=>$q->where('type','despesa'))->get();
-        $todayInv  = (clone $todayBase)->whereHas('transactionCategory', fn($q)=>$q->where('type','investimento'))->get();
+        $todayIn   = (clone $todayBase)->whereHas('transactionCategory', fn ($q) => $q->where('type', 'entrada'))->get();
+        $todayOut  = (clone $todayBase)->whereHas('transactionCategory', fn ($q) => $q->where('type', 'despesa'))->get();
+        $todayInv  = (clone $todayBase)->whereHas('transactionCategory', fn ($q) => $q->where('type', 'investimento'))->get();
 
-        // AMANHÃ
+        // ========= AMANHÃ
         $tomBase = (clone $txBase)->whereDate('date', $tomorrow->toDateString());
-        $tomIn   = (clone $tomBase)->whereHas('transactionCategory', fn($q)=>$q->where('type','entrada'))->get();
-        $tomOut  = (clone $tomBase)->whereHas('transactionCategory', fn($q)=>$q->where('type','despesa'))->get();
-        $tomInv  = (clone $tomBase)->whereHas('transactionCategory', fn($q)=>$q->where('type','investimento'))->get();
+        $tomIn   = (clone $tomBase)->whereHas('transactionCategory', fn ($q) => $q->where('type', 'entrada'))->get();
+        $tomOut  = (clone $tomBase)->whereHas('transactionCategory', fn ($q) => $q->where('type', 'despesa'))->get();
+        $tomInv  = (clone $tomBase)->whereHas('transactionCategory', fn ($q) => $q->where('type', 'investimento'))->get();
 
-        // ========= FATURAS (um evento por invoice no vencimento) — HOJE/AMANHÃ
+        // ========= FATURAS (para hoje/amanhã e para KPIs)
         $invoicesAgg = DB::table('invoices as inv')
             ->join('cards as c', 'c.id', '=', 'inv.card_id')
             ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
             ->where('inv.user_id', $user->id)
             ->where('inv.paid', false)
-            ->groupBy('inv.id','inv.card_id','inv.current_month','c.cardholder_name','c.last_four_digits','c.due_day')
+            ->groupBy('inv.id', 'inv.card_id', 'inv.current_month',
+                'c.cardholder_name', 'c.last_four_digits', 'c.due_day')
             ->select(
                 'inv.id','inv.card_id','inv.current_month',
                 'c.cardholder_name','c.last_four_digits','c.due_day',
                 DB::raw('COALESCE(SUM(it.amount),0) as total')
-            )->get()
+            )
+            ->get()
             ->map(function ($r) {
                 $base = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
                 $due  = $base->copy()->day(min((int)($r->due_day ?: 1), $base->daysInMonth));
@@ -69,62 +75,111 @@ class DailyDigestController extends Controller
                     'total'         => (float)$r->total,
                 ];
             })
-            ->filter(fn($x)=>$x['total']>0)
+            ->filter(fn ($x) => $x['total'] > 0)
             ->values();
 
         $invoicesToday    = $invoicesAgg->where('due_date', $today->toDateString())->values();
         $invoicesTomorrow = $invoicesAgg->where('due_date', $tomorrow->toDateString())->values();
 
-        // ========= PRÓXIMOS (após amanhã, próximos 5)
-        $winStart = $afterTomorrow->copy();
-        $winEnd   = $afterTomorrow->copy()->addMonthsNoOverflow(12);
+        // ========= EVENTOS (únicas + recorrentes + custom + faturas)
+        // janela: 6 meses para trás até 12 meses para frente
+        $winStart = $today->copy()->subMonthsNoOverflow(6);
+        $winEnd   = $today->copy()->addMonthsNoOverflow(12);
 
-        $events = $this->buildWindowEventsLite($user->id, $winStart, $winEnd);
+        $events    = $this->buildWindowEventsLite($user->id, $winStart, $winEnd);
+        $eventsCol = collect($events);
 
-        $nextFive = collect($events)
-            ->filter(fn($e)=>($e['extendedProps']['type'] ?? null) !== 'payment')
-            ->filter(fn($e)=>Carbon::parse($e['start'])->gte($afterTomorrow))
+        // helper de KPI a partir dos eventos
+        $buildKpi = function ($minDate, $maxDate) use ($eventsCol) {
+            $min = $minDate ? Carbon::parse($minDate)->toDateString() : null;
+            $max = $maxDate ? Carbon::parse($maxDate)->toDateString() : null;
+
+            $in  = 0.0;
+            $out = 0.0;
+
+            foreach ($eventsCol as $e) {
+                $d = Carbon::parse($e['start'])->toDateString();
+                if ($min && $d < $min) continue;
+                if ($max && $d > $max) continue;
+
+                $props = $e['extendedProps'] ?? [];
+                $type  = $props['type'] ?? null;
+                if ($type === 'payment') continue; // pagamentos não entram
+
+                $amount = (float)($props['amount'] ?? 0);
+
+                if ($type === 'entrada') {
+                    $in += abs($amount);
+                } else {
+                    $out += abs($amount);
+                }
+            }
+
+            return [
+                'in'  => $in,
+                'out' => $out,
+                'net' => $in - $out,
+            ];
+        };
+
+        // ========= KPIs
+        $kpiOverdue = $buildKpi(null, $today->copy()->subDay());       // tudo que venceu antes de hoje
+        $kpiToday   = $buildKpi($today, $today);                       // hoje
+        $kpiNext7   = $buildKpi($tomorrow, $today->copy()->addDays(7)); // amanhã até +7 dias
+
+        // ========= CARDS ATRASADOS (lista detalhada)
+        $overdueEvents = $eventsCol
+            ->filter(function ($e) use ($today) {
+                $d    = Carbon::parse($e['start']);
+                $type = $e['extendedProps']['type'] ?? null;
+                return $d->lt($today) && $type !== 'payment';
+            })
+            ->sortByDesc('start');
+
+        $overdueCards = $overdueEvents->map(function ($e) {
+            $props      = $e['extendedProps'] ?? [];
+            $type       = $props['type'] ?? null;
+            $amountRaw  = (float)($props['amount'] ?? 0);
+            $signed     = $type === 'entrada' ? abs($amountRaw) : -abs($amountRaw);
+
+            return [
+                'bg'            => $e['bg']   ?? '#6b7280',
+                'icon'          => $e['icon'] ?? 'fa-solid fa-calendar-day',
+                'title'         => $e['title'] ?? ($props['category_name'] ?? 'Lançamento'),
+                'date'          => Carbon::parse($e['start'])->toDateString(),
+                'amt'           => $signed,
+                'is_invoice'    => !empty($props['is_invoice']),
+                'paid'          => $props['paid'] ?? false,
+                'tx_id'         => $props['transaction_id'] ?? null,
+                'card_id'       => $props['card_id'] ?? null,
+                'current_month' => $props['current_month'] ?? null,
+                'parcel_of'     => $props['parcel_of'] ?? null,
+                'parcel_total'  => $props['parcel_total'] ?? null,
+            ];
+        })->values();
+
+        // ========= PRÓXIMOS 5 (mantendo a lógica antiga)
+        $nextFive = $eventsCol
+            ->filter(function ($e) use ($afterTomorrow) {
+                $props = $e['extendedProps'] ?? [];
+                $type  = $props['type'] ?? null;
+                if ($type === 'payment') return false;
+
+                $d = Carbon::parse($e['start']);
+                return $d->gte($afterTomorrow);
+            })
             ->sortBy('start')
             ->take(5)
             ->values();
-
-        // ========= ATRASADOS (até ontem)
-        $pastStart = $today->copy()->subMonthsNoOverflow(12); // janela de 12 meses pra trás
-        $pastEnd   = $today->copy()->subDay();
-
-        $overdueEvents = $this->buildWindowEventsLite($user->id, $pastStart, $pastEnd);
-
-        $overdueCards = $overdueEvents
-            ->sortByDesc('start')
-            ->map(function ($e) {
-                $xp  = $e['extendedProps'] ?? [];
-                $amt = (float) ($xp['amount'] ?? 0);
-
-                return [
-                    'bg'            => $e['bg'] ?? '#6b7280',
-                    'icon'          => $e['icon'] ?? (!empty($xp['is_invoice']) ? 'fa-solid fa-credit-card' : 'fa-solid fa-receipt'),
-                    'title'         => $e['title'] ?? ($xp['category_name'] ?? 'Lançamento'),
-                    'date'          => $e['start'],
-                    'amt'           => $amt,
-                    'is_invoice'    => !empty($xp['is_invoice']),
-                    'paid'          => !empty($xp['paid']),
-                    'tx_id'         => $xp['transaction_id'] ?? null,
-                    'card_id'       => $xp['card_id'] ?? null,
-                    'current_month' => $xp['current_month'] ?? null,
-                    'parcel_of'     => $xp['parcel_of'] ?? null,
-                    'parcel_total'  => $xp['parcel_total'] ?? null,
-                ];
-            })
-            ->filter(fn ($c) => empty($c['paid']))
-            ->values();
-
 
         return view('app.digest.index', compact(
             'today','tomorrow',
             'todayIn','todayOut','todayInv',
             'tomIn','tomOut','tomInv',
             'invoicesToday','invoicesTomorrow',
-            'nextFive','overdueCards'
+            'nextFive',
+            'overdueCards',
+            'kpiOverdue','kpiToday','kpiNext7'
         ));
     }
 

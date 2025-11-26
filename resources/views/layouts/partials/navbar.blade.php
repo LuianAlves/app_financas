@@ -52,17 +52,17 @@
             </button>
             @if(auth()->check())
 
-                <button
-                    class="relative grid place-items-center size-10 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition"
-                    aria-label="Notificações">
-                    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 5 3 9H3c0-4 3-2 3-9"/>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                    </svg>
-                    <span
-                        class="absolute -top-1 -right-1 size-4 rounded-full bg-brand-500 text-white text-[10px] grid place-items-center">3</span>
-                </button>
+{{--                <button--}}
+{{--                    class="relative grid place-items-center size-10 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition"--}}
+{{--                    aria-label="Notificações">--}}
+{{--                    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"--}}
+{{--                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">--}}
+{{--                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 5 3 9H3c0-4 3-2 3-9"/>--}}
+{{--                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>--}}
+{{--                    </svg>--}}
+{{--                    <span--}}
+{{--                        class="absolute -top-1 -right-1 size-4 rounded-full bg-brand-500 text-white text-[10px] grid place-items-center">3</span>--}}
+{{--                </button>--}}
 
                 <button
                     type="button"

@@ -90,7 +90,8 @@ class DailyDigestController extends Controller
         $eventsCol = collect($events);
 
         // helper de KPI a partir dos eventos
-        $buildKpi = function ($minDate, $maxDate) use ($eventsCol) {
+        // $onlyUnpaid = true -> ignora eventos já pagos (caso dos atrasados)
+        $buildKpi = function ($minDate, $maxDate, bool $onlyUnpaid = false) use ($eventsCol) {
             $min = $minDate ? Carbon::parse($minDate)->toDateString() : null;
             $max = $maxDate ? Carbon::parse($maxDate)->toDateString() : null;
 
@@ -104,7 +105,12 @@ class DailyDigestController extends Controller
 
                 $props = $e['extendedProps'] ?? [];
                 $type  = $props['type'] ?? null;
-                if ($type === 'payment') continue; // pagamentos não entram
+                if ($type === 'payment') continue; // se um dia tiver evento de pagamento, ignora
+
+                $paid = (bool)($props['paid'] ?? false);
+                if ($onlyUnpaid && $paid) {
+                    continue;
+                }
 
                 $amount = (float)($props['amount'] ?? 0);
 
@@ -123,16 +129,22 @@ class DailyDigestController extends Controller
         };
 
         // ========= KPIs
-        $kpiOverdue = $buildKpi(null, $today->copy()->subDay());       // tudo que venceu antes de hoje
-        $kpiToday   = $buildKpi($today, $today);                       // hoje
-        $kpiNext7   = $buildKpi($tomorrow, $today->copy()->addDays(7)); // amanhã até +7 dias
+        // Atrasados: só o que ainda NÃO foi pago
+        $kpiOverdue = $buildKpi(null, $today->copy()->subDay(), true);
 
-        // ========= CARDS ATRASADOS (lista detalhada)
+        // Hoje / próximos 7 dias: consideram pagos + não pagos
+        $kpiToday   = $buildKpi($today, $today, false);
+        $kpiNext7   = $buildKpi($tomorrow, $today->copy()->addDays(7), false);
+
+        // ========= CARDS ATRASADOS (lista detalhada) — somente NÃO pagos
         $overdueEvents = $eventsCol
             ->filter(function ($e) use ($today) {
-                $d    = Carbon::parse($e['start']);
-                $type = $e['extendedProps']['type'] ?? null;
-                return $d->lt($today) && $type !== 'payment';
+                $props = $e['extendedProps'] ?? [];
+                $d     = Carbon::parse($e['start']);
+                $type  = $props['type'] ?? null;
+                $paid  = (bool)($props['paid'] ?? false);
+
+                return $d->lt($today) && $type !== 'payment' && !$paid;
             })
             ->sortByDesc('start');
 
@@ -149,7 +161,7 @@ class DailyDigestController extends Controller
                 'date'          => Carbon::parse($e['start'])->toDateString(),
                 'amt'           => $signed,
                 'is_invoice'    => !empty($props['is_invoice']),
-                'paid'          => $props['paid'] ?? false,
+                'paid'          => (bool)($props['paid'] ?? false),
                 'tx_id'         => $props['transaction_id'] ?? null,
                 'card_id'       => $props['card_id'] ?? null,
                 'current_month' => $props['current_month'] ?? null,
@@ -172,6 +184,26 @@ class DailyDigestController extends Controller
             ->take(5)
             ->values();
 
+        // mapa [transaction_id#data] => true/false (pago?)
+        $paidByKey = $eventsCol
+            ->map(function ($e) {
+                $props = $e['extendedProps'] ?? [];
+                if (empty($props['transaction_id'])) {
+                    return null;
+                }
+
+                $date = Carbon::parse($e['start'])->toDateString();
+
+                return [
+                    'key'  => $props['transaction_id'].'#'.$date,
+                    'paid' => (bool)($props['paid'] ?? false),
+                ];
+            })
+            ->filter()
+            ->groupBy('key')
+            ->map(fn ($rows) => $rows->contains(fn ($r) => $r['paid']))
+            ->toArray();
+
         return view('app.digest.index', compact(
             'today','tomorrow',
             'todayIn','todayOut','todayInv',
@@ -179,7 +211,8 @@ class DailyDigestController extends Controller
             'invoicesToday','invoicesTomorrow',
             'nextFive',
             'overdueCards',
-            'kpiOverdue','kpiToday','kpiNext7'
+            'kpiOverdue','kpiToday','kpiNext7',
+            'paidByKey'
         ));
     }
 
@@ -187,34 +220,84 @@ class DailyDigestController extends Controller
     {
         $events = collect();
 
-        $uniqueTx = \App\Models\Transaction::withoutGlobalScopes()->with(['transactionCategory:id,name,type,color,icon'])->leftJoin('payment_transactions as pt', 'pt.transaction_id', '=', 'transactions.id')->where('transactions.user_id', $userId)->where('recurrence_type', 'unique')->whereBetween('transactions.date', [$winStart, $winEnd])->whereNull('pt.id')->where(function ($q) {$q->where('transactions.type','!=','card')->orWhereNull('transactions.type')->orWhere(fn($qq)=>$qq->where('transactions.type','card')->where('transactions.type_card','!=','credit'));})->where(function ($q) {
+        // ===== MAPA DE PAGAMENTOS POR (transaction_id + ano-mês) =====
+        $payments = DB::table('payment_transactions as pt')
+            ->join('transactions as t', 't.id', '=', 'pt.transaction_id')
+            ->where('t.user_id', $userId)
+            ->select('pt.transaction_id', 'pt.reference_month', 'pt.reference_year')
+            ->get();
+
+        $paidMap = [];
+        foreach ($payments as $p) {
+            $month = str_pad((string) $p->reference_month, 2, '0', STR_PAD_LEFT);
+            $key   = (string) $p->transaction_id . '#' . $p->reference_year . '-' . $month;
+            $paidMap[$key] = true;
+        }
+
+        $isPaid = function (string $transactionId, Carbon $occDate) use ($paidMap): bool {
+            $key = $transactionId . '#' . $occDate->format('Y-m');
+            return !empty($paidMap[$key]);
+        };
+
+        // ===== ÚNICAS =====
+        $uniqueTx = \App\Models\Transaction::withoutGlobalScopes()
+            ->with(['transactionCategory:id,name,type,color,icon'])
+            ->where('transactions.user_id', $userId)
+            ->where('recurrence_type', 'unique')
+            ->whereBetween('transactions.date', [$winStart, $winEnd])
+            ->where(function ($q) {
+                $q->where('transactions.type', '!=', 'card')
+                    ->orWhereNull('transactions.type')
+                    ->orWhere(fn ($qq) =>
+                    $qq->where('transactions.type', 'card')
+                        ->where('transactions.type_card', '!=', 'credit')
+                    );
+            })
+            ->where(function ($q) {
                 $q->whereNull('transactions.title')
-                    ->orWhereRaw('LOWER(transactions.title) NOT IN (?,?,?)', ['total fatura','fatura total','total da fatura']);
-            })->get([
-                'transactions.id','transactions.title','transactions.amount',
-                'transactions.date','transactions.transaction_category_id'
+                    ->orWhereRaw('LOWER(transactions.title) NOT IN (?,?,?)', [
+                        'total fatura', 'fatura total', 'total da fatura'
+                    ]);
+            })
+            ->get([
+                'transactions.id',
+                'transactions.title',
+                'transactions.amount',
+                'transactions.date',
+                'transactions.transaction_category_id',
             ]);
 
         foreach ($uniqueTx as $t) {
             $cat  = $t->transactionCategory;
-            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true) ? $cat->type : 'investimento';
+            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true)
+                ? $cat->type
+                : 'investimento';
+
+            $occ  = Carbon::parse($t->date)->startOfDay();
+            $paid = $isPaid((string) $t->id, $occ);
+
             $events->push([
-                'id'    => (string)$t->id,
+                'id'    => (string) $t->id,
                 'title' => $t->title ?? $cat?->name,
-                'start' => (string)$t->date,
+                'start' => $occ->toDateString(),
                 'bg'    => $cat?->color,
                 'icon'  => $cat?->icon,
-                'color' => $type === 'despesa' ? '#ef4444' : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
+                'color' => $type === 'despesa' ? '#ef4444'
+                    : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
                 'extendedProps' => [
-                    'amount'        => (float)$t->amount,
-                    'amount_brl'    => function_exists('brlPrice') ? brlPrice($t->amount) : number_format($t->amount,2,',','.'),
+                    'amount'        => (float) $t->amount,
+                    'amount_brl'    => function_exists('brlPrice')
+                        ? brlPrice($t->amount)
+                        : number_format($t->amount, 2, ',', '.'),
                     'category_name' => $cat?->name,
                     'type'          => $type,
-                    'transaction_id'=> (string)$t->id,
+                    'transaction_id'=> (string) $t->id,
+                    'paid'          => $paid,
                 ],
             ]);
         }
 
+        // ===== RECORRENTES MONTHLY / YEARLY (sem custom items) =====
         $recMY = \App\Models\Recurrent::withoutGlobalScopes()
             ->with(['transaction.transactionCategory:id,name,type,color,icon'])
             ->where('recurrents.user_id', $userId)
@@ -223,8 +306,10 @@ class DailyDigestController extends Controller
                     ->where(function ($q2) {
                         $q2->where('transactions.type', '!=', 'card')
                             ->orWhereNull('transactions.type')
-                            ->orWhere(fn($qq) => $qq->where('transactions.type', 'card')
-                                ->where('transactions.type_card', '!=', 'credit'));
+                            ->orWhere(fn ($qq) =>
+                            $qq->where('transactions.type', 'card')
+                                ->where('transactions.type_card', '!=', 'credit')
+                            );
                     })
                     ->where(function ($q3) {
                         $q3->whereNull('transactions.title')
@@ -249,8 +334,8 @@ class DailyDigestController extends Controller
             $t = $r->transaction;
             if (!$t) continue;
 
-            $cat   = $t->transactionCategory;
-            $type  = in_array($cat?->type, ['entrada', 'despesa', 'investimento'], true)
+            $cat  = $t->transactionCategory;
+            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true)
                 ? $cat->type
                 : 'investimento';
 
@@ -265,21 +350,27 @@ class DailyDigestController extends Controller
                     $occ = $m->copy()->day(min($pd, $m->daysInMonth));
 
                     if ($occ->betweenIncluded($winStart, $winEnd) && $occ->gte($anchor)) {
+                        $paid = $isPaid((string) $t->id, $occ);
+
                         $events->push([
                             'id'    => "rec_m_{$r->id}_".$occ->format('Ymd'),
                             'title' => $t->title ?? $cat?->name,
                             'start' => $occ->toDateString(),
                             'bg'    => $cat?->color,
                             'icon'  => $cat?->icon,
-                            'color' => $type === 'despesa' ? '#ef4444' : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
+                            'color' => $type === 'despesa' ? '#ef4444'
+                                : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
                             'extendedProps' => [
-                                'amount'        => $type === 'entrada' ? abs($amount) : -abs($amount),
+                                'amount'        => $type === 'entrada'
+                                    ? abs($amount)
+                                    : -abs($amount),
                                 'amount_brl'    => function_exists('brlPrice')
                                     ? brlPrice($amount)
                                     : number_format($amount, 2, ',', '.'),
                                 'category_name' => $cat?->name,
                                 'type'          => $type,
                                 'transaction_id'=> (string) $t->id,
+                                'paid'          => $paid,
                             ],
                         ]);
                     }
@@ -294,21 +385,27 @@ class DailyDigestController extends Controller
                     $occ    = Carbon::create($y, $anchorMonth, min($pd, $daysIn));
 
                     if ($occ->betweenIncluded($winStart, $winEnd) && $occ->gte($anchor)) {
+                        $paid = $isPaid((string) $t->id, $occ);
+
                         $events->push([
                             'id'    => "rec_y_{$r->id}_".$occ->format('Ymd'),
                             'title' => $t->title ?? $cat?->name,
                             'start' => $occ->toDateString(),
                             'bg'    => $cat?->color,
                             'icon'  => $cat?->icon,
-                            'color' => $type === 'despesa' ? '#ef4444' : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
+                            'color' => $type === 'despesa' ? '#ef4444'
+                                : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
                             'extendedProps' => [
-                                'amount'        => $type === 'entrada' ? abs($amount) : -abs($amount),
+                                'amount'        => $type === 'entrada'
+                                    ? abs($amount)
+                                    : -abs($amount),
                                 'amount_brl'    => function_exists('brlPrice')
                                     ? brlPrice($amount)
                                     : number_format($amount, 2, ',', '.'),
                                 'category_name' => $cat?->name,
                                 'type'          => $type,
                                 'transaction_id'=> (string) $t->id,
+                                'paid'          => $paid,
                             ],
                         ]);
                     }
@@ -316,11 +413,13 @@ class DailyDigestController extends Controller
             }
         }
 
-        // CUSTOM COM ITENS (terminados)
+        // ===== CUSTOM COM ITENS (tabela custom_item_recurrents) =====
         $recCustom = \App\Models\Recurrent::withoutGlobalScopes()
             ->with(['transaction.transactionCategory:id,name,type,color,icon'])
             ->where('recurrents.user_id', $userId)
-            ->whereHas('transaction', fn($q)=>$q->whereIn('recurrence_type', ['custom','monthly','yearly']))
+            ->whereHas('transaction', fn ($q) =>
+            $q->whereIn('recurrence_type', ['custom','monthly','yearly'])
+            )
             ->whereExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('custom_item_recurrents as cir')
@@ -333,17 +432,32 @@ class DailyDigestController extends Controller
             if (!$t) continue;
 
             $cat  = $t->transactionCategory;
-            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true) ? $cat->type : 'investimento';
+            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true)
+                ? $cat->type
+                : 'investimento';
 
             $items = \App\Models\CustomItemRecurrents::where('recurrent_id', $r->id)
-                ->get(['payment_day','reference_month','reference_year','amount','custom_occurrence_number']);
+                ->get([
+                    'payment_day',
+                    'reference_month',
+                    'reference_year',
+                    'amount',
+                    'custom_occurrence_number',
+                ]);
 
             $totalOccurrences = max($items->max('custom_occurrence_number') ?? 0, $items->count());
 
             foreach ($items as $ci) {
                 $days = Carbon::create($ci->reference_year, $ci->reference_month, 1)->daysInMonth;
-                $occ  = Carbon::create($ci->reference_year, $ci->reference_month, min((int) $ci->payment_day, $days));
-                if (!$occ->betweenIncluded($winStart, $winEnd)) continue;
+                $occ  = Carbon::create(
+                    $ci->reference_year,
+                    $ci->reference_month,
+                    min((int) $ci->payment_day, $days)
+                );
+
+                if (!$occ->betweenIncluded($winStart, $winEnd)) {
+                    continue;
+                }
 
                 $amount     = (float) $ci->amount;
                 $occurrence = (int) $ci->custom_occurrence_number;
@@ -351,105 +465,146 @@ class DailyDigestController extends Controller
                 $parcelOf    = $totalOccurrences > 1 ? $occurrence : null;
                 $parcelTotal = $totalOccurrences > 1 ? $totalOccurrences : null;
 
+                $paid = $isPaid((string) $t->id, $occ);
+
                 $events->push([
                     'id'    => "rec_c_{$r->id}_".$occ->format('Ymd')."_".$ci->custom_occurrence_number,
                     'title' => $t->title ?? $cat?->name,
                     'start' => $occ->toDateString(),
                     'bg'    => $cat?->color,
                     'icon'  => $cat?->icon,
-                    'color' => $type === 'despesa' ? '#ef4444' : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
+                    'color' => $type === 'despesa' ? '#ef4444'
+                        : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
                     'extendedProps' => [
-                        'amount'        => $type === 'entrada' ? abs($amount) : -abs($amount),
-                        'amount_brl'    => function_exists('brlPrice') ? brlPrice($amount) : number_format($amount, 2, ',', '.'),
+                        'amount'        => $type === 'entrada'
+                            ? abs($amount)
+                            : -abs($amount),
+                        'amount_brl'    => function_exists('brlPrice')
+                            ? brlPrice($amount)
+                            : number_format($amount, 2, ',', '.'),
                         'category_name' => $cat?->name,
                         'type'          => $type,
                         'transaction_id'=> (string) $t->id,
                         'parcel_of'     => $parcelOf,
                         'parcel_total'  => $parcelTotal,
+                        'paid'          => $paid,
                     ],
                 ]);
             }
         }
 
-        // CUSTOM “A CADA X DIAS” (sem itens)
+        // ===== CUSTOM “A CADA X DIAS” (sem itens) =====
         $recDays = \App\Models\Recurrent::withoutGlobalScopes()
             ->with(['transaction.transactionCategory:id,name,type,color,icon'])
             ->where('recurrents.user_id', $userId)
-            ->where('interval_unit','days')
+            ->where('interval_unit', 'days')
             ->whereHas('transaction', function ($q) {
-                $q->where('recurrence_type','custom')
+                $q->where('recurrence_type', 'custom')
                     ->where(function ($q2) {
                         $q2->where('transactions.type','!=','card')
                             ->orWhereNull('transactions.type')
-                            ->orWhere(fn($qq)=>$qq->where('transactions.type','card')->where('transactions.type_card','!=','credit'));
+                            ->orWhere(fn ($qq) =>
+                            $qq->where('transactions.type','card')
+                                ->where('transactions.type_card','!=','credit')
+                            );
                     })
                     ->where(function ($q3) {
                         $q3->whereNull('transactions.title')
-                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?,?,?)', ['total fatura','fatura total','total da fatura']);
+                            ->orWhereRaw('LOWER(transactions.title) NOT IN (?,?,?)', [
+                                'total fatura','fatura total','total da fatura'
+                            ]);
                     });
             })
             ->get(['recurrents.*']);
 
         foreach ($recDays as $r) {
-            if (DB::table('custom_item_recurrents')->where('recurrent_id', $r->id)->exists()) continue;
+            if (DB::table('custom_item_recurrents')->where('recurrent_id', $r->id)->exists()) {
+                continue; // já tratado em $recCustom
+            }
 
-            $t = $r->transaction; if (!$t) continue;
+            $t = $r->transaction;
+            if (!$t) continue;
+
             $cat  = $t->transactionCategory;
-            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true) ? $cat->type : 'investimento';
+            $type = in_array($cat?->type, ['entrada','despesa','investimento'], true)
+                ? $cat->type
+                : 'investimento';
 
             $startBase = Carbon::parse($t->date)->startOfDay();
             $start     = Carbon::parse($r->start_date ?: $startBase)->startOfDay();
-            if ($start->lt($startBase)) $start = $startBase;
+            if ($start->lt($startBase)) {
+                $start = $startBase;
+            }
 
-            $interval = max(1, (int)$r->interval_value);
-            $cursor = $this->firstAlignedDays($start, $winStart, $interval);
-            $cursor = $this->normalizeW($cursor, (bool)$r->include_sat, (bool)$r->include_sun);
+            $interval = max(1, (int) $r->interval_value);
+            $cursor   = $this->firstAlignedDays($start, $winStart, $interval);
+            $cursor   = $this->normalizeW($cursor, (bool) $r->include_sat, (bool) $r->include_sun);
 
-            $amount = (float)($r->amount ?: $t->amount);
+            $amount = (float) ($r->amount ?: $t->amount);
 
             while ($cursor->lte($winEnd)) {
+                $paid = $isPaid((string) $t->id, $cursor);
+
                 $events->push([
                     'id'    => "rec_d_{$r->id}_".$cursor->format('Ymd'),
                     'title' => $t->title ?? $cat?->name,
                     'start' => $cursor->toDateString(),
                     'bg'    => $cat?->color,
                     'icon'  => $cat?->icon,
-                    'color' => $type === 'despesa' ? '#ef4444' : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
+                    'color' => $type === 'despesa' ? '#ef4444'
+                        : ($type === 'entrada' ? '#22c55e' : '#0ea5e9'),
                     'extendedProps' => [
-                        'amount'        => $type === 'entrada' ? abs($amount) : -abs($amount),
-                        'amount_brl'    => function_exists('brlPrice') ? brlPrice($amount) : number_format($amount,2,',','.'),
+                        'amount'        => $type === 'entrada'
+                            ? abs($amount)
+                            : -abs($amount),
+                        'amount_brl'    => function_exists('brlPrice')
+                            ? brlPrice($amount)
+                            : number_format($amount, 2, ',', '.'),
                         'category_name' => $cat?->name,
                         'type'          => $type,
-                        'transaction_id'=> (string)$t->id,
+                        'transaction_id'=> (string) $t->id,
+                        'paid'          => $paid,
                     ],
                 ]);
-                $cursor = $this->normalizeW($cursor->copy()->addDays($interval), (bool)$r->include_sat, (bool)$r->include_sun);
+
+                $cursor = $this->normalizeW(
+                    $cursor->copy()->addDays($interval),
+                    (bool) $r->include_sat,
+                    (bool) $r->include_sun
+                );
             }
         }
 
-        // FATURAS (um por invoice, na data de vencimento)
+        // ===== FATURAS (invoice) – um por invoice no vencimento =====
         $rows = DB::table('invoices as inv')
             ->join('cards as c', 'c.id', '=', 'inv.card_id')
             ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
             ->where('inv.user_id', $userId)
             ->where('inv.paid', false)
-            ->groupBy('inv.id','inv.card_id','inv.current_month','c.cardholder_name','c.last_four_digits','c.due_day')
+            ->groupBy(
+                'inv.id','inv.card_id','inv.current_month',
+                'c.cardholder_name','c.last_four_digits','c.due_day'
+            )
             ->select(
                 'inv.id','inv.card_id','inv.current_month',
                 'c.cardholder_name','c.last_four_digits','c.due_day',
                 DB::raw('COALESCE(SUM(it.amount),0) as total')
-            )->get();
+            )
+            ->get();
 
         foreach ($rows as $r) {
-            $base = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
-            $due  = $base->copy()->day(min((int)($r->due_day ?: 1), $base->daysInMonth));
-            $total = (float)$r->total;
-            if ($total <= 0 || !$due->betweenIncluded($winStart,$winEnd)) continue;
+            $base  = Carbon::createFromFormat('Y-m', $r->current_month)->startOfMonth();
+            $due   = $base->copy()->day(min((int) ($r->due_day ?: 1), $base->daysInMonth));
+            $total = (float) $r->total;
 
-            $first = explode(' ', trim((string)$r->cardholder_name))[0];
+            if ($total <= 0 || !$due->betweenIncluded($winStart, $winEnd)) {
+                continue;
+            }
+
+            $first = explode(' ', trim((string) $r->cardholder_name))[0];
 
             $events->push([
-                'id'    => (string)$r->id,
+                'id'    => (string) $r->id,
                 'title' => "Fatura {$first} {$r->last_four_digits}",
                 'start' => $due->toDateString(),
                 'bg'    => '#be123c',
@@ -457,12 +612,14 @@ class DailyDigestController extends Controller
                 'color' => '#ef4444',
                 'extendedProps' => [
                     'amount'        => -abs($total),
-                    'amount_brl'    => function_exists('brlPrice') ? brlPrice($total) : number_format($total,2,',','.'),
+                    'amount_brl'    => function_exists('brlPrice')
+                        ? brlPrice($total)
+                        : number_format($total, 2, ',', '.'),
                     'category_name' => 'Fatura Cartão',
                     'type'          => 'despesa',
                     'is_invoice'    => true,
-                    'paid'          => false,
-                    'card_id'       => (string)$r->card_id,
+                    'paid'          => false, // invoice inteira ainda em aberto
+                    'card_id'       => (string) $r->card_id,
                     'current_month' => $r->current_month,
                 ],
             ]);

@@ -85,22 +85,19 @@
             </p>
 
             <div class="mt-3 flex items-center justify-between gap-2 text-xs">
-                <span
-                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-emerald-50 text-emerald-700
-                           dark:bg-emerald-950/40 dark:text-emerald-300">
+                <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
                     <i class="fa-solid fa-arrow-trend-up text-[11px]"></i>
                     <span>{{ $fmtBrl($kpiToday['in'] ?? 0) }}</span>
                 </span>
 
-                <span
-                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-rose-50 text-rose-700
-                           dark:bg-rose-950/40 dark:text-rose-300">
+                <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
                     <i class="fa-solid fa-arrow-trend-down text-[11px]"></i>
                     <span>{{ $fmtBrl($kpiToday['out'] ?? 0) }}</span>
                 </span>
             </div>
-        </div>
-        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
+
+            <div class="h-px bg-neutral-100 dark:bg-neutral-800 my-5"></div>
+
             <div class="flex items-center justify-between gap-2">
                 <h2 class="text-sm font-semibold text-neutral-700 dark:text-neutral-100">
                     Hoje ({{ $today->format('d/m/Y') }})
@@ -165,7 +162,7 @@
                 @endforelse
             </ul>
         </div>
-        <div class="h-px bg-neutral-100 dark:bg-neutral-800"></div>
+
         <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
             <p class="text-xs font-semibold tracking-[0.12em] uppercase text-neutral-500 dark:text-neutral-400">
                 Próximos 7 dias
@@ -189,8 +186,9 @@
                     <span>{{ $fmtBrl($kpiNext7['out'] ?? 0) }}</span>
                 </span>
             </div>
-        </div>
-        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
+
+            <div class="h-px bg-neutral-100 dark:bg-neutral-800 my-5"></div>
+
             <div class="flex items-center justify-between gap-2">
                 <h2 class="text-sm font-semibold text-neutral-700 dark:text-neutral-100">
                     Amanhã ({{ $tomorrow->format('d/m/Y') }})
@@ -254,9 +252,8 @@
                     </li>
                 @endforelse
             </ul>
-        </div>
-        <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
-            <div class="flex items-center justify-between gap-2">
+
+            <div class="flex items-center justify-between gap-2 my-5">
                 <h2 class="text-sm font-semibold text-neutral-700 dark:text-neutral-100">
                     Próximos lançamentos
                 </h2>
@@ -321,7 +318,7 @@
                 @endforelse
             </ul>
         </div>
-        <div class="h-px bg-neutral-100 dark:bg-neutral-800"></div>
+
         @if(isset($overdueCards) && $overdueCards->count())
             {{-- TOTAL ATRASADO --}}
             <div

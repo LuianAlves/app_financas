@@ -19,26 +19,27 @@ class ProjectionService
 
     public function build(?string $userId, string $start, string $end): array
     {
-        $uid  = $userId ?: \Illuminate\Support\Facades\Auth::id();
+        $uid  = $userId ?: Auth::id();
         [$ownerId, $userIds] = $this->resolveOwnerAndAdditionals($uid);
 
         $tz   = 'America/Sao_Paulo';
-        $from = \Carbon\Carbon::parse($start, $tz)->startOfDay();
-        $to   = \Carbon\Carbon::parse($end,   $tz)->endOfDay();
+        $from = Carbon::parse($start, $tz)->startOfDay();
+        $to   = Carbon::parse($end,   $tz)->endOfDay();
+        $today = Carbon::now($tz)->startOfDay();
+        $todayIso = $today->toDateString();
 
         $this->paidIdx = $this->paymentsIndex($userIds);
 
-        // saldo anterior correto (com fallback)
-        $opening = $this->openingBalance($userIds, $from);
-
+        // monta todas as ocorrências (real + projeção)
         $occ = collect()
-            ->merge($this->expandAccountMovements($userIds, $from, $to))           // <<< AQUI
+            ->merge($this->expandAccountMovements($userIds, $from, $to))
             ->merge($this->expandPaymentTransactions($userIds, $from, $to))
             ->merge($this->expandUnique($userIds, $from, $to))
             ->merge($this->expandRecurrentsMonthlyYearly($userIds, $from, $to))
             ->merge($this->expandRecurrentsCustom($userIds, $from, $to))
             ->merge($this->expandRecurrentsCustomDays($userIds, $from, $to));
 
+        // limpa duplicações / ignora cartão de crédito lançado em outro lugar
         $occ = $occ
             ->reject(fn($o) => ($o['type'] ?? null) === 'card' && ($o['type_card'] ?? null) === 'credit')
             ->unique(fn($o) => (($o['id'] ?? $o['title']).'@'.$o['date']))
@@ -46,15 +47,72 @@ class ProjectionService
 
         $bills = $this->cardBillsFromInvoices($userIds, $from, $to);
 
-        $days = $this->consolidateDays($from, $to, $opening, $occ, $bills);
+        // saldo real atual das contas (igual ao dashboard)
+        $currentBalance = $this->currentAccountsBalance($userIds); // pode ser null se não tiver conta
+
+        // intervalo pega o dia de hoje?
+        $rangeHasToday = $from->toDateString() <= $todayIso && $to->toDateString() >= $todayIso;
+
+        $opening = 0.0;
+        $days    = [];
+
+        if ($rangeHasToday && $currentBalance !== null) {
+            // 1º PASSO: consolida com saldo inicial 0 só para pegar os nets
+            $daysZero = $this->consolidateDays($from, $to, 0.0, $occ, $bills);
+
+            $netUntilToday = 0.0;
+            foreach ($daysZero as $d) {
+                if ($d['date'] > $todayIso) {
+                    break;
+                }
+                $netUntilToday += (float) $d['net'];
+            }
+
+            // saldo inicial hipotético do período,
+            // tal que o saldo no dia de hoje bata com o saldo real das contas
+            $opening = (float) $currentBalance - $netUntilToday;
+
+            // 2º PASSO: consolidação final com o saldo ajustado
+            $days = $this->consolidateDays($from, $to, $opening, $occ, $bills);
+        } else {
+            // janela não contém hoje → usa saldo histórico pelo movimento das contas
+            $opening = $this->openingBalance($userIds, $from);
+            $days    = $this->consolidateDays($from, $to, $opening, $occ, $bills);
+        }
+
+        $totalIn  = array_sum(array_column($days, 'in'));
+        $totalOut = array_sum(array_column($days, 'out'));
+        $lastDay  = end($days) ?: ['balance' => $opening];
 
         return [
-            'opening_balance' => round($opening, 2),
-            'total_in'        => round(array_sum(array_column($days, 'in')), 2),
-            'total_out'       => round(array_sum(array_column($days, 'out')), 2),
-            'ending_balance'  => round(end($days)['balance'] ?? $opening, 2),
-            'days'            => array_values($days),
+            // saldo inicial usado na simulação (dia anterior ao primeiro da janela)
+            'opening_balance'  => round($opening, 2),
+
+            // saldo real em contas hoje (para usar no resumo quando fizer sentido)
+            'current_balance'  => $currentBalance !== null ? round($currentBalance, 2) : null,
+
+            'has_today'        => $rangeHasToday,
+
+            'total_in'         => round($totalIn, 2),
+            'total_out'        => round($totalOut, 2),
+            'ending_balance'   => round($lastDay['balance'] ?? $opening, 2),
+            'days'             => array_values($days),
         ];
+    }
+
+    protected function currentAccountsBalance(array $userIds): ?float
+    {
+        $hasAccounts = DB::table('accounts')
+            ->whereIn('user_id', $userIds)
+            ->exists();
+
+        if (! $hasAccounts) {
+            return null;
+        }
+
+        return (float) Account::withoutGlobalScopes()
+            ->whereIn('user_id', $userIds)
+            ->sum('current_balance');
     }
 
     protected function paymentsIndex(array $userIds): array

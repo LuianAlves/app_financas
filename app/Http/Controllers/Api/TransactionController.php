@@ -393,50 +393,88 @@ class TransactionController extends Controller
     {
         $recurrenceType = $request->recurrence_type ?? 'unique';
         $isRecurring    = $recurrenceType !== 'unique';
-        $cat = TransactionCategory::find($request->transaction_category_id);
+        $cat            = TransactionCategory::find($request->transaction_category_id);
 
         $transaction = $this->transaction->create([
-            'user_id'                  => Auth::id(),
-            'saving_id' => $request->saving_id,
-            'account_id' => $request->account_id,
-            'card_id'                  => $request->card_id,
-            'transaction_category_id'  => $request->transaction_category_id,
-            'title'                    => $request->title,
-            'description'              => $request->description,
-            'amount'                   => $request->amount,
-            'date'                     => $txDate,
-            'type'                     => $request->type,    // pix | money | card
-            'type_card'                => $typeCard,         // credit | debit | null
-            'recurrence_type'          => $recurrenceType,   // unique | monthly | yearly | custom
-            'custom_occurrences'       => $request->custom_occurrences ?? $request->installments,
-            'create_date' => $txDate
+            'user_id'                 => Auth::id(),
+            'saving_id'               => $request->saving_id,
+            'account_id'              => $request->account_id,
+            'card_id'                 => $request->card_id,
+            'transaction_category_id' => $request->transaction_category_id,
+            'title'                   => $request->title,
+            'description'             => $request->description,
+            'amount'                  => $request->amount,
+            'date'                    => $txDate,
+            'type'                    => $request->type,    // pix | money | card
+            'type_card'               => $typeCard,         // credit | debit | null
+            'recurrence_type'         => $recurrenceType,   // unique | monthly | yearly | custom
+            'custom_occurrences'      => $request->custom_occurrences ?? $request->installments,
+            'create_date'             => $txDate,
         ]);
 
+        // investimento único → movimenta cofrinho
         if ($cat && $cat->type === 'investimento' && $recurrenceType === 'unique') {
             DB::transaction(function() use ($request, $transaction, $txDate) {
                 SavingMovement::create([
-                    'user_id'       => Auth::id(),
-                    'saving_id'     => $request->saving_id,
-                    'transaction_id'=> $transaction->id,
-                    'account_id'    => $request->type === 'pix' ? $request->account_id : null,
-                    'direction'     => 'deposit',
-                    'amount'        => $transaction->amount,
-                    'date'          => $txDate->toDateString(),
-                    'notes'         => $transaction->title,
+                    'user_id'        => Auth::id(),
+                    'saving_id'      => $request->saving_id,
+                    'transaction_id' => $transaction->id,
+                    'account_id'     => $request->type === 'pix' ? $request->account_id : null,
+                    'direction'      => 'deposit',
+                    'amount'         => $transaction->amount,
+                    'date'           => $txDate->toDateString(),
+                    'notes'          => $transaction->title,
                 ]);
                 Saving::where('id',$request->saving_id)
                     ->increment('current_amount', $transaction->amount);
             });
         }
 
+        // =========================
+        // NOVO BLOCO: cartão CRÉDITO ÚNICO → gera 1 invoice + 1 invoice_item
+        // =========================
+        // NOVO BLOCO: cartão CRÉDITO ÚNICO → gera 1 invoice + 1 invoice_item
+        if ($isCard && $typeCard === 'credit' && !$isRecurring) {
+            $card = Card::findOrFail($request->card_id);
+
+            // mês de ciclo correto dessa compra (considerando dia de fechamento)
+            $cycleMonth = CardCycle::cycleMonthFor($txDate, (int) $card->closing_day);
+
+            // 🔴 TROCA ISSO:
+            // $invoice = Invoice::firstOrCreate(
+            //     [
+            //         'user_id'       => Auth::id(),
+            //         'card_id'       => $card->id,
+            //         'current_month' => $cycleMonth,
+            //     ],
+            //     ['paid' => false]
+            // );
+
+            // ✅ POR ISSO:
+            $invoice = $this->ensureCardInvoicesUntil($card, $cycleMonth);
+
+            InvoiceItem::create([
+                'invoice_id'              => $invoice->id,
+                'transaction_id'          => $transaction->id,
+                'title'                   => $request->title,
+                'amount'                  => $transaction->amount,
+                'date'                    => $txDate->copy(),
+                'transaction_category_id' => $request->transaction_category_id,
+                'installments'            => 1,
+                'current_installment'     => 1,
+                'is_projection'           => true,
+            ]);
+        }
+
+        // =========================
+
+        // recorrência (mas NUNCA cartão crédito aqui, esses já vão para handleRecurringCard)
         if ($isRecurring && !($isCard && $typeCard === 'credit')) {
             $recurrent = $this->recurrent->create([
                 'user_id'        => $transaction->user_id,
                 'transaction_id' => $transaction->id,
                 'payment_day'    => $txDate->format('d'),
                 'amount'         => $transaction->amount,
-
-                // novos campos de recorrents já existem na tua migration extra
                 'start_date'     => $txDate,
                 'interval_unit'  => $recurrenceType === 'yearly' ? 'years' : ($recurrenceType === 'custom' ? 'days' : 'months'),
                 'interval_value' => $recurrenceType === 'custom' ? (int)($request->interval_value ?? 1) : 1,
@@ -448,7 +486,6 @@ class TransactionController extends Controller
 
             $occ = (int)($request->custom_occurrences ?? 0);
 
-            // SEM TÉRMINO → 1 linha modelo em monthly/yearly
             if (in_array($recurrenceType, ['monthly','yearly']) && $occ === 0) {
                 if ($recurrenceType === 'monthly') {
                     $this->monthlyItemRecurrents->create([
@@ -459,7 +496,7 @@ class TransactionController extends Controller
                         'amount'          => $transaction->amount,
                         'status'          => false,
                     ]);
-                } else { // yearly
+                } else {
                     $this->yearlyItemRecurrents->create([
                         'recurrent_id'   => $recurrent->id,
                         'payment_day'    => $txDate->format('d'),
@@ -468,9 +505,7 @@ class TransactionController extends Controller
                         'status'         => false,
                     ]);
                 }
-            }
-            // COM TÉRMINO → gerar N datas em custom_item_recurrents
-            elseif ($occ > 0) {
+            } elseif ($occ > 0) {
                 $includeSat = (bool)($request->include_sat ?? true);
                 $includeSun = (bool)($request->include_sun ?? true);
                 $norm = function (Carbon $d) use ($includeSat,$includeSun) {

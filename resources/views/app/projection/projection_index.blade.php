@@ -153,7 +153,15 @@
                 }
 
                 function renderSummary(data){
-                    document.getElementById('sumOpening').textContent = fmtBRL(data.opening_balance);
+                    // se o backend disser que o intervalo inclui hoje e existir current_balance,
+                    // usamos o saldo real; caso contrário, usamos o opening_balance mesmo
+                    let openingToShow = data.opening_balance;
+
+                    if (data.has_today && typeof data.current_balance === 'number') {
+                        openingToShow = data.current_balance;
+                    }
+
+                    document.getElementById('sumOpening').textContent = fmtBRL(openingToShow);
                     document.getElementById('sumIn').textContent      = fmtBRL(data.total_in);
                     document.getElementById('sumOut').textContent     = fmtBRL(data.total_out);
                     document.getElementById('sumEnd').textContent     = fmtBRL(data.ending_balance);

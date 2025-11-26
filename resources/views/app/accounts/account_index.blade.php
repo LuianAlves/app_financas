@@ -371,9 +371,14 @@
       <button data-action="edit" class="hidden md:inline-flex text-xs px-2 py-1.5 rounded-lg border hover:bg-neutral-50 dark:hover:bg-neutral-800">Editar</button>
       <button data-action="transfer" class="hidden md:inline-flex text-xs px-2 py-1.5 rounded-lg border hover:bg-neutral-50 dark:hover:bg-neutral-800">Transferir</button>
       <button data-action="delete" class="hidden md:inline-flex text-xs px-2 py-1.5 rounded-lg border border-red-200/70 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/20">Excluir</button>
-      <button data-sheet-open class="inline-grid size-10 place-items-center rounded-lg border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800" aria-label="Mais ações">
-        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
-      </button>
+<button type="button" data-action="sheet"
+        class="inline-grid size-10 place-items-center rounded-lg border border-neutral-200/70 dark:border-neutral-800/70 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+        aria-label="Mais ações">
+    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>
+    </svg>
+</button>
+
     </div>
   </div>
 
@@ -385,7 +390,7 @@
   <div class="mt-3 grid grid-cols-2 gap-3">
     <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
       <p class="text-xs text-neutral-500 dark:text-neutral-400">Em conta</p>
-      <p class="text-lg font-medium" data-inacc>${typeof acc.current_balance==='string' ? acc.current_balance : brl(inAcc)}</p>
+      <p class="text-lg font-medium" data-inacc>${typeof acc.current_balance === 'string' ? acc.current_balance : brl(inAcc)}</p>
     </div>
     <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 p-3">
       <p class="text-xs text-neutral-500 dark:text-neutral-400">Cofrinhos</p>
@@ -503,7 +508,14 @@
                     onAction: (act, id, api)=> {
                         if (act === 'transfer') {
                             openTransfer(id);
+                            return;
                         }
+
+                        if (act === 'sheet') {
+                            openSheet(id);
+                            return;
+                        }
+
                         // outros “act” custom aqui, se precisar
                     }
                 });
@@ -521,17 +533,6 @@
                 }
                 sheetOv.addEventListener('click', closeSheet);
                 document.addEventListener('keydown', e => { if (e.key==='Escape' && !sheet.classList.contains('hidden')) closeSheet(); });
-
-                // Delegação no grid para abrir sheet e ações do sheet
-                grid.addEventListener('click', async (e)=>{
-                    const card = e.target.closest('article[data-id]');
-                    if (!card) return;
-                    // abrir sheet (botão com data-sheet-open)
-                    if (e.target.closest('[data-sheet-open]')) {
-                        openSheet(card.dataset.id);
-                        return;
-                    }
-                });
 
                 // Ações do sheet
                 sheet.addEventListener('click', async (e)=>{

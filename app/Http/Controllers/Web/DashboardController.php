@@ -20,11 +20,6 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    public function newDashboard()
-    {
-        return view('app.new_dashboard');
-    }
-
     public function dashboard(Request $request)
     {
         $ownerId = AdditionalUser::ownerIdFor();

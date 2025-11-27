@@ -53,10 +53,12 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
     <label class="block text-sm" id="imageInputWrap">
         <span class="text-xs font-medium text-neutral-600 dark:text-neutral-300">Foto</span>
+
+        {{-- arquivo só para o front ler --}}
         <input
             type="file"
-            id="image"
-            name="image"
+            id="image_file"
+            name="image_file"
             accept="image/*"
             class="mt-1 block w-full text-sm text-neutral-700 dark:text-neutral-200
                    file:mr-3 file:rounded-lg file:border-0
@@ -64,6 +66,9 @@
                    dark:file:bg-neutral-800 dark:file:text-neutral-100
                    file:text-xs cursor-pointer"
         >
+
+        {{-- hidden que realmente vai pro backend --}}
+        <input type="hidden" id="image" name="image">
     </label>
 
     <div id="imagePreview" class="hidden">
@@ -77,12 +82,17 @@
             const form = document.getElementById('formUser');
             if (!form) return;
 
-            const fileEl = form.querySelector('#image');
-            const wrapEl = form.querySelector('#imageInputWrap');
-            const prevEl = form.querySelector('#imagePreview');
-            if (!fileEl || !wrapEl || !prevEl) return;
+            const fileEl   = form.querySelector('#image_file');
+            const hiddenEl = form.querySelector('#image');
+            const wrapEl   = form.querySelector('#imageInputWrap');
+            const prevEl   = form.querySelector('#imagePreview');
+
+            if (!fileEl || !hiddenEl || !wrapEl || !prevEl) return;
 
             function showPreview(dataUrl) {
+                // manda o dataURL inteiro; o backend já trata "data:image..."
+                hiddenEl.value = dataUrl;
+
                 prevEl.innerHTML = `
             <div class="relative inline-block">
                 <img src="${dataUrl}" alt="preview"
@@ -101,11 +111,13 @@
                 prevEl.classList.add('hidden');
                 wrapEl.classList.remove('hidden');
                 fileEl.value = '';
+                hiddenEl.value = '';
             }
 
             fileEl.addEventListener('change', () => {
                 const f = fileEl.files && fileEl.files[0];
                 if (!f) { clearPreview(); return; }
+
                 const r = new FileReader();
                 r.onload = () => showPreview(r.result);
                 r.readAsDataURL(f);

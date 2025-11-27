@@ -787,17 +787,32 @@
                 let fp;
 
                 document.addEventListener('DOMContentLoaded', () => {
-    const monthPicker = document.getElementById('monthPicker');
-    if (monthPicker && !monthPicker.value) {
-        const now = new Date();
-        monthPicker.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    }
-                    fp = flatpickr("#calendar", {
-    locale: 'pt',
-    inline: true,
-    static: true,
-    defaultDate: new Date(), // força o ano atual corretamente
-    disableMobile: true,
+    const localePtSunday = {
+        ...flatpickr.l10ns.pt,
+        firstDayOfWeek: 0, // 0 = domingo
+        weekdays: {
+            shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+            longhand:  ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
+                        'Quinta-feira', 'Sexta-feira', 'Sábado'],
+        }
+    };
+
+    fp = flatpickr("#calendar", {
+        locale: localePtSunday,
+        inline: true,
+        static: true,
+        defaultDate: "today",
+        disableMobile: true,
+        // ... resto das opções
+        onDayCreate: ...,
+        onMonthChange: ...,
+        onYearChange: ...,
+        onReady: ...,
+        onChange: ...
+    });
+
+    window.__cal = { fp, eventosCache, exibirEventos, iso };
+
 
                         onDayCreate: (_, _2, _3, dayElem) => {
                             const d = iso(dayElem.dateObj);

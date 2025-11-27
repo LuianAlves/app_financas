@@ -787,26 +787,8 @@
                 let fp;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // locale pt-BR começando em DOMINGO
-    const localePtSunday = {
-        ...flatpickr.l10ns.pt,
-        firstDayOfWeek: 0, // 0 = domingo
-        weekdays: {
-            shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
-            longhand: [
-                'Domingo',
-                'Segunda-feira',
-                'Terça-feira',
-                'Quarta-feira',
-                'Quinta-feira',
-                'Sexta-feira',
-                'Sábado'
-            ],
-        },
-    };
-
     fp = flatpickr('#calendar', {
-        locale: localePtSunday,
+        locale: flatpickr.l10ns.pt,   // usa o locale oficial pt-BR
         inline: true,
         static: true,
         defaultDate: 'today',

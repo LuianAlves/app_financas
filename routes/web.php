@@ -19,7 +19,8 @@ use App\Http\Controllers\Api\{SavingTransactionController,
     RecurrentController as ApiRecurrentController,
     SavingController as ApiSavingController,
     TransactionController as ApiTransactionController,
-    InvestmentController as ApiInvestmentController};
+    InvestmentController as ApiInvestmentController
+};
 
 // Web Controllers
 use App\Http\Controllers\Web\{ChartController,
@@ -34,7 +35,8 @@ use App\Http\Controllers\Web\{ChartController,
     InvoiceController as WebInvoiceController,
     InvoiceItemController as WebInvoiceItemController,
     InvestmentController as WebInvestmentController,
-    PaymentController as WebPaymentController};
+    PaymentController as WebPaymentController
+};
 
 Route::middleware('guest')->group(function () {
     Route::get('/', [AuthController::class, 'welcome']);
@@ -50,7 +52,6 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
     Route::middleware('partial')->group(function () {
         // Dashboard
         Route::get('/dashboard', [WebDashboardController::class, 'dashboard'])->name('dashboard');
-        Route::get('/new-dashboard', [WebDashboardController::class, 'newDashboard'])->name('new-dashboard');
 
         // Dashboard Data
         Route::get('/dashboard/kpis', [WebDashboardController::class, 'kpis'])->name('dashboard.kpis');
@@ -76,17 +77,12 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
         // Transactions
         Route::get('/transaction', [WebTransactionController::class, 'index'])->name('transaction-view.index');
         Route::get('/transaction/custom-item-projections', [WebTransactionController::class, 'custom-item-projections']);
-
         Route::resource('transactions', ApiTransactionController::class)->scoped(['transaction' => 'uuid']);
 
         //Savings
         Route::get('/saving', [WebSavingController::class, 'index'])->name('saving-view.index');
         Route::resource('savings', ApiSavingController::class)->scoped(['saving' => 'uuid']);
-
-        // DEPÓSITO
         Route::post('/savings/{saving}/deposit', [SavingTransactionController::class, 'deposit']);
-
-        // SAQUE
         Route::post('/savings/{saving}/withdraw', [SavingTransactionController::class, 'withdraw']);
 
         Route::resource('recurrents', ApiRecurrentController::class)->scoped(['recurrent' => 'uuid']);
@@ -95,7 +91,6 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
         Route::get('/invoice/{cardId}', [WebInvoiceController::class, 'index'])->name('invoice-view.index');
         Route::get('/invoice/{cardId}/{ym}', [WebInvoiceController::class, 'show'])->name('invoice-view.show'); // ym = 'Y-m'
         Route::any('/invoice/payment/{cardId}/{ym}', [WebInvoiceController::class, 'update'])->name('invoice-payment.update'); // ym = 'Y-m'
-
         Route::resource('invoices', ApiInvoiceController::class)->scoped(['invoice' => 'uuid']);
 
         //InvoiceItem
@@ -110,19 +105,22 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
         Route::get('/projection', [ProjectionController::class, 'index'])->name('projection-view.index');
         Route::get('/projection/data', [ProjectionController::class, 'data'])->name('projection.data');
 
+        // Notifications
         Route::get('notifications', [WebNotificationController::class, 'index'])->name('notifications.index');
         Route::patch('notifications/{notification}/read', [WebNotificationController::class, 'markAsRead'])->name('notifications.read');
         Route::delete('notifications/{notification}', [WebNotificationController::class, 'destroy'])->name('notifications.destroy');
 
+        // Notifications Push
         Route::post('/push/subscribe', [PushController::class, 'subscribe']);
         Route::get('/push/teste', [PushController::class, 'showForm'])->name('test.push');
         Route::post('/push/teste', [PushController::class, 'send']);
-
         Route::get('/push/debug', [PushController::class, 'page'])->name('push.debug');
         Route::post('/push/debug/send', [PushController::class, 'sender'])->name('push.debug.send');
 
+        // Calendar
         Route::get('/calendar/events', [WebDashboardController::class, 'calendarEvents'])->name('calendar.events');
 
+        // Digest
         Route::get('/lancamentos-do-dia', [DailyDigestController::class, 'index'])->name('digest.index');
 
         // Charts
@@ -132,5 +130,4 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
 
 
 // Push Notifications
-Route::get('/vapid-public-key', fn() => response(trim(env('VAPID_PUBLIC_KEY')), 200, ['Content-Type' => 'text/plain'])
-);
+Route::get('/vapid-public-key', fn() => response(trim(env('VAPID_PUBLIC_KEY')), 200, ['Content-Type' => 'text/plain']));

@@ -787,12 +787,17 @@
                 let fp;
 
                 document.addEventListener('DOMContentLoaded', () => {
+    const monthPicker = document.getElementById('monthPicker');
+    if (monthPicker && !monthPicker.value) {
+        const now = new Date();
+        monthPicker.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
                     fp = flatpickr("#calendar", {
-                        locale: 'pt',
-                        inline: true,
-                        static: true,
-                        defaultDate: "today",
-                        disableMobile: true,
+    locale: 'pt',
+    inline: true,
+    static: true,
+    defaultDate: new Date(), // força o ano atual corretamente
+    disableMobile: true,
 
                         onDayCreate: (_, _2, _3, dayElem) => {
                             const d = iso(dayElem.dateObj);

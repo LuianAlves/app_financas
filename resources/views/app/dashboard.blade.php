@@ -786,135 +786,147 @@
 
                 let fp;
 
-                document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
+    // locale pt-BR começando em DOMINGO
     const localePtSunday = {
         ...flatpickr.l10ns.pt,
         firstDayOfWeek: 0, // 0 = domingo
         weekdays: {
             shorthand: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
-            longhand:  ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
-                        'Quinta-feira', 'Sexta-feira', 'Sábado'],
-        }
+            longhand: [
+                'Domingo',
+                'Segunda-feira',
+                'Terça-feira',
+                'Quarta-feira',
+                'Quinta-feira',
+                'Sexta-feira',
+                'Sábado'
+            ],
+        },
     };
 
-    fp = flatpickr("#calendar", {
+    fp = flatpickr('#calendar', {
         locale: localePtSunday,
         inline: true,
         static: true,
-        defaultDate: "today",
+        defaultDate: 'today',
         disableMobile: true,
-        // ... resto das opções
-        onDayCreate: ...,
-        onMonthChange: ...,
-        onYearChange: ...,
-        onReady: ...,
-        onChange: ...
+
+        onDayCreate: (_, _2, _3, dayElem) => {
+            const d = iso(dayElem.dateObj);
+            const evs = eventosDoDia(d);
+            if (!evs.length) return;
+
+            const hasGreen = evs.some(e => e.tipo === 'entrada');
+            const hasRed = evs.some(
+                e =>
+                    (e.tipo === 'despesa' && !e.is_invoice) ||
+                    (e.is_invoice && !e.paid)
+            );
+            const hasBlue = evs.some(
+                e =>
+                    e.tipo === 'investimento' ||
+                    e.tipo === 'payment' ||
+                    (e.is_invoice && e.paid)
+            );
+
+            const wrap = document.createElement('div');
+            wrap.style.cssText =
+                'display:flex;justify-content:center;gap:2px;margin-top:-10px';
+            const dot = c => {
+                const s = document.createElement('span');
+                s.style.cssText =
+                    'width:6px;height:6px;background:' +
+                    c +
+                    ';border-radius:50%';
+                wrap.appendChild(s);
+            };
+            if (hasGreen) dot('green');
+            if (hasRed) dot('red');
+            if (hasBlue) dot('#0ea5e9');
+            if (wrap.childElementCount) dayElem.appendChild(wrap);
+        },
+
+        onMonthChange: async (_sd, _ds, inst) => {
+            const first = new Date(inst.currentYear, inst.currentMonth, 1);
+            const ymStr = ym(first);
+            await loadWindow(ymStr, 2);
+            inst.redraw();
+            document.getElementById('monthPicker').value = ymStr;
+            atualizarKpisDoMes(ymStr);
+            window.refreshPie?.(true);
+        },
+
+        onYearChange: async (_sd, _ds, inst) => {
+            const first = new Date(inst.currentYear, inst.currentMonth, 1);
+            const ymStr = ym(first);
+            await loadWindow(ymStr, 2);
+            inst.redraw();
+            document.getElementById('monthPicker').value = ymStr;
+            atualizarKpisDoMes(ymStr);
+            window.refreshPie?.(true);
+        },
+
+        onReady: async (sd, _ds, inst) => {
+            try {
+                const calEl = inst.calendarContainer;
+                calEl.classList.add('animate');
+                calEl.classList.add('arrowTop');
+                if (document.fonts && document.fonts.ready) await document.fonts.ready;
+            } catch (_) {}
+
+            const first = new Date(inst.currentYear, inst.currentMonth, 1);
+            const ymStr = ym(first);
+            await loadWindow(ymStr, 2);
+
+            requestAnimationFrame(() => inst.redraw());
+            setTimeout(() => {
+                try {
+                    inst.redraw();
+                } catch (_) {}
+            }, 120);
+
+            exibirEventos(iso(sd?.[0] ?? new Date()));
+            const initialYm =
+                document.getElementById('monthPicker').value || ymStr;
+            atualizarKpisDoMes(initialYm);
+
+            window.refreshPie?.(true);
+        },
+
+        onChange: sd => {
+            if (sd?.[0]) exibirEventos(iso(sd[0]));
+        },
     });
 
+    // Redraw em eventos de viewport
+    const doRedraw = () => {
+        try {
+            fp && fp.redraw();
+        } catch (_) {}
+    };
+    ['load', 'resize', 'orientationchange'].forEach(ev =>
+        window.addEventListener(ev, doRedraw, { passive: true })
+    );
+    window.addEventListener(
+        'pageshow',
+        e => {
+            if (e.persisted) doRedraw();
+        },
+        { passive: true }
+    );
+
+    document
+        .getElementById('monthForm')
+        ?.addEventListener('submit', e => e.preventDefault());
+    document
+        .getElementById('monthPicker')
+        ?.addEventListener('change', async e => {
+            await window.syncMonthUI(e.target.value);
+        });
+
     window.__cal = { fp, eventosCache, exibirEventos, iso };
-
-
-                        onDayCreate: (_, _2, _3, dayElem) => {
-                            const d = iso(dayElem.dateObj);
-                            const evs = eventosDoDia(d);
-                            if (!evs.length) return;
-
-                            const hasGreen = evs.some(e => e.tipo === 'entrada');
-                            const hasRed = evs.some(e => (e.tipo === 'despesa' && !e.is_invoice) || (e.is_invoice && !e.paid));
-                            const hasBlue = evs.some(e => e.tipo === 'investimento' || e.tipo === 'payment' || (e.is_invoice && e.paid));
-
-                            const wrap = document.createElement('div');
-                            wrap.style.cssText = 'display:flex;justify-content:center;gap:2px;margin-top:-10px';
-                            const dot = c => {
-                                const s = document.createElement('span');
-                                s.style.cssText = `width:6px;height:6px;background:${c};border-radius:50%`;
-                                wrap.appendChild(s);
-                            };
-                            if (hasGreen) dot('green');
-                            if (hasRed) dot('red');
-                            if (hasBlue) dot('#0ea5e9');
-                            if (wrap.childElementCount) dayElem.appendChild(wrap);
-                        },
-
-                        onMonthChange: async (_sd, _ds, inst) => {
-                            const first = new Date(inst.currentYear, inst.currentMonth, 1);
-                            const ymStr = ym(first);
-                            await loadWindow(ymStr, 2);
-                            inst.redraw();
-                            document.getElementById('monthPicker').value = ymStr;
-                            atualizarKpisDoMes(ymStr);
-
-                            window.refreshPie?.(true);
-                        },
-
-                        onYearChange: async (_sd, _ds, inst) => {
-                            const first = new Date(inst.currentYear, inst.currentMonth, 1);
-                            const ymStr = ym(first);
-                            await loadWindow(ymStr, 2);
-                            inst.redraw();
-                            document.getElementById('monthPicker').value = ymStr;
-                            atualizarKpisDoMes(ymStr);
-
-                            window.refreshPie?.(true);
-                        },
-
-                        onReady: async (sd, _ds, inst) => {
-                            // força as classes que teu CSS espera
-                            try {
-                                const calEl = inst.calendarContainer;
-                                calEl.classList.add('animate');   // tua regra usa .animate
-                                calEl.classList.add('arrowTop');  // tua regra usa .arrowTop
-                                // garante CSS/Fontes aplicadas
-                                if (document.fonts && document.fonts.ready) await document.fonts.ready;
-                            } catch (_) {
-                            }
-
-                            const first = new Date(inst.currentYear, inst.currentMonth, 1);
-                            const ymStr = ym(first);
-                            await loadWindow(ymStr, 2);
-
-                            // dois redraws curtos evitam “abrir torto” no Safari/Android
-                            requestAnimationFrame(() => inst.redraw());
-                            setTimeout(() => {
-                                try {
-                                    inst.redraw();
-                                } catch (_) {
-                                }
-                            }, 120);
-
-                            exibirEventos(iso(sd?.[0] ?? new Date()));
-                            const initialYm = document.getElementById('monthPicker').value || ymStr;
-                            atualizarKpisDoMes(initialYm);
-
-                            window.refreshPie?.(true);
-                        },
-
-                        onChange: sd => {
-                            if (sd?.[0]) exibirEventos(iso(sd[0]));
-                        }
-                    });
-
-                    // Redraw em eventos de viewport (sem mexer no teu CSS)
-                    const doRedraw = () => {
-                        try {
-                            fp && fp.redraw();
-                        } catch (_) {
-                        }
-                    };
-                    ['load', 'resize', 'orientationchange'].forEach(ev =>
-                        window.addEventListener(ev, doRedraw, {passive: true})
-                    );
-                    window.addEventListener('pageshow', e => {
-                        if (e.persisted) doRedraw();
-                    }, {passive: true});
-
-                    document.getElementById('monthForm')?.addEventListener('submit', e => e.preventDefault());
-                    document.getElementById('monthPicker')?.addEventListener('change', async (e) => {
-                        await window.syncMonthUI(e.target.value);
-                    });
-
-                    window.__cal = {fp, eventosCache, exibirEventos, iso};
-                });
+});
             })();
         </script>
 

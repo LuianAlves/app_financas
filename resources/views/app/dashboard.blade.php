@@ -788,7 +788,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     fp = flatpickr('#calendar', {
-        locale: flatpickr.l10ns.pt,   // usa o locale oficial pt-BR
+        locale: flatpickr.l10ns.pt,   // usa pt nativo (começa em SEGUNDA)
         inline: true,
         static: true,
         defaultDate: 'today',
@@ -852,8 +852,7 @@ document.addEventListener('DOMContentLoaded', () => {
         onReady: async (sd, _ds, inst) => {
             try {
                 const calEl = inst.calendarContainer;
-                calEl.classList.add('animate');
-                calEl.classList.add('arrowTop');
+                calEl.classList.add('animate', 'arrowTop');
                 if (document.fonts && document.fonts.ready) await document.fonts.ready;
             } catch (_) {}
 
@@ -863,14 +862,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             requestAnimationFrame(() => inst.redraw());
             setTimeout(() => {
-                try {
-                    inst.redraw();
-                } catch (_) {}
+                try { inst.redraw(); } catch (_) {}
             }, 120);
 
             exibirEventos(iso(sd?.[0] ?? new Date()));
-            const initialYm =
-                document.getElementById('monthPicker').value || ymStr;
+            const initialYm = document.getElementById('monthPicker').value || ymStr;
             atualizarKpisDoMes(initialYm);
 
             window.refreshPie?.(true);
@@ -881,32 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
     });
 
-    // Redraw em eventos de viewport
-    const doRedraw = () => {
-        try {
-            fp && fp.redraw();
-        } catch (_) {}
-    };
-    ['load', 'resize', 'orientationchange'].forEach(ev =>
-        window.addEventListener(ev, doRedraw, { passive: true })
-    );
-    window.addEventListener(
-        'pageshow',
-        e => {
-            if (e.persisted) doRedraw();
-        },
-        { passive: true }
-    );
-
-    document
-        .getElementById('monthForm')
-        ?.addEventListener('submit', e => e.preventDefault());
-    document
-        .getElementById('monthPicker')
-        ?.addEventListener('change', async e => {
-            await window.syncMonthUI(e.target.value);
-        });
-
+    // resto igual
     window.__cal = { fp, eventosCache, exibirEventos, iso };
 });
             })();

@@ -738,48 +738,16 @@ class ProjectionService
 
     protected function earliestEventDate(array $userIds): ?Carbon
     {
-        $dates = [];
-
-        // 1) Primeira data de movimento REAL em conta
+        // Só olha para movimentos reais em conta
         $amMin = DB::table('account_movements as am')
             ->join('accounts as a', 'a.id', '=', 'am.account_id')
             ->whereIn('a.user_id', $userIds)
             ->min('am.occurred_at');
 
-        if ($amMin) {
-            $dates[] = Carbon::parse($amMin);
-        }
-
-        // 2) Primeira data de pagamento de transação (se usar payment_transactions)
-        $payMin = DB::table('payment_transactions as pt')
-            ->join('transactions as t', 't.id', '=', 'pt.transaction_id')
-            ->whereIn('t.user_id', $userIds)
-            ->min('pt.payment_date');
-
-        if ($payMin) {
-            $dates[] = Carbon::parse($payMin);
-        }
-
-        // 3) Primeira data ligada a faturas (pelo mês de referência)
-        $invMonthMin = DB::table('invoices')
-            ->whereIn('user_id', $userIds)
-            ->min('current_month'); // 'Y-m'
-
-        if ($invMonthMin) {
-            $dates[] = Carbon::createFromFormat('Y-m', $invMonthMin)->startOfMonth();
-        }
-
-        if (empty($dates)) {
+        if (!$amMin) {
             return null;
         }
 
-        $min = null;
-        foreach ($dates as $d) {
-            if ($min === null || $d->lt($min)) {
-                $min = $d;
-            }
-        }
-
-        return $min;
+        return Carbon::parse($amMin)->startOfDay();
     }
 }

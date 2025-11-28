@@ -45,7 +45,10 @@ class ProjectionService
         // tipo de janela
         $rangeHasToday = $fromIso <= $todayIso && $toIso >= $todayIso;
         $rangeFuture   = $from->gt($today);   // tudo depois de hoje
-        $rangePast     = $to->lt($today);     // tudo antes de hoje
+
+        // primeira data que existe no sistema (qualquer coisa: movimento, transação, fatura…)
+        $earliest = $this->earliestEventDate($userIds);
+        $startBeforeFirstEvent = $earliest && $from->lt($earliest);
 
         // helpers pra montar ocorrências
         $buildOcc = function (Carbon $a, Carbon $b) use ($userIds) {
@@ -65,52 +68,65 @@ class ProjectionService
             return $this->cardBillsFromInvoices($userIds, $a, $b);
         };
 
-        $globalFrom    = $from->copy();
-        $globalOpening = 0.0;
-        $daysAll       = [];
+        $globalFrom     = $from->copy();
+        $globalOpening  = 0.0;
+        $daysAll        = [];
         $alignToCurrent = false;
 
         if ($rangeFuture) {
-            // === 1) Janela totalmente FUTURA: zera e só soma cofrinhos selecionados ===
+            // === 1) Janela totalmente FUTURA: abre em 0 + cofrinhos, sem histórico antigo ===
             $globalFrom = $from->copy();
 
             $occ   = $buildOcc($globalFrom, $to);
             $bills = $buildBills($globalFrom, $to);
 
-            // base = 0, ou só cofrinhos se tiver marcado
-            $globalOpening = $savingsBalance;
-            $daysAll       = $this->consolidateDays($globalFrom, $to, $globalOpening, $occ, $bills);
+            $globalOpening  = $savingsBalance; // se não marcar cofrinho → 0
+            $daysAll        = $this->consolidateDays($globalFrom, $to, $globalOpening, $occ, $bills);
             $alignToCurrent = false;
 
         } else {
-            // === 2) Janela pega hoje OU só passado: precisa olhar histórico ===
-            $earliest = $this->earliestEventDate($userIds);
-            if ($earliest && $earliest->lt($globalFrom)) {
-                $globalFrom = $earliest->copy();
-            }
+            // === 2) Janela pega hoje ou está no passado ===
 
-            $occ   = $buildOcc($globalFrom, $to);
-            $bills = $buildBills($globalFrom, $to);
+            if ($startBeforeFirstEvent) {
+                // 2.1) Filtro começa ANTES da primeira movimentação → NÃO alinha com saldo atual
+                //      (caso 01/11/2000 que você mostrou)
+                $globalFrom = $from->copy();
 
-            if ($rangeHasToday && $effectiveCurrent !== null) {
-                // 2.1) Inclui hoje → ancora no saldo atual (contas + cofrinhos marcados)
-                $daysZero = $this->consolidateDays($globalFrom, $to, 0.0, $occ, $bills);
+                $occ   = $buildOcc($globalFrom, $to);
+                $bills = $buildBills($globalFrom, $to);
 
-                $netUntilToday = 0.0;
-                foreach ($daysZero as $d) {
-                    if ($d['date'] > $todayIso) break;
-                    $netUntilToday += (float) $d['net'];
-                }
-
-                $globalOpening = (float) $effectiveCurrent - $netUntilToday;
-                $daysAll       = $this->consolidateDays($globalFrom, $to, $globalOpening, $occ, $bills);
-                $alignToCurrent = true;
-
-            } else {
-                // 2.2) Só passado ou não temos saldo atual → histórico puro
-                $globalOpening = $this->openingBalance($userIds, $globalFrom) + $savingsBalance;
-                $daysAll       = $this->consolidateDays($globalFrom, $to, $globalOpening, $occ, $bills);
+                $globalOpening  = $this->openingBalance($userIds, $globalFrom) + $savingsBalance;
+                $daysAll        = $this->consolidateDays($globalFrom, $to, $globalOpening, $occ, $bills);
                 $alignToCurrent = false;
+            } else {
+                // 2.2) Filtro começa depois (ou igual) à primeira movimentação → pode alinhar
+                //      se fizer sentido
+                $globalFrom = $earliest && $earliest->lt($from)
+                    ? $earliest->copy()
+                    : $from->copy();
+
+                $occ   = $buildOcc($globalFrom, $to);
+                $bills = $buildBills($globalFrom, $to);
+
+                if ($rangeHasToday && $effectiveCurrent !== null) {
+                    // 2.2.a) Inclui hoje → ancora para bater com saldo atual (contas + cofrinhos)
+                    $daysZero = $this->consolidateDays($globalFrom, $to, 0.0, $occ, $bills);
+
+                    $netUntilToday = 0.0;
+                    foreach ($daysZero as $d) {
+                        if ($d['date'] > $todayIso) break;
+                        $netUntilToday += (float) $d['net'];
+                    }
+
+                    $globalOpening  = (float) $effectiveCurrent - $netUntilToday;
+                    $daysAll        = $this->consolidateDays($globalFrom, $to, $globalOpening, $occ, $bills);
+                    $alignToCurrent = true;
+                } else {
+                    // 2.2.b) Só passado / sem saldo atual → usa histórico puro
+                    $globalOpening  = $this->openingBalance($userIds, $globalFrom) + $savingsBalance;
+                    $daysAll        = $this->consolidateDays($globalFrom, $to, $globalOpening, $occ, $bills);
+                    $alignToCurrent = false;
+                }
             }
         }
 
@@ -147,7 +163,7 @@ class ProjectionService
         }
 
         return [
-            'opening_balance'  => round($openingForWindow, 2), // saldo antes do 1º dia
+            'opening_balance'  => round($openingForWindow, 2),
 
             'current_balance'  => $currentBalance !== null ? round($currentBalance, 2) : null,
             'savings_balance'  => round($savingsBalance, 2),

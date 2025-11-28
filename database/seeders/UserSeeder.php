@@ -19,25 +19,5 @@ class UserSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
-
-        $user = User::firstOrCreate(
-            ['email' => 'luian@teste.com'],
-            [
-                'name'      => 'Luian admin',
-                'password'  => Hash::make('teste123'),
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
-        );
-
-        $user = User::firstOrCreate(
-            ['email' => 'douglas@teste.com'],
-            [
-                'name'      => 'Douglas admin',
-                'password'  => Hash::make('teste123'),
-                'is_active' => true,
-                'email_verified_at' => now(),
-            ]
-        );
     }
 }

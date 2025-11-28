@@ -20,7 +20,6 @@
     @endpush
 
     <section class="mt-6">
-        <!-- Header -->
         <div class="flex items-center justify-between mb-4">
             <div>
                 <h2 class="text-xl font-semibold">Projeção financeira — Extrato</h2>
@@ -28,7 +27,6 @@
             </div>
         </div>
 
-        <!-- Filtros -->
         <div class="rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label class="block">
@@ -42,6 +40,50 @@
                            class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2">
                 </label>
             </div>
+
+            @if(isset($savings) && $savings->count())
+                <div class="mt-3 border-t border-neutral-200/70 dark:border-neutral-800/70 pt-3">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <div class="text-xs text-neutral-500 dark:text-neutral-400">
+                                Incluir valores dos cofrinhos?
+                            </div>
+                            <p class="text-[11px] text-neutral-400 dark:text-neutral-500">
+                                Esses valores serão somados ao saldo inicial da projeção.
+                            </p>
+                        </div>
+                        <button type="button" id="toggleSavings"
+                                class="relative inline-flex h-6 w-11 items-center rounded-full bg-neutral-300 dark:bg-neutral-700 transition-colors">
+                            <span class="sr-only">Incluir cofrinhos</span>
+                            <span data-knob
+                                  class="inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform translate-x-0"></span>
+                        </button>
+                    </div>
+
+                    <!-- Lista de cofrinhos com toggle individual -->
+                    <div id="savingsList" class="mt-3 hidden space-y-2">
+                        @foreach($savings as $saving)
+                            <label class="flex items-center justify-between gap-3 rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-neutral-50/70 dark:bg-neutral-900/60 px-3 py-2">
+                                <div>
+                                    <div class="text-xs font-medium text-neutral-800 dark:text-neutral-100">
+                                        {{ $saving->name ?? 'Cofrinho' }}
+                                    </div>
+                                    <div class="text-[11px] text-neutral-500 dark:text-neutral-400">
+                                        Saldo:
+                                        R$ {{ number_format($saving->current_amount ?? 0, 2, ',', '.') }}
+                                    </div>
+                                </div>
+                                <button type="button"
+                                        class="relative inline-flex h-5 w-9 items-center rounded-full text-[10px] font-semibold uppercase tracking-wide saving-toggle"
+                                        data-saving-id="{{ $saving->id }}">
+                                    <span class="sr-only">Incluir {{ $saving->name ?? 'cofrinho' }}</span>
+                                    <span class="absolute inset-y-0 left-0 m-[2px] inline-flex h-4 w-4 items-center justify-center rounded-full bg-white shadow"></span>
+                                </button>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
 
             <div class="mt-3 flex flex-wrap gap-2">
                 <button class="chip" data-range="1">+1 mês</button>
@@ -58,7 +100,6 @@
             </div>
         </div>
 
-        <!-- Resumo -->
         <div class="mt-3 rounded-2xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-4">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div class="flex items-center justify-between">
@@ -80,7 +121,6 @@
             </div>
         </div>
 
-        <!-- Lista por mês/dia -->
         <div id="statement" class="mt-3">Carregando…</div>
     </section>
 
@@ -97,10 +137,63 @@
 
                 const today = new Date();
                 const defStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-                const defEnd   = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate()); // ✅ corrigido
+                const defEnd   = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate());
 
                 $start.value = toISO(defStart);
                 $end.value   = toISO(defEnd);
+
+                // ===== COFRINHOS =====
+                const selectedSavings = new Set();
+                let includeSavings = false;
+
+                const $toggleSavings = document.getElementById('toggleSavings');
+                const $savingsList   = document.getElementById('savingsList');
+
+                if ($toggleSavings) {
+                    const knob = $toggleSavings.querySelector('[data-knob]');
+                    $toggleSavings.addEventListener('click', () => {
+                        includeSavings = !includeSavings;
+
+                        // cor do toggle
+                        $toggleSavings.classList.toggle('bg-brand-600', includeSavings);
+                        $toggleSavings.classList.toggle('bg-neutral-300', !includeSavings);
+                        $toggleSavings.classList.toggle('dark:bg-neutral-700', !includeSavings);
+
+                        // posição do “knob”
+                        if (knob) {
+                            knob.classList.toggle('translate-x-5', includeSavings);
+                            knob.classList.toggle('translate-x-0', !includeSavings);
+                        }
+
+                        if ($savingsList) {
+                            $savingsList.classList.toggle('hidden', !includeSavings);
+                        }
+                    });
+                }
+
+                document.querySelectorAll('.saving-toggle').forEach(btn => {
+                    const id = btn.dataset.savingId;
+
+                    // estado inicial OFF
+                    btn.classList.add('bg-neutral-300','text-neutral-600','dark:bg-neutral-700','dark:text-neutral-200');
+
+                    btn.addEventListener('click', () => {
+                        const isOn = btn.classList.contains('bg-brand-600');
+
+                        if (isOn) {
+                            // desligar
+                            btn.classList.remove('bg-brand-600','text-white');
+                            btn.classList.add('bg-neutral-300','text-neutral-600','dark:bg-neutral-700','dark:text-neutral-200');
+                            selectedSavings.delete(id);
+                        } else {
+                            // ligar
+                            btn.classList.add('bg-brand-600','text-white');
+                            btn.classList.remove('bg-neutral-300','text-neutral-600','dark:bg-neutral-700','dark:text-neutral-200');
+                            selectedSavings.add(id);
+                        }
+                    });
+                });
+                // ======================
 
                 document.querySelectorAll('.chip[data-range]').forEach(btn => {
                     btn.addEventListener('click', () => {
@@ -137,6 +230,11 @@
                         url.searchParams.set('start', start);
                         url.searchParams.set('end', end);
 
+                        // envia ids dos cofrinhos selecionados
+                        if (includeSavings && selectedSavings.size > 0) {
+                            selectedSavings.forEach(id => url.searchParams.append('savings[]', id));
+                        }
+
                         const r = await fetch(url, { headers:{ 'Accept':'application/json' } });
                         if(!r.ok) throw new Error('Falha ao carregar projeção');
                         const data = await r.json();
@@ -153,12 +251,14 @@
                 }
 
                 function renderSummary(data){
-                    // se o backend disser que o intervalo inclui hoje e existir current_balance,
-                    // usamos o saldo real; caso contrário, usamos o opening_balance mesmo
-                    let openingToShow = data.opening_balance;
+                    const savings = Number(data.savings_balance || 0);
 
-                    if (data.has_today && typeof data.current_balance === 'number') {
-                        openingToShow = data.current_balance;
+                    let openingToShow;
+
+                    if (data.align_to_current && data.has_today && typeof data.current_balance === 'number') {
+                        openingToShow = Number(data.current_balance) + savings;
+                    } else {
+                        openingToShow = Number(data.opening_balance || 0);
                     }
 
                     document.getElementById('sumOpening').textContent = fmtBRL(openingToShow);
@@ -167,11 +267,9 @@
                     document.getElementById('sumEnd').textContent     = fmtBRL(data.ending_balance);
                 }
 
-                // (mantém aqui sua função renderStatement encadeando mês a mês)
                 function renderStatement(days, openingBalance, startISO, endISO){
                     const list = Array.isArray(days) ? days.slice() : [];
 
-                    // utilitários
                     const monthKey = iso => iso.slice(0,7);
                     const parseISO = iso => { const [y,m,d]=iso.split('-').map(Number); return new Date(y, m-1, d); };
                     const enumMonths = (startISO, endISO) => {
@@ -188,27 +286,23 @@
                         return out;
                     };
 
-                    // ordenar dias
                     list.sort((a,b)=> String(a.date).localeCompare(String(b.date)));
 
-                    // agrupar por mês
                     const byMonth = {};
                     for(const d of list){
                         const ym = monthKey(d.date);
                         (byMonth[ym] ||= []).push(d);
                     }
 
-                    // lista de meses a exibir (inclui vazios)
                     const months = enumMonths(startISO, endISO);
                     if(!months.length){
                         $statement.innerHTML = `
-                          <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5">
-                            <div class="text-neutral-500">Sem lançamentos no período.</div>
-                          </div>`;
+                  <div class="rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 p-5">
+                    <div class="text-neutral-500">Sem lançamentos no período.</div>
+                  </div>`;
                         return;
                     }
 
-                    // saldo que carrega mês a mês
                     let runningBalance = Number(openingBalance) || 0;
                     const htmlParts = [];
 
@@ -218,15 +312,12 @@
                         const [Y, M] = ym.split('-');
                         const label = `${M}/${Y}`;
 
-                        // Saldo inicial do mês é o saldo final/projetado do mês anterior
                         const monthOpening = runningBalance;
 
-                        // Totais do mês
                         const monthIn  = ds.reduce((s,x)=> s + Number(x.in  || 0), 0);
                         const monthOut = ds.reduce((s,x)=> s + Number(x.out || 0), 0);
                         const monthNet = monthIn - monthOut;
 
-                        // Saldo final/projetado do mês: abertura + resultado do mês
                         let monthEnding = monthOpening + monthNet;
 
                         let html = `
@@ -234,7 +325,6 @@
   <div class="px-4 pt-4">
     <div class="text-sm text-neutral-500 dark:text-neutral-400 font-medium">${label}</div>
 
-    <!-- RESUMO DO MÊS: UMA INFO POR LINHA -->
     <div class="mt-2 space-y-1 text-sm">
       <div class="flex items-center justify-between">
         <span class="text-neutral-500 dark:text-neutral-400">Saldo inicial do mês</span>
@@ -269,7 +359,6 @@
 `;
 
                         if (ds.length === 0) {
-                            // mês sem lançamentos
                             html += `
     <div class="grid grid-cols-[130px_1fr_130px] max-sm:grid-cols-[1fr_110px] items-center px-4 py-3 border-b border-neutral-200/70 dark:border-neutral-800/70 bg-neutral-50/40 dark:bg-neutral-900/40">
       <div class="max-sm:hidden"></div>
@@ -278,7 +367,6 @@
     </div>
 `;
                         } else {
-                            // render de dias e itens + saldo do dia
                             ds.forEach(d => {
                                 const dateLabel = formatDate(d.date);
                                 const items = Array.isArray(d.items) ? d.items : [];
@@ -307,10 +395,9 @@
 `;
                                 });
 
-                                // saldo do dia baseado no backend (se vier) ou no encadeado local
                                 const saldoDia = (typeof d.balance === 'number')
                                     ? Number(d.balance)
-                                    : (monthOpening + (Number(d.in||0) - Number(d.out||0))); // fallback simplificado
+                                    : (monthOpening + (Number(d.in||0) - Number(d.out||0)));
 
                                 html += `
     <div class="grid grid-cols-[130px_1fr_130px] max-sm:grid-cols-[1fr_110px] items-center border-b border-neutral-200/70 dark:border-neutral-800/70 bg-white dark:bg-neutral-900 px-4 py-3">
@@ -322,7 +409,6 @@
                             });
                         }
 
-                        // rodapé do mês: fechamento/projeção
                         html += `
     <div class="grid grid-cols-[130px_1fr_130px] max-sm:grid-cols-[1fr_110px] items-center bg-neutral-50 dark:bg-neutral-900/60 px-4 py-3">
       <div class="max-sm:hidden"></div>
@@ -333,10 +419,7 @@
 </article>
 `;
 
-                        // encerra card do mês
                         htmlParts.push(html);
-
-                        // importante: esse fechamento vira a abertura do próximo
                         runningBalance = monthEnding;
                     });
 

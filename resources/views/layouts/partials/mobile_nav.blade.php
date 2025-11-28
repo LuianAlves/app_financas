@@ -29,7 +29,7 @@
                 </button>
             </div>
 
-            <div class="px-5 pb-5 space-y-5">
+            <div class="px-5 pb-10 space-y-5">
                 {{-- ÁREAS PRINCIPAIS --}}
                 <section>
                     <p class="text-[11px] font-medium tracking-wide text-neutral-400 uppercase">

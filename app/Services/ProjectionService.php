@@ -17,7 +17,7 @@ class ProjectionService
 {
     protected array $paidIdx = [];
 
-    public function build(?string $userId, string $start, string $end): array
+    public function build(?string $userId, string $start, string $end, array $savingIds = []): array
     {
         $uid  = $userId ?: Auth::id();
         [$ownerId, $userIds] = $this->resolveOwnerAndAdditionals($uid);
@@ -30,35 +30,55 @@ class ProjectionService
 
         $this->paidIdx = $this->paymentsIndex($userIds);
 
-        // monta todas as ocorrências (real + projeção)
-        $occ = collect()
-            ->merge($this->expandAccountMovements($userIds, $from, $to))
-            ->merge($this->expandPaymentTransactions($userIds, $from, $to))
-            ->merge($this->expandUnique($userIds, $from, $to))
-            ->merge($this->expandRecurrentsMonthlyYearly($userIds, $from, $to))
-            ->merge($this->expandRecurrentsCustom($userIds, $from, $to))
-            ->merge($this->expandRecurrentsCustomDays($userIds, $from, $to));
+        // ==== DEFINIR PERÍODO GLOBAL (para pegar histórico antes do filtro) ====
+        $earliest = $this->earliestEventDate($userIds);
+        $globalFrom = $from->copy();
+        if ($earliest && $earliest->lt($globalFrom)) {
+            $globalFrom = $earliest->copy();
+        }
 
-        // limpa duplicações / ignora cartão de crédito lançado em outro lugar
+        // ==== OCORRÊNCIAS (real + projeção) NO PERÍODO GLOBAL ====
+        $occ = collect()
+            ->merge($this->expandAccountMovements($userIds, $globalFrom, $to))
+            ->merge($this->expandPaymentTransactions($userIds, $globalFrom, $to))
+            ->merge($this->expandUnique($userIds, $globalFrom, $to))
+            ->merge($this->expandRecurrentsMonthlyYearly($userIds, $globalFrom, $to))
+            ->merge($this->expandRecurrentsCustom($userIds, $globalFrom, $to))
+            ->merge($this->expandRecurrentsCustomDays($userIds, $globalFrom, $to));
+
         $occ = $occ
             ->reject(fn($o) => ($o['type'] ?? null) === 'card' && ($o['type_card'] ?? null) === 'credit')
             ->unique(fn($o) => (($o['id'] ?? $o['title']).'@'.$o['date']))
             ->values();
 
-        $bills = $this->cardBillsFromInvoices($userIds, $from, $to);
+        $bills = $this->cardBillsFromInvoices($userIds, $globalFrom, $to);
 
-        // saldo real atual das contas (igual ao dashboard)
-        $currentBalance = $this->currentAccountsBalance($userIds); // pode ser null se não tiver conta
+        // ==== SALDOS ATUAIS (contas + cofrinhos) ====
+        $currentBalance = $this->currentAccountsBalance($userIds); // contas
+        $savingsBalance = $this->selectedSavingsBalance($userIds, $savingIds); // cofrinhos
 
-        // intervalo pega o dia de hoje?
+        $hasLedger = $this->hasAccountMovements($userIds);
+
         $rangeHasToday = $from->toDateString() <= $todayIso && $to->toDateString() >= $todayIso;
 
-        $opening = 0.0;
-        $days    = [];
+        $effectiveCurrent = null;
+        if ($currentBalance !== null || $savingsBalance != 0.0) {
+            $effectiveCurrent = (float) ($currentBalance ?: 0) + $savingsBalance;
+        }
 
-        if ($rangeHasToday && $currentBalance !== null) {
-            // 1º PASSO: consolida com saldo inicial 0 só para pegar os nets
-            $daysZero = $this->consolidateDays($from, $to, 0.0, $occ, $bills);
+        // Só alinhar com saldo atual se:
+        // - Existe movimento real de conta OU saldo atual explícito diferente de zero
+        // - E o intervalo pega o dia de hoje
+        $shouldAlignToCurrent = $hasLedger || ($currentBalance !== null && abs($currentBalance) > 0.00001);
+        $alignToCurrent = $shouldAlignToCurrent && $rangeHasToday && $effectiveCurrent !== null;
+
+        $globalOpening = 0.0;
+        $daysAll = [];
+
+        if ($alignToCurrent) {
+            // === MODO "ALINHADO AO SALDO ATUAL" ===
+            // 1º: consolida com abertura 0 para descobrir o net até hoje
+            $daysZero = $this->consolidateDays($globalFrom, $to, 0.0, $occ, $bills);
 
             $netUntilToday = 0.0;
             foreach ($daysZero as $d) {
@@ -68,34 +88,76 @@ class ProjectionService
                 $netUntilToday += (float) $d['net'];
             }
 
-            // saldo inicial hipotético do período,
-            // tal que o saldo no dia de hoje bata com o saldo real das contas
-            $opening = (float) $currentBalance - $netUntilToday;
+            // abertura global tal que o saldo no dia de hoje bata com o saldo efetivo
+            $globalOpening = (float) $effectiveCurrent - $netUntilToday;
 
-            // 2º PASSO: consolidação final com o saldo ajustado
-            $days = $this->consolidateDays($from, $to, $opening, $occ, $bills);
+            // 2º: consolidação definitiva com essa abertura
+            $daysAll = $this->consolidateDays($globalFrom, $to, $globalOpening, $occ, $bills);
         } else {
-            // janela não contém hoje → usa saldo histórico pelo movimento das contas
-            $opening = $this->openingBalance($userIds, $from);
-            $days    = $this->consolidateDays($from, $to, $opening, $occ, $bills);
+            // === MODO "PURAMENTE PROJETADO" (sem alinhar ao current_balance) ===
+            // Usa histórico real de conta (se houver) + cofrinhos, mas sem forçar saldo de hoje
+            $globalOpening = $this->openingBalance($userIds, $globalFrom) + $savingsBalance;
+            $daysAll = $this->consolidateDays($globalFrom, $to, $globalOpening, $occ, $bills);
         }
 
-        $totalIn  = array_sum(array_column($days, 'in'));
-        $totalOut = array_sum(array_column($days, 'out'));
-        $lastDay  = end($days) ?: ['balance' => $opening];
+        // ==== CORTAR PARA A JANELA SOLICITADA ====
+        $fromIso = $from->toDateString();
+        $toIso   = $to->toDateString();
+
+        $days = [];
+        foreach ($daysAll as $k => $d) {
+            if ($k < $fromIso) {
+                continue;
+            }
+            if ($k > $toIso) {
+                break;
+            }
+            $days[] = $d;
+        }
+
+        // Saldo "anterior ao início" da janela (para exibir como saldo inicial)
+        $openingForWindow = $globalOpening;
+        if ($fromIso > $globalFrom->toDateString()) {
+            $prev = null;
+            foreach ($daysAll as $k => $d) {
+                if ($k >= $fromIso) {
+                    break;
+                }
+                $prev = $d;
+            }
+            if ($prev) {
+                $openingForWindow = (float) $prev['balance'];
+            }
+        }
+
+        // Totais apenas do período solicitado
+        $totalIn = 0.0;
+        $totalOut = 0.0;
+        $endingBalance = $openingForWindow;
+
+        foreach ($days as $d) {
+            $totalIn  += (float) $d['in'];
+            $totalOut += (float) $d['out'];
+            $endingBalance = (float) $d['balance'];
+        }
 
         return [
-            // saldo inicial usado na simulação (dia anterior ao primeiro da janela)
-            'opening_balance'  => round($opening, 2),
+            // saldo imediatamente ANTES do primeiro dia da janela
+            'opening_balance'  => round($openingForWindow, 2),
 
-            // saldo real em contas hoje (para usar no resumo quando fizer sentido)
+            // saldo real em contas hoje (sem cofrinhos)
             'current_balance'  => $currentBalance !== null ? round($currentBalance, 2) : null,
 
+            // quanto de cofrinho estamos somando
+            'savings_balance'  => round($savingsBalance, 2),
+            'include_savings'  => !empty($savingIds),
+
             'has_today'        => $rangeHasToday,
+            'align_to_current' => $alignToCurrent,
 
             'total_in'         => round($totalIn, 2),
             'total_out'        => round($totalOut, 2),
-            'ending_balance'   => round($lastDay['balance'] ?? $opening, 2),
+            'ending_balance'   => round($endingBalance, 2),
             'days'             => array_values($days),
         ];
     }
@@ -113,6 +175,19 @@ class ProjectionService
         return (float) Account::withoutGlobalScopes()
             ->whereIn('user_id', $userIds)
             ->sum('current_balance');
+    }
+
+    protected function selectedSavingsBalance(array $userIds, array $savingIds): float
+    {
+        $ids = array_filter($savingIds, fn ($id) => !empty($id));
+        if (empty($ids)) {
+            return 0.0;
+        }
+
+        return (float) DB::table('savings')
+            ->whereIn('user_id', $userIds)
+            ->whereIn('id', $ids)
+            ->sum('current_amount');
     }
 
     protected function paymentsIndex(array $userIds): array
@@ -627,5 +702,63 @@ class ProjectionService
             $s->addDays($steps * $interval);
         }
         return $s;
+    }
+
+    protected function hasAccountMovements(array $userIds): bool
+    {
+        $accIds = DB::table('accounts')
+            ->whereIn('user_id', $userIds)
+            ->pluck('id');
+
+        if ($accIds->isEmpty()) {
+            return false;
+        }
+
+        return DB::table('account_movements')
+            ->whereIn('account_id', $accIds)
+            ->exists();
+    }
+
+    protected function earliestEventDate(array $userIds): ?Carbon
+    {
+        $dates = [];
+
+        // Menor data de transação
+        $txMin = DB::table('transactions')
+            ->whereIn('user_id', $userIds)
+            ->min('date');
+        if ($txMin) {
+            $dates[] = Carbon::parse($txMin);
+        }
+
+        // Menor data de movimento de conta
+        $amMin = DB::table('account_movements as am')
+            ->join('accounts as a', 'a.id', '=', 'am.account_id')
+            ->whereIn('a.user_id', $userIds)
+            ->min('am.occurred_at');
+        if ($amMin) {
+            $dates[] = Carbon::parse($amMin);
+        }
+
+        // Menor mês de fatura de cartão
+        $invMin = DB::table('invoices')
+            ->whereIn('user_id', $userIds)
+            ->min('current_month'); // formato Y-m
+        if ($invMin) {
+            $dates[] = Carbon::createFromFormat('Y-m', $invMin)->startOfMonth();
+        }
+
+        if (empty($dates)) {
+            return null;
+        }
+
+        $min = null;
+        foreach ($dates as $d) {
+            if ($min === null || $d->lt($min)) {
+                $min = $d;
+            }
+        }
+
+        return $min;
     }
 }

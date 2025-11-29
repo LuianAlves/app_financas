@@ -264,11 +264,22 @@ class DailyDigestController extends Controller
             ->select('pt.transaction_id', 'pt.reference_month', 'pt.reference_year')
             ->get();
 
-        $paidMap = [];
+        $paidMap   = [];
+        $anchorMap = []; // âncora mínima por transação (yyyy-mm)
+
         foreach ($payments as $p) {
-            $month = str_pad((string) $p->reference_month, 2, '0', STR_PAD_LEFT);
-            $key   = (string) $p->transaction_id . '#' . $p->reference_year . '-' . $month;
-            $paidMap[$key] = true;
+            $monthPadded = str_pad((string) $p->reference_month, 2, '0', STR_PAD_LEFT);
+            $ym          = $p->reference_year . '-' . $monthPadded;
+
+            // usado pra saber se a ocorrência daquele mês está paga
+            $keyPaid = (string) $p->transaction_id . '#' . $ym;
+            $paidMap[$keyPaid] = true;
+
+            // âncora mínima: menor ano-mês pago pra essa transação
+            $txId = (string) $p->transaction_id;
+            if (!isset($anchorMap[$txId]) || $ym < $anchorMap[$txId]) {
+                $anchorMap[$txId] = $ym;
+            }
         }
 
         $isPaid = function (string $transactionId, Carbon $occDate) use ($paidMap): bool {
@@ -377,8 +388,21 @@ class DailyDigestController extends Controller
                 : 'investimento';
 
             $amount = (float) $r->amount;
+
+            // âncora base: transaction->date (pode estar "andando" por causa do bump)
             $anchor = Carbon::parse($t->date)->startOfDay();
-            $pd     = max(1, (int) $r->payment_day);
+
+            // se houver pagamentos registrados, usa o MENOR ano-mês como limite inferior
+            $txKey = (string) $t->id;
+            if (!empty($anchorMap[$txKey])) {
+                // yyyy-mm -> começo do mês
+                $anchorRef = Carbon::createFromFormat('Y-m', $anchorMap[$txKey])->startOfDay();
+                if ($anchorRef->lt($anchor)) {
+                    $anchor = $anchorRef;
+                }
+            }
+
+            $pd = max(1, (int) $r->payment_day);
 
             if ($t->recurrence_type === 'monthly') {
                 $m = $winStart->copy()->startOfMonth();

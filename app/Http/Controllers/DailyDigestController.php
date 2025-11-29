@@ -18,9 +18,7 @@ class DailyDigestController extends Controller
         $afterTomorrow= $tomorrow->copy()->addDay();
 
         // ========= TRANSAÇÕES (sem cartão/credit e sem “total fatura”)
-        $txBase = $user->transactions()
-            ->with('transactionCategory')
-            ->where(function ($q) {
+        $txBase = $user->transactions()->with('transactionCategory')->where(function ($q) {
                 $q->where('transactions.type', '!=', 'card')
                     ->orWhereNull('transactions.type')
                     ->orWhere(fn ($qq) =>
@@ -48,12 +46,7 @@ class DailyDigestController extends Controller
         $tomInv  = (clone $tomBase)->whereHas('transactionCategory', fn ($q) => $q->where('type', 'investimento'))->get();
 
         // ========= FATURAS (para hoje/amanhã e para KPIs)
-        $invoicesAgg = DB::table('invoices as inv')
-            ->join('cards as c', 'c.id', '=', 'inv.card_id')
-            ->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')
-            ->where('inv.user_id', $user->id)
-            ->where('inv.paid', false)
-            ->groupBy('inv.id', 'inv.card_id', 'inv.current_month',
+        $invoicesAgg = DB::table('invoices as inv')->join('cards as c', 'c.id', '=', 'inv.card_id')->leftJoin('invoice_items as it', 'it.invoice_id', '=', 'inv.id')->where('inv.user_id', $user->id)->where('inv.paid', false)->groupBy('inv.id', 'inv.card_id', 'inv.current_month',
                 'c.cardholder_name', 'c.last_four_digits', 'c.due_day')
             ->select(
                 'inv.id','inv.card_id','inv.current_month',
@@ -109,6 +102,45 @@ class DailyDigestController extends Controller
 
                 $paid = (bool)($props['paid'] ?? false);
                 if ($onlyUnpaid && $paid) {
+                    // só queremos o que AINDA não foi pago
+                    continue;
+                }
+
+                $amount = (float)($props['amount'] ?? 0);
+
+                if ($type === 'entrada') {
+                    $in += abs($amount);
+                } else {
+                    $out += abs($amount);
+                }
+            }
+
+            return [
+                'in'  => $in,
+                'out' => $out,
+                'net' => $in - $out,
+            ];
+        };
+
+        $buildKpiPaid = function ($minDate, $maxDate) use ($eventsCol) {
+            $min = $minDate ? Carbon::parse($minDate)->toDateString() : null;
+            $max = $maxDate ? Carbon::parse($maxDate)->toDateString() : null;
+
+            $in  = 0.0;
+            $out = 0.0;
+
+            foreach ($eventsCol as $e) {
+                $d = Carbon::parse($e['start'])->toDateString();
+                if ($min && $d < $min) continue;
+                if ($max && $d > $max) continue;
+
+                $props = $e['extendedProps'] ?? [];
+                $type  = $props['type'] ?? null;
+                if ($type === 'payment') continue;
+
+                $paid = (bool)($props['paid'] ?? false);
+                if (!$paid) {
+                    // aqui queremos somente o que JÁ foi lançado/pago
                     continue;
                 }
 
@@ -132,9 +164,14 @@ class DailyDigestController extends Controller
         // Atrasados: só o que ainda NÃO foi pago
         $kpiOverdue = $buildKpi(null, $today->copy()->subDay(), true);
 
-        // Hoje / próximos 7 dias: consideram pagos + não pagos
+        // Hoje: considera pagos + não pagos
         $kpiToday   = $buildKpi($today, $today, false);
-        $kpiNext7   = $buildKpi($tomorrow, $today->copy()->addDays(7), false);
+
+        // Próximos 7 dias:
+        // - kpiNext7: apenas o que ainda NÃO foi pago (projeção futura)
+        // - kpiNext7Paid: o que já foi lançado dentro desse período
+        $kpiNext7      = $buildKpi($tomorrow, $today->copy()->addDays(7), true);
+        $kpiNext7Paid  = $buildKpiPaid($tomorrow, $today->copy()->addDays(7));
 
         // ========= CARDS ATRASADOS (lista detalhada) — somente NÃO pagos
         $overdueEvents = $eventsCol
@@ -211,7 +248,7 @@ class DailyDigestController extends Controller
             'invoicesToday','invoicesTomorrow',
             'nextFive',
             'overdueCards',
-            'kpiOverdue','kpiToday','kpiNext7',
+            'kpiOverdue','kpiToday','kpiNext7','kpiNext7Paid',
             'paidByKey'
         ));
     }

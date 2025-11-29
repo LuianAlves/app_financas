@@ -2,10 +2,10 @@
 
 @section('new-content')
     <x-card-header
-        prevRoute="{{ route('dashboard') }}"
-        iconRight="calendar"
-        title="Lançamentos"
-        description="Veja os seus lançamentos de hoje e dos próximos dias!">
+            prevRoute="{{ route('dashboard') }}"
+            iconRight="calendar"
+            title="Lançamentos"
+            description="Veja os seus lançamentos de hoje e dos próximos dias!">
     </x-card-header>
 
     @php
@@ -15,29 +15,30 @@
 
         // TRANSAÇÃO -> card normalizado
         $txToCard = function($t) use ($today, $fmt, $paidByKey){
-            $cat    = optional($t->transactionCategory);
-            $type   = $cat->type; // 'entrada'|'despesa'|'investimento'
-            $amt    = (float)$t->amount;
-            $signedAmt = $type === 'entrada' ? abs($amt) : -abs($amt);
+           $cat    = optional($t->transactionCategory);
+           $type   = $cat->type; // 'entrada'|'despesa'|'investimento'
+           $amt    = (float)$t->amount;
+           $signedAmt = $type === 'entrada' ? abs($amt) : -abs($amt);
 
-            $date = $t->date
-                ? \Carbon\Carbon::parse($t->date)->toDateString()
-                : $today->toDateString();
+           $date = $t->date
+               ? \Carbon\Carbon::parse($t->date)->toDateString()
+               : $today->toDateString();
 
-            $key  = (string)$t->id . '#' . $date;
-            $paid = $paidByKey[$key] ?? false;
+           $key  = (string)$t->id . '#' . $date;
+           $info = $paidByKey[$key] ?? ['paid' => false, 'paid_at' => null];
 
-            return [
-                'bg'          => $cat->color ?: '#6b7280',
-                'icon'        => $cat->icon  ?: 'fa-solid fa-receipt',
-                'title'       => $t->title ?? $cat->name ?? 'Lançamento',
-                'date'        => $date,
-                'amt'         => $signedAmt,
-                'is_invoice'  => false,
-                'paid'        => (bool)$paid,
-                'tx_id'       => (string)$t->id,
-            ];
-        };
+           return [
+               'bg'          => $cat->color ?: '#6b7280',
+               'icon'        => $cat->icon  ?: 'fa-solid fa-receipt',
+               'title'       => $t->title ?? $cat->name ?? 'Lançamento',
+               'date'        => $date,
+               'amt'         => $signedAmt,
+               'is_invoice'  => false,
+               'paid'        => (bool)($info['paid'] ?? false),
+               'paid_at'     => $info['paid_at'] ?? null,
+               'tx_id'       => (string)$t->id,
+           ];
+       };
 
         // FATURA -> card normalizado
         $invToCard = fn($inv) => [
@@ -132,7 +133,14 @@
                                            bg-emerald-50 text-emerald-700
                                            dark:bg-emerald-950/40 dark:text-emerald-300">
                                     <i class="fa-solid fa-circle-check text-[10px]"></i>
-                                    Realizado
+                                    @php
+                                        $paidAt = $c['paid_at'] ?? null;
+                                    @endphp
+                                    @if($paidAt)
+                                        Realizado em {{ \Carbon\Carbon::parse($paidAt)->format('d/m/Y') }}
+                                    @else
+                                        Realizado
+                                    @endif
                                 </p>
                             @endif
                         </div>
@@ -167,14 +175,14 @@
 
             <div class="mt-3 flex items-center justify-between gap-2 text-xs">
                 <span
-                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-emerald-50 text-emerald-700
+                        class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-emerald-50 text-emerald-700
                            dark:bg-emerald-950/40 dark:text-emerald-300">
                     <i class="fa-solid fa-arrow-trend-up text-[11px]"></i>
                     <span>{{ $fmtBrl($kpiNext7['in'] ?? 0) }}</span>
                 </span>
 
                 <span
-                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-rose-50 text-rose-700
+                        class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-rose-50 text-rose-700
                            dark:bg-rose-950/40 dark:text-rose-300">
                     <i class="fa-solid fa-arrow-trend-down text-[11px]"></i>
                     <span>{{ $fmtBrl($kpiNext7['out'] ?? 0) }}</span>
@@ -219,7 +227,14 @@
                                            bg-emerald-50 text-emerald-700
                                            dark:bg-emerald-950/40 dark:text-emerald-300">
                                     <i class="fa-solid fa-circle-check text-[10px]"></i>
-                                    Realizado
+                                    @php
+                                        $paidAt = $c['paid_at'] ?? null;
+                                    @endphp
+                                    @if($paidAt)
+                                        Realizado em {{ \Carbon\Carbon::parse($paidAt)->format('d/m/Y') }}
+                                    @else
+                                        Realizado
+                                    @endif
                                 </p>
                             @endif
                         </div>
@@ -252,8 +267,9 @@
             <ul class="mt-3 divide-y divide-neutral-200/70 dark:divide-neutral-800/70">
                 @forelse($nextFive as $item)
                     @php
-                        $amt  = $item['extendedProps']['amount'] ?? 0;
-                        $paid = (bool)($item['extendedProps']['paid'] ?? false);
+                        $amt    = $item['extendedProps']['amount'] ?? 0;
+                        $paid   = (bool)($item['extendedProps']['paid'] ?? false);
+                        $paidAt = $item['extendedProps']['paid_at'] ?? null;
                     @endphp
                     <li class="grid grid-cols-[auto_1fr_auto] items-center gap-3 py-3 transaction-card">
                         <span class="size-10 grid place-items-center rounded-xl text-white"
@@ -274,7 +290,11 @@
                                            bg-emerald-50 text-emerald-700
                                            dark:bg-emerald-950/40 dark:text-emerald-300">
                                     <i class="fa-solid fa-circle-check text-[10px]"></i>
-                                    Realizado
+                                    @if($paidAt)
+                                        Realizado em {{ \Carbon\Carbon::parse($paidAt)->format('d/m/Y') }}
+                                    @else
+                                        Realizado
+                                    @endif
                                 </p>
                             @endif
                         </div>
@@ -312,7 +332,7 @@
                 <div class="mt-3 flex items-center justify-between gap-2 text-xs">
                     {{-- Entradas --}}
                     <span
-                        class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-emerald-50 text-emerald-700
+                            class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-emerald-50 text-emerald-700
                            dark:bg-emerald-950/40 dark:text-emerald-300">
                     <i class="fa-solid fa-arrow-trend-up text-[11px]"></i>
                     <span>{{ $fmtBrl($kpiOverdue['in'] ?? 0) }}</span>
@@ -320,7 +340,7 @@
 
                     {{-- Saídas --}}
                     <span
-                        class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-rose-50 text-rose-700
+                            class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 bg-rose-50 text-rose-700
                            dark:bg-rose-950/40 dark:text-rose-300">
                     <i class="fa-solid fa-arrow-trend-down text-[11px]"></i>
                     <span>{{ $fmtBrl($kpiOverdue['out'] ?? 0) }}</span>
@@ -336,11 +356,11 @@
 
                     @if($overdueRest->count())
                         <button
-                            type="button"
-                            id="btn-overdue-toggle"
-                            class="text-xs font-medium text-red-700 hover:text-red-800 dark:text-red-300 dark:hover:text-red-200"
-                            data-label-more="Ver mais ({{ $overdueRest->count() }})"
-                            data-label-less="Ver menos"
+                                type="button"
+                                id="btn-overdue-toggle"
+                                class="text-xs font-medium text-red-700 hover:text-red-800 dark:text-red-300 dark:hover:text-red-200"
+                                data-label-more="Ver mais ({{ $overdueRest->count() }})"
+                                data-label-less="Ver menos"
                         >
                             Ver mais ({{ $overdueRest->count() }})
                         </button>

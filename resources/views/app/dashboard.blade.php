@@ -295,10 +295,11 @@
     </section>
 
     <!-- Check Payment -->
-    <x-modal id="paymentModal" titleCreate="Registrar pagamento" titleEdit="Registrar pagamento"
-             titleShow="Registrar pagamento" submitLabel="Salvar">
+    <x-modal id="paymentModal" titleCreate="Registrar pagamento" titleEdit="Registrar pagamento" titleShow="Registrar pagamento" submitLabel="Salvar">
         @csrf
+
         <input type="hidden" name="transaction_id" id="payment_transaction_id">
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label class="block">
                 <span class="text-xs text-neutral-500 dark:text-neutral-400">Valor pago</span>

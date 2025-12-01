@@ -66,9 +66,7 @@ class InvoiceController extends Controller
         // header para o mês selecionado
         [$header, $items] = $this->buildInvoicePayload($card, $selectedYm);
 
-        $categories = TransactionCategory::where('user_id', Auth::id())
-            ->orderBy('name')
-            ->get();
+        $categories = TransactionCategory::orderBy('name')->get();
 
         // carrossel com status (paid | pending | overdue)
         $invoices = $sorted->map(function ($inv) use ($card, $today) {

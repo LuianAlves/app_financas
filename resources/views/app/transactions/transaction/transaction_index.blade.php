@@ -116,6 +116,7 @@
         {{-- MODAL (mantido igual) --}}
         <x-modal id="txModal" titleCreate="Nova transação" titleEdit="Editar transação" titleShow="Detalhes da transação" submitLabel="Salvar">
             <input type="hidden" name="id"/>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label class="block">
                     <span class="text-xs text-neutral-500 dark:text-neutral-400">Título</span>
@@ -123,40 +124,73 @@
                            class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2" required/>
                     <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
                 </label>
-                @php
-                    // Agrupa por tipo
-                    $grouped = $categories->groupBy('type');
 
-                    // Ordem + rótulo exibido
-                    $typeOrder = [
-                        'despesa'      => 'Despesas',
-                        'entrada'      => 'Entradas',
-                        'investimento' => 'Investimentos',
+                <label for="transaction_category_id"
+                       class="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                    Categoria
+                </label>
+
+                @php
+                    $groupedCategories = $categories->groupBy('type');
+                    $typeLabels = [
+                        1 => 'Receitas',
+                        2 => 'Despesas',
+                        3 => 'Transferências',
                     ];
                 @endphp
 
-                <label class="block">
-                    <span class="text-xs text-neutral-500 dark:text-neutral-400">Categoria</span>
-                    <select name="transaction_category_id" id="tx_cat"
-                            class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2">
+                <el-select name="transaction_category_id" id="transaction_category_id" value="4" class="mt-2 block">
+                    <button type="button"
+                            class="grid w-full cursor-default grid-cols-1 rounded-md dark:bg-neutral-900 dark:text-neutral-50 dark:outline-neutral-700 bg-white py-1.5 pl-3 pr-2 text-left text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6">
+                        <el-selectedcontent class="col-start-1 row-start-1 flex items-center gap-3 pr-6">
+                            <i class="fa-solid fa-arrow-up-short-wide fs-5"></i>
+                            <span class="block truncate">Selecione uma categoria</span>
+                        </el-selectedcontent>
+                        <svg viewBox="0 0 16 16" fill="currentColor" data-slot="icon" aria-hidden="true"
+                             class="col-start-1 row-start-1 size-5 self-center justify-self-end text-gray-500 sm:size-4">
+                            <path
+                                d="M5.22 10.22a.75.75 0 0 1 1.06 0L8 11.94l1.72-1.72a.75.75 0 1 1 1.06 1.06l-2.25 2.25a.75.75 0 0 1-1.06 0l-2.25-2.25a.75.75 0 0 1 0-1.06ZM10.78 5.78a.75.75 0 0 1-1.06 0L8 4.06 6.28 5.78a.75.75 0 0 1-1.06-1.06l2.25-2.25a.75.75 0 0 1 1.06 0l2.25 2.25a.75.75 0 0 1 0 1.06Z"
+                                clip-rule="evenodd" fill-rule="evenodd"/>
+                        </svg>
+                    </button>
 
-                        <option value="" disabled selected hidden>Selecione uma categoria</option>
+                    <el-options anchor="bottom start" popover
+                                class="m-0 max-h-56 w-[var(--button-width)] overflow-auto rounded-md
+           bg-white text-gray-900
+           dark:bg-neutral-800 dark:text-neutral-50
+           p-0 py-1 text-base shadow-lg shadow-black/20
+           outline outline-1 outline-black/5 dark:outline-white/10
+           [--anchor-gap:theme(spacing.1)]
+           data-[closed]:data-[leave]:opacity-0 data-[leave]:transition
+           data-[leave]:duration-100 data-[leave]:ease-in
+           data-[leave]:[transition-behavior:allow-discrete] sm:text-sm">
 
-                        @foreach($typeOrder as $type => $label)
-                            @if(isset($grouped[$type]) && $grouped[$type]->isNotEmpty())
-                                <optgroup label="{{ $label }}">
-                                    @foreach($grouped[$type] as $category)
-                                        <option value="{{ $category->id }}" data-type="{{ $category->type }}">
-                                            {{ $category->name }}
-                                        </option>
-                                    @endforeach
-                                </optgroup>
-                            @endif
+                        @foreach($groupedCategories as $type => $cats)
+                            <div class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide
+                    text-slate-400 dark:text-slate-400">
+                                {{ $typeLabels[$type] ?? 'Outros' }}
+                            </div>
+
+                            @foreach($cats as $cat)
+                                <el-option value="{{ $cat->id }}"
+                                           class="group/option relative cursor-default select-none py-2 pl-3 pr-9
+                       text-gray-900 dark:text-neutral-50
+                       focus:bg-blue-600 dark:focus:bg-blue-500/30
+                       focus:text-white dark:focus:text-blue-100
+                       focus:outline-none [&:not([hidden])]:block">
+                                    <div class="flex items-center">
+                                        <i class="{{ $cat->icon }} fs-5 text-slate-500 dark:text-slate-300"></i>
+                                        <span class="ml-3 block truncate font-normal group-aria-selected/option:font-semibold">
+                        {{ $cat->name }}
+                    </span>
+                                    </div>
+                                </el-option>
+                            @endforeach
+
+                            <div class="my-1 border-t border-slate-100 dark:border-slate-700"></div>
                         @endforeach
-                    </select>
-                    <p class="field-error mt-1 text-xs text-red-600 hidden"></p>
-                </label>
-
+                    </el-options>
+                </el-select>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">

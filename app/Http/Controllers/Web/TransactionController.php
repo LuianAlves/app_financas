@@ -14,7 +14,7 @@ class TransactionController extends Controller
 {
     public function index()
     {
-        $categories = TransactionCategory::all();
+        $categories = TransactionCategory::orderBy('name')->get();
         $cards = Card::with('account')->get();
         $accounts = Account::all();
         $savings = Saving::all();

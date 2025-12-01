@@ -32,7 +32,6 @@
         @endforeach
     </div>
 
-
     {{-- Header da fatura selecionada --}}
     <div class="balance-box m-0 mb-3 status-{{ $header['status'] }}" id="invoiceHeader"
          data-card="{{ $card->id }}"
@@ -706,8 +705,6 @@
             --inv-orange: #fb923c;
             --inv-red: #f87171;
         }
-
-
     </style>
 @endpush
 

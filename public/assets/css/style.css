@@ -76,14 +76,28 @@ html {
     font-variant-numeric: tabular-nums
 }
 
-
-
-
+/* container cheio, sem sombra, etc. */
 .flatpickr-calendar.animate.inline.arrowTop {
     width: 100% !important;
     box-shadow: none !important;
-    background: transparent !important; /* bg “vaza” do container */
+    background: transparent !important;
     border-radius: .75rem !important;
+}
+
+/* grid elástico, mas com 7 colunas fixas */
+.flatpickr-days,
+.flatpickr-days .dayContainer {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    border: 0 !important;
+}
+
+/* garante SEMPRE 7 dias por linha */
+.flatpickr-day {
+    max-width: none !important;                  /* remove os 39px */
+    width: calc(100% / 7) !important;            /* 7 colunas */
+    box-sizing: border-box;
 }
 
 /* remove o triângulo do “balão” */
@@ -92,14 +106,6 @@ html {
     display: none !important;
 }
 
-/* deixa o grid elástico */
-.flatpickr-days,
-.flatpickr-days .dayContainer {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    border: 0 !important;
-}
 
 /* ----- Dark mode: texto/ícones claros + borda ----- */
 .dark .flatpickr-calendar.animate.inline.arrowTop {

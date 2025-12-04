@@ -834,130 +834,145 @@ class DashboardController extends Controller
     }
 
     public function paymentTransaction(Request $request, Transaction $transaction)
-    {
-        // ==== NORMALIZAÇÃO DO VALOR (pt-BR -> padrão numérico) ====
-        $rawAmount = $request->input('amount');
+{
+    // ==== NORMALIZAÇÃO DO VALOR (pt-BR -> padrão numérico) ====
+    $rawAmount = $request->input('amount');
 
-        if (is_string($rawAmount)) {
-            $rawAmount = trim($rawAmount);
+    if (is_string($rawAmount)) {
+        $rawAmount = trim($rawAmount);
 
-            // Só converte se tiver vírgula (formato pt-BR)
-            if ($rawAmount !== '' && str_contains($rawAmount, ',')) {
-                // remove separador de milhar
-                $normalized = str_replace('.', '', $rawAmount);
-                // troca vírgula decimal por ponto
-                $normalized = str_replace(',', '.', $normalized);
+        // Só converte se tiver vírgula (formato pt-BR)
+        if ($rawAmount !== '' && str_contains($rawAmount, ',')) {
+            // remove separador de milhar
+            $normalized = str_replace('.', '', $rawAmount);
+            // troca vírgula decimal por ponto
+            $normalized = str_replace(',', '.', $normalized);
 
-                // sobrescreve no request
-                $request->merge([
-                    'amount' => $normalized,
-                ]);
-            }
-        }
-
-        // ==== AUTH por grupo ====
-        $ownerId = AdditionalUser::ownerIdFor();
-        $userIds = AdditionalUser::where('user_id', $ownerId)
-            ->pluck('linked_user_id')->push($ownerId)->unique()->values();
-
-        abort_unless(in_array($transaction->user_id, $userIds->all()), 403);
-
-        $data = $request->validate([
-            'amount' => ['required', 'numeric'],
-            'payment_date' => ['required', 'date'],
-            'month' => ['nullable', 'date_format:Y-m'], // mês selecionado na UI (para recalcular KPIs)
-            'due_date' => ['nullable', 'date'],         // NOVO: data da ocorrência/vencimento
-            'account_id' => ['nullable', 'integer'],    // só pra garantir se estiver vindo
-        ]);
-
-        // UNIQUE: se já foi paga, 409 e sai antes da transação
-        if ($transaction->recurrence_type === 'unique' &&
-            PaymentTransaction::where('transaction_id', $transaction->id)->exists()) {
-            return response()->json(['ok' => false, 'message' => 'Transação única já foi paga.'], 409);
-        }
-
-        if (!empty($data['due_date'])) {
-    $refDate = \Carbon\Carbon::parse($data['due_date']);
-} elseif (in_array($transaction->recurrence_type, ['monthly', 'yearly'], true) && !empty($transaction->date)) {
-    $refDate = \Carbon\Carbon::parse($transaction->date);
-} elseif (!empty($data['month'])) {
-    $refDate = \Carbon\Carbon::createFromFormat('Y-m', $data['month'])->startOfDay();
-} else {
-    $refDate = \Carbon\Carbon::parse($data['payment_date']);
-}
-e
-
-        DB::transaction(function () use ($transaction, $data, $userIds, $refDate) {
-            // Escolha da conta
-            $account = null;
-
-            if (!empty($data['account_id'])) {
-                $account = Account::whereIn('user_id', $userIds)->where('id', $data['account_id'])->first();
-            }
-            if (!$account && !empty($transaction->account_id)) {
-                $account = Account::whereIn('user_id', $userIds)->where('id', $transaction->account_id)->first();
-            }
-            if (!$account) {
-                $account = Account::whereIn('user_id', $userIds)->orderBy('id')->first();
-            }
-
-            // Cria o pagamento
-            $pt = PaymentTransaction::create([
-        'transaction_id'   => $transaction->id,
-        'title'            => $transaction->title,
-        'amount'           => (float) $data['amount'],
-        'payment_date'     => $data['payment_date'],
-        'reference_date'   => $refDate->toDateString(),      // <- ESSA LINHA
-        'reference_month'  => $refDate->format('m'),
-        'reference_year'   => $refDate->format('Y'),
-        'account_id'       => $account?->id,
-    ]);
-
-            // Movimenta saldo da conta (entrada incrementa, despesa decrementa)
-            if ($account) {
-    $type  = strtolower((string) optional($transaction->transactionCategory)->type);
-    $value = abs((float) $pt->amount);
-
-    if ($value == 0.0) {
-        // pagamento “zerado” só serve pra marcar como quitado
-        // não mexe em saldo
-        return;
-    }
-
-    if ($type === 'entrada') {
-        // aumenta saldo
-        $account->increment('current_balance', $value);
-    } else {
-        // qualquer coisa que NÃO é entrada → trata como saída
-        $account->decrement('current_balance', $value);
-    }
-}
-        });
-
-        // Bump da âncora só para monthly/yearly SEM itens custom
-        $shouldBump = false;
-        if (in_array($transaction->recurrence_type, ['monthly', 'yearly'], true)) {
-            $rec = Recurrent::where('transaction_id', $transaction->id)->first();
-            $hasCustomItems = $rec ? DB::table('custom_item_recurrents')->where('recurrent_id', $rec->id)->exists() : false;
-            $shouldBump = !$hasCustomItems;
-        }
-        if ($shouldBump) {
-            $base = \Carbon\Carbon::parse($transaction->date);
-            $transaction->update([
-                'date' => $transaction->recurrence_type === 'monthly'
-                    ? $base->addMonthNoOverflow()
-                    : $base->addYear(),
+            // sobrescreve no request
+            $request->merge([
+                'amount' => $normalized,
             ]);
         }
-
-        // Recalcula KPIs do mês atual da UI
-        $month = $data['month'] ?? now()->format('Y-m');
-        $startMonth = \Carbon\Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-        $endMonth = (clone $startMonth)->endOfMonth();
-
-        $kpis = $this->kpisForMonth($userIds, $startMonth, $endMonth);
-        return response()->json($this->kpisJson($kpis));
     }
+
+    // ==== AUTH por grupo ====
+    $ownerId = AdditionalUser::ownerIdFor();
+    $userIds = AdditionalUser::where('user_id', $ownerId)
+        ->pluck('linked_user_id')->push($ownerId)->unique()->values();
+
+    abort_unless(in_array($transaction->user_id, $userIds->all()), 403);
+
+    $data = $request->validate([
+        'amount'       => ['required', 'numeric'],
+        'payment_date' => ['required', 'date'],
+        'month'        => ['nullable', 'date_format:Y-m'], // mês selecionado na UI (para recalcular KPIs)
+        'due_date'     => ['nullable', 'date'],            // NOVO: data da ocorrência/vencimento
+        'account_id'   => ['nullable', 'integer'],
+    ]);
+
+    // UNIQUE: se já foi paga, 409 e sai antes da transação
+    if (
+        $transaction->recurrence_type === 'unique' &&
+        PaymentTransaction::where('transaction_id', $transaction->id)->exists()
+    ) {
+        return response()->json(['ok' => false, 'message' => 'Transação única já foi paga.'], 409);
+    }
+
+    // ===== define $refDate (data de referência da ocorrência) =====
+    if (!empty($data['due_date'])) {
+        $refDate = Carbon::parse($data['due_date']);
+    } elseif (
+        in_array($transaction->recurrence_type, ['monthly', 'yearly'], true)
+        && !empty($transaction->date)
+    ) {
+        $refDate = Carbon::parse($transaction->date);
+    } elseif (!empty($data['month'])) {
+        $refDate = Carbon::createFromFormat('Y-m', $data['month'])->startOfDay();
+    } else {
+        $refDate = Carbon::parse($data['payment_date']);
+    }
+
+    DB::transaction(function () use ($transaction, $data, $userIds, $refDate) {
+        // Escolha da conta
+        $account = null;
+
+        if (!empty($data['account_id'])) {
+            $account = Account::whereIn('user_id', $userIds)
+                ->where('id', $data['account_id'])
+                ->first();
+        }
+
+        if (!$account && !empty($transaction->account_id)) {
+            $account = Account::whereIn('user_id', $userIds)
+                ->where('id', $transaction->account_id)
+                ->first();
+        }
+
+        if (!$account) {
+            $account = Account::whereIn('user_id', $userIds)->orderBy('id')->first();
+        }
+
+        // Cria o pagamento
+        $pt = PaymentTransaction::create([
+            'transaction_id'  => $transaction->id,
+            'title'           => $transaction->title,
+            'amount'          => (float) $data['amount'],
+            'payment_date'    => $data['payment_date'],
+            'reference_date'  => $refDate->toDateString(),
+            'reference_month' => $refDate->format('m'),
+            'reference_year'  => $refDate->format('Y'),
+            'account_id'      => $account?->id,
+        ]);
+
+        // Movimenta saldo da conta (entrada incrementa, despesa decrementa)
+        if ($account) {
+            $type  = strtolower((string) optional($transaction->transactionCategory)->type);
+            $value = abs((float) $pt->amount);
+
+            if ($value == 0.0) {
+                // pagamento “zerado” só serve pra marcar como quitado
+                // não mexe em saldo
+                return;
+            }
+
+            if ($type === 'entrada') {
+                // aumenta saldo
+                $account->increment('current_balance', $value);
+            } else {
+                // qualquer coisa que NÃO é entrada → trata como saída
+                $account->decrement('current_balance', $value);
+            }
+        }
+    });
+
+    // Bump da âncora só para monthly/yearly SEM itens custom
+    $shouldBump = false;
+    if (in_array($transaction->recurrence_type, ['monthly', 'yearly'], true)) {
+        $rec = Recurrent::where('transaction_id', $transaction->id)->first();
+        $hasCustomItems = $rec
+            ? DB::table('custom_item_recurrents')->where('recurrent_id', $rec->id)->exists()
+            : false;
+        $shouldBump = !$hasCustomItems;
+    }
+
+    if ($shouldBump) {
+        $base = Carbon::parse($transaction->date);
+        $transaction->update([
+            'date' => $transaction->recurrence_type === 'monthly'
+                ? $base->addMonthNoOverflow()
+                : $base->addYear(),
+        ]);
+    }
+
+    // Recalcula KPIs do mês atual da UI
+    $month      = $data['month'] ?? now()->format('Y-m');
+    $startMonth = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+    $endMonth   = (clone $startMonth)->endOfMonth();
+
+    $kpis = $this->kpisForMonth($userIds, $startMonth, $endMonth);
+
+    return response()->json($this->kpisJson($kpis));
+}
 
     private function kpisJson(array $k): array
     {

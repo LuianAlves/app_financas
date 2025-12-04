@@ -695,6 +695,15 @@ if (dueHidden)  dueHidden.value = CURRENT_DUE_DATE; // aqui ele passa 29/12/2025
                     }
 
                     for (const ev of eventos) {
+                        // esconder pagamentos de valor 0 (não faz sentido mostrar)
+    const isZeroPayment = ev.tipo === 'payment'
+        && !ev.is_invoice
+        && Math.abs(ev.valor || 0) < 0.005;
+
+    if (isZeroPayment) {
+        continue;
+    }
+
                         const isPaidInv = ev.is_invoice && ev.paid === true;
                         const iconCls = isPaidInv ? 'fa-regular fa-circle-check' : (ev.icon || 'fa-solid fa-file-invoice-dollar');
                         const bgColor = isPaidInv ? '#0ea5e9' : (ev.color || '#999');

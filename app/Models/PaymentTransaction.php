@@ -7,12 +7,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class PaymentTransaction extends BaseModel
 {
-    protected $fillable = [
+   protected $fillable = [
         'transaction_id',
         'title',
         'amount',
         'payment_date',
-        'reference_month',
-        'reference_year'
+        'reference_date',   // <-
+        'reference_month',  // <-
+        'reference_year',   // <-
+        'account_id',
+    ];
+
+    protected $casts = [
+        'payment_date'   => 'date',
+        'reference_date' => 'date',
     ];
 }

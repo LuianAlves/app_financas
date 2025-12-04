@@ -295,26 +295,27 @@
     </section>
 
     <!-- Check Payment -->
-    <x-modal id="paymentModal" titleCreate="Registrar pagamento" titleEdit="Registrar pagamento" titleShow="Registrar pagamento" submitLabel="Salvar">
-        @csrf
+<x-modal id="paymentModal" titleCreate="Registrar pagamento" titleEdit="Registrar pagamento" titleShow="Registrar pagamento" submitLabel="Salvar">
+    @csrf
 
-        <input type="hidden" name="transaction_id" id="payment_transaction_id">
+    <input type="hidden" name="transaction_id" id="payment_transaction_id">
+    <input type="hidden" name="due_date" id="payment_due_date"> {{-- IMPORTANTE --}}
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <label class="block">
-                <span class="text-xs text-neutral-500 dark:text-neutral-400">Valor pago</span>
-                <input type="text" inputmode="decimal" name="amount" id="payment_amount"
-                       class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
-                       required>
-            </label>
-            <label class="block">
-                <span class="text-xs text-neutral-500 dark:text-neutral-400">Data do pagamento</span>
-                <input type="date" name="payment_date" id="payment_date"
-                       class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
-                       required>
-            </label>
-        </div>
-    </x-modal>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label class="block">
+            <span class="text-xs text-neutral-500 dark:text-neutral-400">Valor pago</span>
+            <input type="text" inputmode="decimal" name="amount" id="payment_amount"
+                   class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
+                   required>
+        </label>
+        <label class="block">
+            <span class="text-xs text-neutral-500 dark:text-neutral-400">Data do pagamento</span>
+            <input type="date" name="payment_date" id="payment_date"
+                   class="mt-1 w-full rounded-xl border border-neutral-200/70 dark:border-neutral-800/70 bg-white/90 dark:bg-neutral-900/70 px-3 py-2"
+                   required>
+        </label>
+    </div>
+</x-modal>
 
     @push('scripts')
         <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -429,13 +430,12 @@
         CURRENT_TX_CARD = btnPayTx.closest('.transaction-card') || null;
         CURRENT_ID      = btnPayTx.dataset.id;
         CURRENT_TITLE   = btnPayTx.dataset.title || 'Pagamento';
-        CURRENT_DUE_DATE= (btnPayTx.dataset.date || '').slice(0, 10);
+        CURRENT_DUE_DATE = (btnPayTx.dataset.date || '').slice(0, 10);
 
-        form.action = PAY_TPL.replace('__ID__', CURRENT_ID);
-        if (inAmt)      inAmt.value = btnPayTx.dataset.amount || '0';
-        if (inDate)     inDate.value = CURRENT_DUE_DATE;
-        if (dueHidden)  dueHidden.value = CURRENT_DUE_DATE; // NOVO: envia vencimento
-
+form.action = PAY_TPL.replace('__ID__', CURRENT_ID);
+if (inAmt)      inAmt.value = btnPayTx.dataset.amount || '0';
+if (inDate)     inDate.value = CURRENT_DUE_DATE;
+if (dueHidden)  dueHidden.value = CURRENT_DUE_DATE; // aqui ele passa 29/12/2025
         showPaymentModal();
         return;
     }

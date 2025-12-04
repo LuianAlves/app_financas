@@ -877,14 +877,15 @@ class DashboardController extends Controller
         }
 
         if (!empty($data['due_date'])) {
-            $refDate = \Carbon\Carbon::parse($data['due_date']);
-        } elseif (in_array($transaction->recurrence_type, ['monthly', 'yearly'], true) && !empty($transaction->date)) {
-            $refDate = \Carbon\Carbon::parse($transaction->date);
-        } elseif (!empty($data['month'])) {
-            $refDate = \Carbon\Carbon::createFromFormat('Y-m', $data['month'])->startOfDay();
-        } else {
-            $refDate = \Carbon\Carbon::parse($data['payment_date']);
-        }
+    $refDate = \Carbon\Carbon::parse($data['due_date']);
+} elseif (in_array($transaction->recurrence_type, ['monthly', 'yearly'], true) && !empty($transaction->date)) {
+    $refDate = \Carbon\Carbon::parse($transaction->date);
+} elseif (!empty($data['month'])) {
+    $refDate = \Carbon\Carbon::createFromFormat('Y-m', $data['month'])->startOfDay();
+} else {
+    $refDate = \Carbon\Carbon::parse($data['payment_date']);
+}
+e
 
         DB::transaction(function () use ($transaction, $data, $userIds, $refDate) {
             // Escolha da conta
@@ -902,14 +903,15 @@ class DashboardController extends Controller
 
             // Cria o pagamento
             $pt = PaymentTransaction::create([
-                'transaction_id' => $transaction->id,
-                'title' => $transaction->title,
-                'amount' => (float)$data['amount'],
-                'payment_date' => $data['payment_date'],
-                'reference_month' => $refDate->format('m'),
-                'reference_year' => $refDate->format('Y'),
-                'account_id' => $account?->id,
-            ]);
+        'transaction_id'   => $transaction->id,
+        'title'            => $transaction->title,
+        'amount'           => (float) $data['amount'],
+        'payment_date'     => $data['payment_date'],
+        'reference_date'   => $refDate->toDateString(),      // <- ESSA LINHA
+        'reference_month'  => $refDate->format('m'),
+        'reference_year'   => $refDate->format('Y'),
+        'account_id'       => $account?->id,
+    ]);
 
             // Movimenta saldo da conta (entrada incrementa, despesa decrementa)
             if ($account) {
@@ -1045,7 +1047,7 @@ class DashboardController extends Controller
             'pt.reference_year',
             'pt.reference_month',
             'pt.payment_date',
-            'pt.reference_date', // <-- NOVO
+            'pt.reference_date', // nova coluna
         ]);
 
     $idx    = [];
@@ -1057,18 +1059,19 @@ class DashboardController extends Controller
             $idx[$r->transaction_id][$ym] = true;
         }
 
-        // sempre que tiver reference_date, usa ela como “dia da ocorrência”
+        // PRIORIDADE: reference_date (data da ocorrência/vencimento)
         if (!empty($r->reference_date)) {
             $d = \Carbon\Carbon::parse($r->reference_date)->toDateString();
             $byDate[$r->transaction_id][$d] = true;
         } elseif (!empty($r->payment_date)) {
-            // fallback pra dados antigos
+            // fallback para registros antigos sem reference_date
             $d = \Carbon\Carbon::parse($r->payment_date)->toDateString();
             $byDate[$r->transaction_id][$d] = true;
         }
     }
 
     $idx['_byDate'] = $byDate;
+
     return $idx;
 }
 

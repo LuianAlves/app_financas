@@ -513,15 +513,22 @@ if (dueHidden)  dueHidden.value = CURRENT_DUE_DATE; // aqui ele passa 29/12/2025
                 }
             }
 
-            document.getElementById('paymentModal')?.addEventListener('submit', async (e) => {
-                const form = e.target;
-                if (form.tagName !== 'FORM') return;
-                e.preventDefault();
+           document.getElementById('paymentModal')?.addEventListener('submit', async (e) => {
+    const form = e.target;
+    if (form.tagName !== 'FORM') return;
+    e.preventDefault();
 
-                const {inAmt, inDate} = getPaymentEls();
-                const fd = new FormData(form);
-                const currentMonth = document.getElementById('monthPicker')?.value || '';
-                if (currentMonth) fd.set('month', currentMonth);
+    const {inAmt, inDate, dueHidden} = getPaymentEls(); // <-- pega o hidden também
+    const fd = new FormData(form);
+
+    // garante que a data da ocorrência vá pro back
+    if (dueHidden && dueHidden.value) {
+        fd.set('due_date', dueHidden.value);           // <<< ESSA LINHA É O PONTO
+    }
+
+    const currentMonth = document.getElementById('monthPicker')?.value || '';
+    if (currentMonth) fd.set('month', currentMonth);
+
 
                 try {
                     const resp = await fetch(form.action, {

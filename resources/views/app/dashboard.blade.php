@@ -682,10 +682,19 @@ if (dueHidden)  dueHidden.value = CURRENT_DUE_DATE; // aqui ele passa 29/12/2025
                     loadedWindows.add(key);
                 }
 
-                const eventosDoDia = dateStr => {
-                    const map = eventosCache[dateStr];
-                    return map ? Array.from(map.values()) : [];
-                };
+              const eventosDoDia = dateStr => {
+    const map = eventosCache[dateStr];
+    if (!map) return [];
+
+    // ignora pagamentos com valor 0 (adiantamento / ajuste)
+    return Array.from(map.values()).filter(ev => {
+        const isZeroPayment =
+            ev.tipo === 'payment' && Number(ev.valor || 0) === 0;
+
+        return !isZeroPayment;
+    });
+};
+
 
                 function exibirEventos(dateStr) {
                     const c = document.getElementById('calendar-results');

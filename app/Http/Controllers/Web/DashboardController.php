@@ -891,7 +891,13 @@ class DashboardController extends Controller
     } else {
         $refDate = Carbon::parse($data['payment_date']);
     }
+$existsSameRef = PaymentTransaction::where('transaction_id', $transaction->id)
+    ->whereDate('reference_date', $refDate->toDateString())
+    ->exists();
 
+if ($existsSameRef) {
+    return response()->json(['ok' => false, 'message' => 'Essa ocorrência já foi paga.'], 409);
+}
     DB::transaction(function () use ($transaction, $data, $userIds, $refDate) {
         // Escolha da conta
         $account = null;

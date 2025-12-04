@@ -913,13 +913,23 @@ class DashboardController extends Controller
 
             // Movimenta saldo da conta (entrada incrementa, despesa decrementa)
             if ($account) {
-                $type = optional($transaction->transactionCategory)->type;
-                if ($type === 'despesa') {
-                    $account->decrement('current_balance', abs((float)$pt->amount));
-                } else {
-                    $account->increment('current_balance', abs((float)$pt->amount));
-                }
-            }
+    $type  = strtolower((string) optional($transaction->transactionCategory)->type);
+    $value = abs((float) $pt->amount);
+
+    if ($value == 0.0) {
+        // pagamento “zerado” só serve pra marcar como quitado
+        // não mexe em saldo
+        return;
+    }
+
+    if ($type === 'entrada') {
+        // aumenta saldo
+        $account->increment('current_balance', $value);
+    } else {
+        // qualquer coisa que NÃO é entrada → trata como saída
+        $account->decrement('current_balance', $value);
+    }
+}
         });
 
         // Bump da âncora só para monthly/yearly SEM itens custom
@@ -1026,29 +1036,41 @@ class DashboardController extends Controller
     }
 
     private function paymentsIndex(Collection $userIds): array
-    {
-        $rows = DB::table('payment_transactions as pt')
-            ->join('transactions as t', 't.id', '=', 'pt.transaction_id')
-            ->whereIn('t.user_id', $userIds)
-            ->get(['pt.transaction_id', 'pt.reference_year', 'pt.reference_month', 'pt.payment_date']);
+{
+    $rows = DB::table('payment_transactions as pt')
+        ->join('transactions as t', 't.id', '=', 'pt.transaction_id')
+        ->whereIn('t.user_id', $userIds)
+        ->get([
+            'pt.transaction_id',
+            'pt.reference_year',
+            'pt.reference_month',
+            'pt.payment_date',
+            'pt.reference_date', // <-- NOVO
+        ]);
 
-        $idx = [];
-        $byDate = [];
+    $idx    = [];
+    $byDate = [];
 
-        foreach ($rows as $r) {
-            if ($r->reference_year && $r->reference_month) {
-                $ym = sprintf('%04d-%02d', (int)$r->reference_year, (int)$r->reference_month);
-                $idx[$r->transaction_id][$ym] = true; // mantém compatibilidade (por mês)
-            }
-            if (!empty($r->payment_date)) {
-                $d = \Carbon\Carbon::parse($r->payment_date)->toDateString();
-                $byDate[$r->transaction_id][$d] = true; // novo: por data exata
-            }
+    foreach ($rows as $r) {
+        if ($r->reference_year && $r->reference_month) {
+            $ym = sprintf('%04d-%02d', (int) $r->reference_year, (int) $r->reference_month);
+            $idx[$r->transaction_id][$ym] = true;
         }
 
-        $idx['_byDate'] = $byDate;
-        return $idx;
+        // sempre que tiver reference_date, usa ela como “dia da ocorrência”
+        if (!empty($r->reference_date)) {
+            $d = \Carbon\Carbon::parse($r->reference_date)->toDateString();
+            $byDate[$r->transaction_id][$d] = true;
+        } elseif (!empty($r->payment_date)) {
+            // fallback pra dados antigos
+            $d = \Carbon\Carbon::parse($r->payment_date)->toDateString();
+            $byDate[$r->transaction_id][$d] = true;
+        }
     }
+
+    $idx['_byDate'] = $byDate;
+    return $idx;
+}
 
     private function normType(?string $t): string
     {

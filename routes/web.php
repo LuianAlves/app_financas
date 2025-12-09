@@ -35,7 +35,8 @@ use App\Http\Controllers\Web\{ChartController,
     InvoiceController as WebInvoiceController,
     InvoiceItemController as WebInvoiceItemController,
     InvestmentController as WebInvestmentController,
-    PaymentController as WebPaymentController
+    PaymentController as WebPaymentController,
+    SupportController as WebSupportController
 };
 
 Route::middleware('guest')->group(function () {
@@ -125,6 +126,16 @@ Route::middleware(['auth', config('jetstream.auth_session')])->group(function ()
 
         // Charts
         Route::get('/api/analytics/pie', [ChartController::class, 'pie'])->name('analytics.pie');
+
+        Route::prefix('support')
+            ->name('support.')
+            ->group(function () {
+                Route::get('/', [WebSupportController::class, 'index'])->name('index');
+                Route::get('/{slug}', [WebSupportController::class, 'article'])->name('article');
+
+                // somente para "outros" (envio do formulário)
+                Route::post('/outros', [WebSupportController::class, 'storeOther'])->name('outros.store');
+            });
     });
 });
 

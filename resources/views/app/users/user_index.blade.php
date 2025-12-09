@@ -108,12 +108,19 @@
             <h3 id="profileName" class="text-sm font-semibold tracking-wide">{{ auth()->user()->name }}</h3>
             <p id="profileEmail" class="text-xs text-neutral-500 dark:text-neutral-400">{{ auth()->user()->email }}</p>
 
-            <div class="mt-3 flex justify-center">
+            <div class="mt-3 flex flex-col items-center gap-2">
                 <button type="button" id="btnEditProfile"
                         class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border border-neutral-200/70 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800">
                     <i class="fa-solid fa-pen text-[11px]"></i>
                     Editar informações
                 </button>
+
+                {{-- 🔹 Botão de ajuda / suporte --}}
+                <a href="{{ route('support.index') }}"
+                   class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium bg-brand-600 text-white shadow-soft hover:bg-brand-700">
+                    <i class="fa-solid fa-circle-question text-[11px]"></i>
+                    Ajuda & suporte
+                </a>
             </div>
         </div>
     </section>

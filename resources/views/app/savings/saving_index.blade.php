@@ -22,7 +22,7 @@
         <!-- HEADER -->
         <div class="flex items-center justify-between mb-4">
             <div>
-                <h2 class="text-xl font-semibold">Cofrinhos</h2>
+                <h2 class="text-xl font-semibold">Investimentos</h2>
                 <p class="text-sm text-neutral-500 dark:text-neutral-400">Gerencie suas reservas e investimentos.</p>
             </div>
 

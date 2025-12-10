@@ -13,37 +13,52 @@ class SupportController extends Controller
     // GET /support
     public function index()
     {
-        // categorias fixas – você pode mexer aqui
         $categories = [
             [
                 'slug' => 'conta',
-                'name' => 'Conta',
+                'name' => 'Contas',
                 'description' => 'Como cadastrar, editar e excluir contas.',
             ],
             [
-                'slug' => 'cofrinho',
-                'name' => 'Cofrinho',
-                'description' => 'Como usar os cofrinhos e metas.',
+                'slug' => 'transacoes',
+                'name' => 'Transações',
+                'description' => 'Como lançar receitas, despesas, recorrências e parcelas.',
+            ],
+            [
+                'slug' => 'categoria-transacao',
+                'name' => 'Categorias de transação',
+                'description' => 'Como organizar suas receitas e despesas em categorias.',
             ],
             [
                 'slug' => 'cartao',
-                'name' => 'Cartão',
-                'description' => 'Cartões, limites e faturas.',
+                'name' => 'Cartões e faturas',
+                'description' => 'Configuração de cartões, limites, fechamento e faturas.',
+            ],
+            [
+                'slug' => 'investimentos',
+                'name' => 'Investimentos',
+                'description' => 'Como registrar e acompanhar seus investimentos no app.',
+            ],
+            [
+                'slug' => 'projecoes',
+                'name' => 'Projeções',
+                'description' => 'Como interpretar as projeções e relatórios financeiros.',
             ],
             [
                 'slug' => 'perfil',
                 'name' => 'Perfil',
-                'description' => 'Dados do usuário, segurança, etc.',
+                'description' => 'Dados do usuário, foto, usuários adicionais e configurações.',
             ],
             [
                 'slug' => 'outros',
                 'name' => 'Outros',
-                'description' => 'Não encontrou o que precisa? Fale com a gente.',
+                'description' => 'Não encontrou sua dúvida? Envie sua mensagem pra gente.',
             ],
         ];
 
         return view('app.support.support_index', compact('categories'));
     }
+
 
     // GET /support/{slug}
     public function article(string $slug)
@@ -53,11 +68,20 @@ class SupportController extends Controller
             case 'conta':
                 return view('app.support.articles.account');
 
-            case 'cofrinho':
-                return view('app.support.articles.saving');
+            case 'investimentos':
+                return view('app.support.articles.investments');
 
             case 'cartao':
                 return view('app.support.articles.card');
+
+            case 'categoria-transacao':
+                return view('app.support.articles.transaction-category');
+
+            case 'transacoes':
+                return view('app.support.articles.transactions');
+
+            case 'projecoes':
+                return view('app.support.articles.projections');
 
             case 'perfil':
                 return view('app.support.articles.profile');

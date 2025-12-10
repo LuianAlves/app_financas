@@ -10,10 +10,7 @@ return new class extends Migration {
         Schema::create('support_requests', function (Blueprint $table) {
             $table->uuid('id')->primary();
 
-            // se seu users é UUID:
-            $table->foreignUuid('user_id')
-                ->constrained('users')
-                ->nullOnDelete();
+            $table->foreignUuid('user_id')->constrained()->onDelete('cascade');
 
             $table->string('category_slug')->default('outros'); // ex: 'outros'
             $table->string('subject')->nullable();              // opcional

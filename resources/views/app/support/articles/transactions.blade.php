@@ -315,7 +315,7 @@
                 <p class="text-xs text-neutral-500 mb-1">
                     Prefere ver tudo isso em vídeo?
                 </p>
-                <a href="https://www.youtube.com/seu-video-transacoes"
+                <a href="https://www.youtube.com"
                    target="_blank"
                    class="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline">
                     Como lançar transações no app
